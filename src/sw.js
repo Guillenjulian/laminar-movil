@@ -27,6 +27,9 @@ self.addEventListener('message', e => {
 });
 
 // Pedidos: primero la copia guardada; si no está, la red.
+// ignoreVary: algunos servidores responden "Vary: Origin" y, como los módulos
+// se piden con encabezado Origin, sin esto el caché no los encontraría offline.
+const BUSQUEDA = { ignoreSearch: true, ignoreVary: true };
 self.addEventListener('fetch', e => {
     const { request } = e;
     if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
@@ -34,8 +37,8 @@ self.addEventListener('fetch', e => {
         const cache = await caches.open(CACHE);
         // Navegación (abrir la app): siempre el index guardado.
         if (request.mode === 'navigate') {
-            return (await cache.match(request, { ignoreSearch: true })) || (await cache.match('./')) || fetch(request);
+            return (await cache.match(request, BUSQUEDA)) || (await cache.match('./', BUSQUEDA)) || fetch(request);
         }
-        return (await cache.match(request, { ignoreSearch: true })) || fetch(request);
+        return (await cache.match(request, BUSQUEDA)) || fetch(request);
     })());
 });

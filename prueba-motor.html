@@ -30,7 +30,7 @@
     <pre id="salida"></pre>
     <script type="module">
         import { laminar } from './src/motor/motor.js';
-        import { armarConfiguracion, impresoras } from './src/perfiles/perfiles.js';
+        import { armarConfiguracion } from './src/perfiles/perfiles.js';
         import { maxTriangulos } from './src/config.js';
         import { esfera, te } from './src/prueba/mallas.js';
 
@@ -44,12 +44,13 @@
         }
 
         // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
-        window.probar = async ({ caso = 'cubo', calidad = 'normal', soportes = false, limite } = {}) => {
+        window.probar = async ({ caso = 'cubo', impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', soportes = false, personal = {}, limite } = {}) => {
             const stl = await obtenerSTL(caso);
             const { dispositivo, proceso, avisos } = armarConfiguracion({
-                impresoraId: impresoras[0].id,
+                impresoraId,
                 calidad,
-                extras: soportes ? { sliceSupportType: 'automatic' } : {},
+                soportes,
+                personal,
             });
             const inicio = performance.now();
             const r = await laminar({

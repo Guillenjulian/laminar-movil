@@ -73,6 +73,47 @@
                 </span>
                 <input type="checkbox" id="soportes">
             </label>
+
+            <!-- Ajustes finos: todo a la vista dentro de un único desplegable (sin submenús) -->
+            <details class="personalizar" id="personalizar">
+                <summary>Personalizar relleno, paredes y adhesión</summary>
+
+                <h3>Relleno</h3>
+                <div class="patrones" id="patrones"></div>
+                <div class="fila-deslizador">
+                    <label for="densidad">Densidad</label>
+                    <output id="densidadValor"></output>
+                </div>
+                <input type="range" id="densidad" min="0" max="100" step="5">
+                <div class="atajos" id="atajosDensidad"></div>
+
+                <h3>Paredes</h3>
+                <div class="contadores">
+                    <div class="contador" data-clave="paredes" data-min="1" data-max="8">
+                        <span>Paredes</span>
+                        <button type="button" data-delta="-1" aria-label="Menos paredes">−</button>
+                        <output></output>
+                        <button type="button" data-delta="1" aria-label="Más paredes">+</button>
+                    </div>
+                    <div class="contador" data-clave="arriba" data-min="0" data-max="15">
+                        <span>Capas sólidas arriba</span>
+                        <button type="button" data-delta="-1" aria-label="Menos capas arriba">−</button>
+                        <output></output>
+                        <button type="button" data-delta="1" aria-label="Más capas arriba">+</button>
+                    </div>
+                    <div class="contador" data-clave="abajo" data-min="0" data-max="15">
+                        <span>Capas sólidas abajo</span>
+                        <button type="button" data-delta="-1" aria-label="Menos capas abajo">−</button>
+                        <output></output>
+                        <button type="button" data-delta="1" aria-label="Más capas abajo">+</button>
+                    </div>
+                </div>
+
+                <h3>Adhesión a la cama</h3>
+                <div class="opciones" id="adhesiones"></div>
+
+                <button type="button" class="boton enlace" id="restablecer">Volver a los valores de la calidad</button>
+            </details>
         </section>
 
         <!-- Paso 3: laminando -->

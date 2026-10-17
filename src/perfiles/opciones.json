@@ -1,0 +1,39 @@
+{
+    "_nota": "Opciones de 'Personalizar' (paso 2). Las claves de 'proceso' son las de Kiri:Moto (ver LEEME.md).",
+    "patrones": {
+        "hex": { "nombre": "Panal", "descripcion": "Resistente y rápido. El de siempre." },
+        "grid": { "nombre": "Cuadrícula", "descripcion": "Simple y rápido." },
+        "gyroid": { "nombre": "Giroide", "descripcion": "Igual de fuerte en todas direcciones. Más lento de laminar." },
+        "cubic": { "nombre": "Cúbico", "descripcion": "Fuerte en todas direcciones." },
+        "triangle": { "nombre": "Triángulos", "descripcion": "Rígido en el plano." },
+        "linear": { "nombre": "Líneas", "descripcion": "El más rápido, el menos resistente." }
+    },
+    "densidades": [
+        { "nombre": "Liviano", "valor": 0.1 },
+        { "nombre": "Normal", "valor": 0.2 },
+        { "nombre": "Fuerte", "valor": 0.4 },
+        { "nombre": "Macizo", "valor": 1 }
+    ],
+    "adhesiones": {
+        "nada": {
+            "nombre": "Nada",
+            "descripcion": "Directo sobre la cama.",
+            "proceso": { "outputBrimCount": 0, "outputRaft": false }
+        },
+        "falda": {
+            "nombre": "Falda",
+            "descripcion": "2 vueltas separadas de la pieza para cebar la boquilla. Recomendada.",
+            "proceso": { "outputBrimCount": 2, "outputBrimOffset": 3, "outputRaft": false }
+        },
+        "borde": {
+            "nombre": "Borde",
+            "descripcion": "Un ala pegada a la pieza (~4 mm). Para piezas chicas o que se despegan.",
+            "proceso": { "outputBrimCount": 10, "outputBrimOffset": 0, "outputRaft": false }
+        },
+        "balsa": {
+            "nombre": "Balsa",
+            "descripcion": "Una base de varias capas debajo de la pieza. Para camas difíciles. Usa más filamento.",
+            "proceso": { "outputBrimCount": 0, "outputRaft": true }
+        }
+    }
+}

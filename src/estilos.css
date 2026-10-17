@@ -196,6 +196,50 @@ h2:first-child { margin-top: 4px; }
 .interruptor input:checked { background: var(--acento); }
 .interruptor input:checked::after { transform: translateX(20px); }
 
+/* --- Personalizar (relleno, paredes, adhesión) --- */
+.personalizar {
+    margin-top: 16px; padding: 4px 14px 14px;
+    border-radius: var(--radio); background: var(--tarjeta); border: 1px solid var(--borde);
+}
+.personalizar summary {
+    min-height: 52px; display: flex; align-items: center;
+    font-weight: 600; cursor: pointer; list-style: none;
+}
+.personalizar summary::after { content: "▾"; margin-left: auto; color: var(--suave); }
+.personalizar[open] summary::after { content: "▴"; }
+.personalizar h3 { font-size: 1rem; margin: 18px 0 8px; }
+.patrones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.patron {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 4px; border-radius: var(--radio); border: 2px solid var(--borde);
+    font-size: 0.85rem; cursor: pointer; color: var(--suave);
+    position: relative; /* contiene al input oculto */
+}
+.patron input { position: absolute; opacity: 0; pointer-events: none; }
+.patron:has(input:checked) { border-color: var(--acento); color: var(--texto); }
+.patron span { color: var(--texto); }
+.fila-deslizador { display: flex; justify-content: space-between; margin-top: 14px; }
+.fila-deslizador output { font-weight: 700; font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; height: 36px; accent-color: var(--acento); }
+.atajos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.atajo {
+    min-height: 48px; padding: 4px; border-radius: 10px;
+    border: 1px solid var(--borde); background: var(--fondo); color: var(--texto);
+    font: inherit; font-size: 0.85rem; line-height: 1.2;
+}
+.atajo small { display: block; color: var(--suave); }
+.atajo.activo { border-color: var(--acento); background: color-mix(in srgb, var(--acento) 18%, transparent); }
+.contadores { display: flex; flex-direction: column; gap: 6px; }
+.contador { display: flex; align-items: center; gap: 8px; }
+.contador span { flex: 1; }
+.contador output { min-width: 2ch; text-align: center; font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.contador button {
+    width: 48px; height: 48px; border-radius: 12px;
+    border: 1px solid var(--borde); background: var(--fondo); color: var(--texto);
+    font-size: 1.4rem; cursor: pointer;
+}
+#restablecer { margin-top: 12px; }
+
 /* --- Progreso --- */
 .progreso {
     height: 18px; border-radius: 9px; overflow: hidden;

@@ -35,6 +35,7 @@ const navegador = await chromium.launch({ executablePath: buscarChromium(), args
 const contexto = await navegador.newContext({ ...devices['Pixel 7'], acceptDownloads: true });
 const pagina = await contexto.newPage();
 pagina.on('pageerror', e => console.log('[error]', e.message));
+pagina.on('requestfailed', r => console.log('[falló]', r.url(), r.failure()?.errorText));
 pagina.on('console', m => m.type() === 'error' && console.log('[consola]', m.text().slice(0, 200)));
 pagina.on('dialog', d => { console.log('[alerta]', d.message()); d.dismiss(); });
 
@@ -103,9 +104,29 @@ try {
     await pagina.goBack();
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
     await pagina.tap('#siguiente');
+
+    // Personalizar: giroide, "Fuerte" (40 %), una pared más (Rápido trae 2) y borde.
+    await pagina.tap('#personalizar summary');
+    await pagina.tap('.patron:has(input[value="gyroid"])');
+    await pagina.tap('.atajo[data-densidad="0.4"]');
+    await pagina.tap('.contador[data-clave="paredes"] button[data-delta="1"]');
+    await pagina.tap('label.opcion:has(input[value="borde"])');
+    revisar('personalizar: valores elegidos',
+        await pagina.isChecked('input[value="gyroid"]') && (await pagina.textContent('#densidadValor')) === '40 %' &&
+        (await pagina.textContent('.contador[data-clave="paredes"] output')) === '3');
+    const resumenPers = await pagina.textContent('#personalizar summary');
+    revisar('resumen de lo personalizado', resumenPers === 'Personalizado: Giroide 40 % · 3 paredes · Borde', resumenPers);
+    await pagina.evaluate(() => document.getElementById('personalizar').scrollIntoView());
+    await captura('2-relleno');
+    await pagina.locator('#adhesiones').scrollIntoViewIfNeeded();
+    await captura('2-personalizar');
+    revisar('la página no se corre (acciones abajo de todo)', await pagina.evaluate(() =>
+        Math.abs(document.querySelector('.acciones').getBoundingClientRect().bottom - innerHeight) < 2));
+
     await pagina.tap('#laminar');
     await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
     revisar('paso 4 visible', true);
+    revisar('el resultado usa lo personalizado', (await pagina.textContent('#resumen')).includes('Giroide 40 % · 3 paredes · Borde'));
     const resumen = await pagina.textContent('#resumen');
     revisar('resumen con tiempo y filamento', /Tiempo estimado/.test(resumen) && /Filamento.*m \(≈/.test(resumen));
     await captura('4-listo');
@@ -131,6 +152,10 @@ try {
     revisar('abrir un reciente', true);
     await pagina.tap('#siguiente');
     revisar('se recuerda la calidad elegida', await pagina.isChecked('input[value="rapido"]'));
+    revisar('se recuerda lo personalizado', (await pagina.textContent('#personalizar summary')).startsWith('Personalizado: Giroide'));
+    await pagina.tap('#personalizar summary');
+    await pagina.tap('#restablecer');
+    revisar('volver a los valores de la calidad', (await pagina.textContent('#personalizar summary')).startsWith('Personalizar'));
     await pagina.goBack();
     await pagina.tap('#otroModelo');
     await pagina.tap('[data-borrar]:near(.reciente:has-text("esfera-pesada.stl"))');
