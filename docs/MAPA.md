@@ -1,0 +1,110 @@
+# Mapa de la app
+
+> **Para qué sirve:** ubicar rápido dónde está cada cosa sin leer todo el código.
+> **Regla:** todo cambio que agregue, mueva o borre un módulo actualiza este mapa en el mismo commit.
+
+## 1. Flujo general
+
+```
+Paso 1: Subir         Paso 2: Configurar        Paso 3: Laminar            Paso 4: Listo
+─────────────         ──────────────────        ───────────────            ─────────────
+archivo STL/OBJ/3MF   impresora · calidad       laminador.worker.js        vista capa por capa
+o foto (litofanía)    material · soportes       (Kiri:Moto en 1 hilo)      pausas de filamento
+   │                  personalizar · avanzado          │                   descargar / compartir
+   ▼                         │                         ▼                          ▲
+convertir.worker.js          ▼                  G-code (string) ─► recorridos.worker.js
+vista.worker.js       perfiles.js ─► { dispositivo, proceso } ─────────────────────┘
+visor.js (3D)         armarConfiguracion()
+transformar.js (escala/rotación/apoyar cara)
+```
+
+Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al terminar (`motor.js`).
+
+## 2. Módulos
+
+### Interfaz (`src/`, `src/ui/`)
+
+| Archivo | Responsabilidad | Depende de |
+|---|---|---|
+| `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
+| `src/main.js` | Estado de la app, navegación entre pasos e historial, y los manejadores de cada paso. ⚠️ ~1000 líneas: **dividir** (ver la sección 6) | casi todo |
+| `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
+| `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
+| `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
+| `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor.js` |
+| `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen | `perfiles`, `almacen`, `formato` |
+| `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 *(se agrega al integrar el trabajo de Avanzado)* | `perfiles` |
+| `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
+| `src/config.js` | Límites que dependen de la memoria del equipo (triángulos, tramos de la vista previa) | — |
+| `src/sw.js` | Service worker (offline). `vite.config.js` le inyecta la lista de archivos | — |
+| `src/estilos*.css` | Estilos: base + uno por área (formatos, materiales, avanzado) | — |
+
+### Motor (`src/motor/`)
+
+| Archivo | Responsabilidad |
+|---|---|
+| `motor.js` | API para la interfaz: `laminar`, `leerParaVista`, `leerRecorridos`, `convertirAStl`, `litofaniaAStl`. Un worker por tarea, cancelable con `AbortSignal` |
+| `laminador.worker.js` | STL → transformación → decimación → centrado → Kiri (slice, prepare, export) → G-code |
+| `vista.worker.js` | Lee el STL para mostrarlo (cuenta, mide y simplifica sólo para dibujar) |
+| `convertir.worker.js` | OBJ/3MF/litofanía → STL binario |
+| `recorridos.worker.js` | G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa |
+| `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
+| `transformar.js` | Matrices 3×3: identidad, multiplicar, rotacion90, escala, rotacionQueApoya, aplicar, medir |
+| `decimar.js` | Simplificación por agrupamiento en grilla |
+| `pausas.js` | Inserta las pausas (M600/PAUSE) en el G-code al descargar |
+| `minions-locales.js` | Reemplaza el pool de sub-workers de Kiri (soportes) por cálculo local |
+| `tipos-linea.js` | Tipos de línea de Kiri, sus colores, paleta de filamentos, cuantizado |
+
+### Perfiles (`src/perfiles/`): datos, no código
+
+| Archivo | Contenido |
+|---|---|
+| `impresoras/*.json` | Perfiles armados a mano (`estado: revisado`) |
+| `impresoras/kiri/*.json` | 50 importadas de Kiri (`estado: importado`). **Generados**: no editar a mano |
+| `materiales.json` · `opciones.json` | Materiales (temperaturas, densidad, avisos) · patrones, densidades, adhesiones |
+| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas |
+| `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
+| `LEEME.md` | Referencia de todas las claves |
+
+### Motor externo: `vendor/kiri/`
+Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano.** Los parches están en el script y marcados `PARCHE laminar-movil`. Detalle en `vendor/kiri/ORIGEN.md`.
+
+## 3. Estado (`estado` en main.js)
+
+| Clave | Qué guarda | Se persiste |
+|---|---|---|
+| `nombre`, `stl`, `vista` | Modelo cargado (ArrayBuffer original y tamaño) | sí, en recientes |
+| `rotacion`, `escala` | Transformación del modelo | no |
+| `impresoraId`, `calidad`, `material`, `soportes`, `personal` | Elecciones del paso 2 | sí, en `preferencias` |
+| `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
+| `resultado` | `{ gcode, info, archivo, impresoraId }` del último laminado | no |
+| `pausas`, `coloresFilamento`, `modoColor` | Pausas y colores de la vista previa | no |
+
+## 4. Pruebas
+
+| Comando | Qué prueba | Dónde |
+|---|---|---|
+| `npm run test:transformar` | Matrices (Node) | `scripts/probar-transformar.mjs` |
+| `npm run test:formatos` | OBJ, 3MF y litofanía (Node) | `scripts/probar-formatos.mjs` |
+| `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, 50 impresoras, malla pesada | `scripts/probar-motor.mjs` + `prueba-motor.html` |
+| `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` |
+
+Antes de cualquier commit: `npm run build` y las suites que toquen el área cambiada. Antes de integrar, todas.
+
+## 5. Dónde buscar si algo falla
+
+| Síntoma | Mirar primero |
+|---|---|
+| El laminado se cuelga | `laminador.worker.js`: ¿se usa algo del pool de minions? (`minions-locales.js`) |
+| G-code con temperatura, ventilador o velocidad mal | `perfiles.js` → `armarConfiguracion` y el orden de combinación; `materiales.json` |
+| Macros `{...}` sin reemplazar | `dispositivo.gcodePre/Post` del perfil y el shim de QuickJS en `vendor-kiri.mjs` |
+| No abre offline | `src/sw.js` (lista de archivos, `ignoreVary`), `vite.config.js` |
+| La vista previa no coincide con las capas | `recorridos.worker.js` (detección de capa por cambio de Z en extrusión) |
+| La pausa cae en un lugar raro | `recorridos.worker.js` (`pausaCapa`) y `pausas.js` |
+| El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `laminador.worker.js` (`centrar`) |
+| Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
+
+## 6. Deuda técnica conocida
+- `src/main.js` es monolítico (~1000 líneas): dividir en `src/ui/paso1.js` … `paso4.js`, `hojas.js`, `navegacion.js` y `estado.js`.
+- `scripts/probar-app.mjs` (~530 líneas) es un solo recorrido largo: dividir por área con helpers compartidos.
+- El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
