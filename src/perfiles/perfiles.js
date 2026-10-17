@@ -105,6 +105,12 @@ export function armarConfiguracion({ impresoraId, calidad = 'normal', material =
     });
     const avisos = [];
 
+    // Avisos del material: el propio (ej. "necesita gabinete") y, para los que
+    // no se llevan bien con Bowden (TPU), si la impresora retrae más de 2 mm.
+    if (mat.aviso) avisos.push(mat.aviso);
+    const retraccion = { ...imp.proceso, ...cal.proceso }.outputRetractDist;
+    if (mat.avisoBowden && retraccion > 2) avisos.push(mat.avisoBowden);
+
     const { hotendMax, camaMax } = imp.limites || {};
     for (const clave of ['outputTemp', 'firstLayerNozzleTemp']) {
         if (hotendMax && proceso[clave] > hotendMax) {

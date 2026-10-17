@@ -14,6 +14,7 @@ import { maxTriangulos, maxSegmentosVista } from './config.js';
 import { crearVisor } from './ui/visor.js';
 import * as formato from './ui/formato.js';
 import * as almacen from './almacen.js';
+import * as materialesUI from './ui/materiales.js';
 
 const $ = id => document.getElementById(id);
 
@@ -317,11 +318,18 @@ function dibujarOpciones() {
     </div>`;
     $('calidades').innerHTML = Object.entries(imp.calidades).map(([id, c]) =>
         opcion('calidad', id, c.nombre, c.descripcion, id === estado.calidad)).join('');
-    $('materiales').innerHTML = Object.entries(materiales).filter(([id]) => !id.startsWith('_')).map(([id, m]) =>
-        opcion('material', id, m.nombre, `Boquilla ${m.proceso.outputTemp} °C · cama ${m.proceso.outputBedTemp} °C`,
+    $('materiales').innerHTML = materialesUI.listaMateriales().map(([id, m]) =>
+        opcion('material', id, m.nombre, `${m.proceso.outputTemp}&nbsp;°C · cama ${m.proceso.outputBedTemp}&nbsp;°C`,
             id === estado.material)).join('');
+    dibujarMaterial();
     $('soportes').checked = estado.soportes;
     dibujarPersonalizar();
+}
+
+// Tarjeta del material elegido (descripción, avisos y precio del rollo).
+function dibujarMaterial() {
+    const { impresoraId, calidad, material, soportes, personal } = estado;
+    materialesUI.dibujarTarjeta($('tarjetaMaterial'), { impresoraId, calidad, material, soportes, personal });
 }
 
 // --- Personalizar: relleno, paredes y adhesión ---
@@ -395,7 +403,10 @@ document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e 
         estado.calidad = value;
         dibujarPersonalizar();
     }
-    if (name === 'material') estado.material = value;
+    if (name === 'material') {
+        estado.material = value;
+        dibujarMaterial();
+    }
     if (e.target.id === 'soportes') estado.soportes = checked;
     if (name === 'patron') return cambiarPersonal('patron', value);
     if (name === 'adhesion') return cambiarPersonal('adhesion', value);
@@ -679,7 +690,7 @@ function mostrarResultado() {
     const cal = imp.calidades[estado.calidad];
     const filas = [
         ['Tiempo estimado', formato.duracion(info.tiempo)],
-        ['Filamento', formato.filamento(info.filamento, imp.dispositivo.extruders[0].extFilament)],
+        ...materialesUI.filasResumen(info.filamento, imp.dispositivo.extruders[0].extFilament, estado.material),
         ['Capas', formato.numero(info.capas)],
         ['Calidad', `${cal.nombre} · ${materiales[estado.material].nombre}${estado.soportes ? ' · con soportes' : ''}`],
         ['Relleno y adhesión', resumenPersonal(valoresActuales())],
