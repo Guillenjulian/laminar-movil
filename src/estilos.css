@@ -302,6 +302,23 @@ input[type=range] { width: 100%; height: 36px; accent-color: var(--acento); }
 .relleno { height: 100%; width: 0; background: var(--acento); transition: width 0.3s; }
 .porcentaje { font-size: 2.4rem; font-weight: 700; margin: 8px 0; font-variant-numeric: tabular-nums; }
 
+/* --- Vista previa capa por capa --- */
+.visor-capas { height: 46vh; min-height: 240px; margin-bottom: 8px; }
+.cargando-capas { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--suave); }
+.control-capas { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.fila-capa { display: flex; align-items: center; gap: 8px; }
+.fila-capa input[type=range] { flex: 1; }
+.boton-capa {
+    width: 48px; height: 48px; flex: none; border-radius: 12px;
+    border: 1px solid var(--borde); background: var(--tarjeta); color: var(--texto);
+    font-size: 1.3rem; cursor: pointer;
+}
+.texto-capa { flex: 1; font-variant-numeric: tabular-nums; font-size: 0.95rem; }
+.tilde-capa { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--suave); }
+.tilde-capa input { width: 22px; height: 22px; accent-color: var(--acento); }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 2px 0 0; padding: 0; font-size: 0.8rem; color: var(--suave); }
+.leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
 /* --- Resumen --- */
 .resumen {
     display: grid; grid-template-columns: auto 1fr; gap: 10px 16px;

@@ -132,6 +132,26 @@
         <!-- Paso 4: listo -->
         <section class="pantalla" data-paso="4" hidden>
             <h2>¡Listo! 🎉</h2>
+
+            <!-- Vista previa capa por capa -->
+            <div class="visor visor-capas" id="visorCapas" aria-label="Vista previa de los recorridos">
+                <p class="cargando-capas" id="cargandoCapas">Armando la vista previa…</p>
+            </div>
+            <div class="control-capas" id="controlCapas" hidden>
+                <div class="fila-capa">
+                    <button type="button" class="boton-capa" id="capaMenos" aria-label="Capa anterior">−</button>
+                    <input type="range" id="capa" min="0" value="0" aria-label="Capa">
+                    <button type="button" class="boton-capa" id="capaMas" aria-label="Capa siguiente">+</button>
+                </div>
+                <div class="fila-capa">
+                    <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">▶</button>
+                    <span class="texto-capa" id="textoCapa"></span>
+                    <label class="tilde-capa"><input type="checkbox" id="soloCapa"> Sólo esta</label>
+                </div>
+                <ul class="leyenda" id="leyenda"></ul>
+                <p class="aviso" id="avisoVista" hidden></p>
+            </div>
+
             <dl class="resumen" id="resumen"></dl>
             <div class="aviso" id="avisoResultado" hidden></div>
             <p class="nota">Se guarda como <b id="nombreArchivo"></b>.</p>

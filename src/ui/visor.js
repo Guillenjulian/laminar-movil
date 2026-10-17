@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { CUANTIZADO } from '../motor/tipos-linea.js';
 
 export function crearVisor(contenedor) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -24,6 +25,7 @@ export function crearVisor(contenedor) {
     controles.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
     let cama = null, modelo = null, tamanoCama = { x: 220, y: 220, z: 250 };
+    let recorridos = null; // { grupo, abajo, actual, inicioCapa, esfera }
 
     // Cama: un plano con una grilla cada 10 mm, centrada en el origen.
     function ponerCama({ x, y, z }) {
@@ -48,6 +50,7 @@ export function crearVisor(contenedor) {
         cama.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(-x / 2, -y / 2, 0), 20, 0xd03030));
         cama.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-x / 2, -y / 2, 0), 20, 0x30a030));
         escena.add(cama);
+        redibujar();
     }
 
     // Modelo: se centra en la cama y se apoya en Z=0, igual que al laminar.
@@ -70,12 +73,75 @@ export function crearVisor(contenedor) {
         modelo.geometry.dispose();
         modelo.material.dispose();
         modelo = null;
+        redibujar();
     }
 
-    // Encuadra el modelo (o la cama si no hay modelo) desde adelante y arriba.
+    // Recorridos del G-code (vista previa capa por capa). Las capas de abajo se
+    // dibujan atenuadas y la actual con todo su color; las dos comparten los
+    // mismos datos y sólo cambia qué tramo se dibuja (por eso el deslizador es instantáneo).
+    function ponerRecorridos({ posiciones, colores, inicioCapa, caja }, { origenCentro }) {
+        quitarRecorridos();
+        const pos = new THREE.BufferAttribute(posiciones, 3);
+        const col = new THREE.BufferAttribute(colores, 3, true);
+        const geometria = () => {
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', pos);
+            g.setAttribute('color', col);
+            return g;
+        };
+        const abajo = new THREE.LineSegments(geometria(), new THREE.LineBasicMaterial({
+            vertexColors: true, color: 0x9a9a9a, transparent: true, opacity: 0.55,
+        }));
+        const actual = new THREE.LineSegments(geometria(), new THREE.LineBasicMaterial({ vertexColors: true }));
+        // Sin "frustum culling": three.js tendría que recorrer millones de puntos para
+        // calcular la caja, y la pieza siempre está a la vista.
+        abajo.frustumCulled = actual.frustumCulled = false;
+        const grupo = new THREE.Group();
+        grupo.add(abajo, actual);
+        // De enteros a mm, y del origen de la impresora al centro de la cama del visor.
+        const { ESCALA, DESPLAZAMIENTO } = CUANTIZADO;
+        const dx = origenCentro ? 0 : tamanoCama.x / 2, dy = origenCentro ? 0 : tamanoCama.y / 2;
+        grupo.scale.setScalar(1 / ESCALA);
+        grupo.position.set(-DESPLAZAMIENTO - dx, -DESPLAZAMIENTO - dy, -DESPLAZAMIENTO);
+        escena.add(grupo);
+
+        const centro = new THREE.Vector3(
+            (caja.min[0] + caja.max[0]) / 2 - dx, (caja.min[1] + caja.max[1]) / 2 - dy, (caja.min[2] + caja.max[2]) / 2);
+        const radio = Math.hypot(caja.max[0] - caja.min[0], caja.max[1] - caja.min[1], caja.max[2] - caja.min[2]) / 2;
+        recorridos = { grupo, abajo, actual, inicioCapa, esfera: { centro, radio } };
+        vistaInicial();
+    }
+
+    // Muestra hasta la capa n (o sólo esa capa).
+    function mostrarCapa(n, sola = false) {
+        if (!recorridos) return;
+        const { abajo, actual, inicioCapa } = recorridos;
+        const desde = inicioCapa[n], hasta = inicioCapa[n + 1];
+        actual.geometry.setDrawRange(desde * 2, (hasta - desde) * 2);
+        abajo.geometry.setDrawRange(0, desde * 2);
+        abajo.visible = !sola;
+        redibujar();
+    }
+
+    function quitarRecorridos() {
+        if (!recorridos) return;
+        escena.remove(recorridos.grupo);
+        recorridos.abajo.geometry.dispose();
+        recorridos.actual.geometry.dispose();
+        recorridos.abajo.material.dispose();
+        recorridos.actual.material.dispose();
+        recorridos = null;
+        redibujar();
+    }
+
+    // Encuadra lo que haya (recorridos, modelo o la cama) desde adelante y arriba.
     function vistaInicial() {
-        let centro, radio;
-        if (modelo) {
+        let centro, radio, margen = 1.8; // un poco más lejos de lo justo, para ver la cama alrededor
+        if (recorridos) {
+            margen = 1.2; // en la vista previa interesa la pieza, de cerca
+            centro = recorridos.esfera.centro.clone();
+            radio = Math.max(recorridos.esfera.radio, 15);
+        } else if (modelo) {
             modelo.geometry.computeBoundingSphere();
             const s = modelo.geometry.boundingSphere;
             centro = s.center.clone();
@@ -84,11 +150,11 @@ export function crearVisor(contenedor) {
             centro = new THREE.Vector3(0, 0, 0);
             radio = Math.max(tamanoCama.x, tamanoCama.y) / 2;
         }
-        // Un poco más lejos de lo justo, para que se vea la cama alrededor.
-        const dist = radio / Math.sin((camara.fov * Math.PI) / 360) * 1.8;
+        const dist = radio / Math.sin((camara.fov * Math.PI) / 360) * margen;
         camara.position.copy(centro).add(new THREE.Vector3(0, -dist * 0.6, dist * 0.8));
         controles.target.copy(centro);
         controles.update();
+        redibujar();
     }
 
     // Doble toque (o doble clic) para volver a la vista inicial.
@@ -101,15 +167,21 @@ export function crearVisor(contenedor) {
         renderer.setSize(width, height, false);
         camara.aspect = width / height;
         camara.updateProjectionMatrix();
+        redibujar();
     }
     new ResizeObserver(ajustar).observe(contenedor);
 
-    // Sólo dibujamos mientras el visor está a la vista (ahorra batería).
-    let activo = true;
+    // Sólo dibujamos cuando algo cambia (gesto, capa, tamaño) y mientras el visor
+    // está a la vista: con millones de líneas, redibujar cada cuadro gasta mucha batería.
+    let activo = true, sucio = true;
+    const redibujar = () => { sucio = true; };
     renderer.setAnimationLoop(() => {
         if (!activo) return;
-        controles.update();
-        renderer.render(escena, camara);
+        const seMovio = controles.update(); // true mientras dura el gesto (y su inercia)
+        if (seMovio || sucio) {
+            renderer.render(escena, camara);
+            sucio = false;
+        }
     });
 
     ponerCama(tamanoCama);
@@ -119,7 +191,10 @@ export function crearVisor(contenedor) {
         ponerCama,
         ponerModelo,
         quitarModelo,
+        ponerRecorridos,
+        mostrarCapa,
+        quitarRecorridos,
         vistaInicial,
-        pausar(p) { activo = !p; },
+        pausar(p) { activo = !p; redibujar(); },
     };
 }

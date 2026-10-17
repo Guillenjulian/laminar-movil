@@ -53,3 +53,10 @@ export async function leerParaVista(stl, maxTriangulosVista = 300_000) {
     const worker = new Worker(new URL('./vista.worker.js', import.meta.url), { type: 'module' });
     return correr(worker, { stl, maxTriangulosVista }, [stl]);
 }
+
+// Lee un G-code y arma los recorridos para la vista previa capa por capa
+// (ver recorridos.worker.js). El G-code se copia al worker; el resultado vuelve sin copiar.
+export async function leerRecorridos(gcode, maxSegmentos) {
+    const worker = new Worker(new URL('./recorridos.worker.js', import.meta.url), { type: 'module' });
+    return correr(worker, { gcode, maxSegmentos }, []);
+}

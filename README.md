@@ -10,15 +10,20 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
 <img src="docs/capturas/1-modelo.jpg" width="180" alt="Paso 1: modelo en el visor 3D">
 <img src="docs/capturas/2-configurar.jpg" width="180" alt="Paso 2: impresora y calidad">
 <img src="docs/capturas/3-laminando.jpg" width="180" alt="Paso 3: laminando">
-<img src="docs/capturas/4-listo.jpg" width="180" alt="Paso 4: listo para descargar">
+<img src="docs/capturas/4-listo.jpg" width="180" alt="Paso 4: vista previa capa por capa">
+<img src="docs/capturas/2-personalizar.jpg" width="180" alt="Personalizar relleno">
+<img src="docs/capturas/2-impresoras.jpg" width="180" alt="Elegir impresora">
 </p>
 
 ## Qué hace
 
 1. **Subir STL** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
 2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
+   En **Personalizar**: patrón de relleno (panal, cuadrícula, giroide, cúbico, triángulos, líneas),
+   densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
 3. **Laminar** con barra de progreso, en un Web Worker (la pantalla no se congela). Se puede cancelar.
-4. **Descargar o compartir** el G-code (Web Share API en celus que lo soportan).
+4. **Vista previa capa por capa** (deslizador, ±, reproducir, "sólo esta capa", colores por tipo de
+   línea) y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
 
 Además:
 
@@ -26,7 +31,13 @@ Además:
 - Recuerda la última configuración y los últimos 6 modelos (IndexedDB, en el celu).
 - Avisa si el modelo no entra en la cama y limita las temperaturas a los máximos de la impresora.
 
-Impresora incluida: **Creality Ender 3 V3 SE**. Sumar otras es agregar un JSON (ver abajo).
+Impresoras:
+
+- **Creality Ender 3 V3 SE**: perfil armado a mano.
+- **50 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
+  marcadas "sin revisar".
+- **Mi impresora**: cada usuario puede cargar la suya (medidas, boquilla, Marlin/Klipper, G-code)
+  o copiar una existente para ajustarla. Se guarda en el celu.
 
 ## Desarrollo
 
@@ -90,6 +101,9 @@ un laminado a la mitad).
 
 ## Agregar una impresora
 
+Para uso personal alcanza con **"Agregar mi impresora"** dentro de la app. Para sumarla a la app
+para todos:
+
 1. Copiá `src/perfiles/impresoras/creality-ender-3-v3-se.json` con otro nombre en la misma carpeta.
 2. Cambiá `id` (único, sin espacios) y `nombre`.
 3. Ajustá `limites` (temperaturas máximas), `dispositivo` (tamaño de cama, boquilla, filamento,
@@ -99,6 +113,10 @@ un laminado a la mitad).
 Las claves son las de Kiri:Moto y están explicadas en español en
 [`src/perfiles/LEEME.md`](src/perfiles/LEEME.md). Importante: definí `gcodeFan`, si no Kiri no
 prende nunca el ventilador de capa. Los materiales se agregan en `src/perfiles/materiales.json`.
+
+Las 50 importadas se regeneran con `npm run importar:impresoras` (usa el clon de grid-apps de
+`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Bambu Lab,
+Makerbot) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
 
 ## Cómo está armado
 
@@ -110,7 +128,10 @@ src/motor/laminador.worker.js  Worker de laminado: lee STL, simplifica, llama a 
 src/motor/vista.worker.js   Worker liviano para la vista previa
 src/motor/decimar.js        Simplificación de malla (agrupamiento en grilla)
 src/motor/minions-locales.js  Soportes de Kiri sin su pool de sub-workers
-src/perfiles/               Impresoras y materiales en JSON
+src/motor/recorridos.worker.js  Lee el G-code para la vista previa capa por capa
+src/perfiles/               Impresoras, materiales y opciones en JSON; generico.js arma
+                            calidades y perfiles a partir de pocos datos
+scripts/importar-impresoras-kiri.mjs  Trae los perfiles de impresoras de Kiri:Moto
 src/almacen.js              IndexedDB: preferencias y modelos recientes
 src/sw.js                   Service worker (offline); la lista de archivos la completa vite.config.js
 vendor/kiri/                Motor Kiri:Moto (sólo los archivos que usa el worker)
@@ -124,6 +145,10 @@ Decisiones para celus de gama baja:
 - Máximo de triángulos según `navigator.deviceMemory`: 100 mil (≤ 2 GB), 200 mil (4 GB),
   500 mil (≥ 8 GB) y 250 mil si el navegador no informa la memoria (iPhone, Firefox). Se cambia en `src/config.js`.
 - Mientras lamina se pide que la pantalla no se apague (Wake Lock).
+- Vista previa: los tramos alineados se unen y las coordenadas se guardan en enteros de 16 bits
+  (18 bytes por tramo). Tope de tramos según la memoria (1 a 6 millones, `src/config.js`); si el
+  G-code tiene más, se muestran las primeras capas y se avisa. El visor sólo redibuja cuando algo
+  cambia (gesto o capa), así no gasta batería con millones de líneas quietas.
 
 ### Actualizar Kiri:Moto
 
@@ -174,10 +199,21 @@ Esto queda pendiente de validar a mano:
       `text/plain` y que se conserve la extensión `.gcode`.
 - [ ] Descarga en iOS Safari (a veces abre una vista previa en vez de guardar).
 - [ ] Gestos táctiles reales (pellizcar para zoom, girar con un dedo).
+- [ ] Fluidez de la vista previa capa por capa con un G-code grande (1–2 millones de tramos) en la
+      GPU de un celu. Acá sólo pude probar con render por software.
+- [ ] Formulario "Mi impresora" con el teclado del celu (campos numéricos, G-code largo).
 - [ ] Instalación como app (Android: "Instalar app"; iOS: Compartir → "Agregar a inicio") y uso sin conexión.
 - [ ] Workers con módulos ES: requiere iOS 15 o más nuevo; Wake Lock: iOS 16.4 o más nuevo.
 - [ ] iOS Safari puede borrar los datos guardados (recientes) si la app no está instalada y no se usa por un tiempo.
 - [ ] Flujo de "Hay una versión nueva" después de publicar una actualización.
+
+### Impresoras importadas de Kiri
+
+- [ ] Las 50 laminan el cubo de prueba sin errores, centrado y con ventilador (prueba automática),
+      pero **ninguna está probada en una impresora real**. Varios perfiles de Kiri son viejos o
+      tienen G-code de inicio dudoso (la app lo avisa cuando no usa `{temp}`/`{bed_temp}`).
+- [ ] En Kiri, a igual porcentaje, el giroide usa bastante menos material que el panal (cubo de
+      20 mm al 20 %: 1,18 m contra 2,08 m). Revisar si conviene compensar la densidad por patrón.
 
 ### Otros
 

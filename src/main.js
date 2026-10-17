@@ -1,13 +1,14 @@
 // Lógica de la app: 4 pasos (subir → configurar → laminar → listo).
 
-import { laminar, leerParaVista } from './motor/motor.js';
+import { laminar, leerParaVista, leerRecorridos } from './motor/motor.js';
+import { TIPOS } from './motor/tipos-linea.js';
 import {
     listaImpresoras, buscarImpresora, existeImpresora, ponerImpresorasPropias, IMPRESORA_INICIAL,
     materiales, opciones, armarConfiguracion, valoresDeCalidad,
 } from './perfiles/perfiles.js';
 import { PLANTILLAS_GCODE } from './perfiles/generico.js';
 import { iconoRelleno } from './ui/iconos-relleno.js';
-import { maxTriangulos } from './config.js';
+import { maxTriangulos, maxSegmentosVista } from './config.js';
 import { crearVisor } from './ui/visor.js';
 import * as formato from './ui/formato.js';
 import * as almacen from './almacen.js';
@@ -29,7 +30,8 @@ const estado = {
     cancelar: null,      // AbortController del laminado en curso
 };
 
-let visor = null;
+let visor = null;      // visor del modelo (paso 1)
+let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
 
 // ---------------------------------------------------------------------------
 // Navegación entre pasos. Usamos el historial del navegador para que el botón
@@ -53,6 +55,8 @@ function mostrar(paso, hoja = null) {
     });
     $('atras').hidden = paso === 1;
     visor?.pausar(paso !== 1);
+    visorCapas?.pausar(paso !== 4);
+    if (paso !== 4) pararReproduccion();
     $('main').scrollTo(0, 0);
 }
 
@@ -612,6 +616,89 @@ function mostrarResultado() {
     // "Compartir" sólo si el navegador puede compartir archivos (Android/iOS sí; la mayoría de las PCs no).
     $('compartir').hidden = !navigator.canShare?.({ files: [archivoGcode()] });
     $('descargar').classList.toggle('primario', $('compartir').hidden);
+
+    armarVistaPrevia();
+}
+
+// --- Vista previa capa por capa ---
+
+let capas = null; // { inicioCapa, zCapa, total }
+let reproduccion = null;
+
+async function armarVistaPrevia() {
+    const resultado = estado.resultado;
+    capas = null;
+    pararReproduccion();
+    visorCapas?.quitarRecorridos(); // liberar la memoria de la vista anterior
+    $('controlCapas').hidden = true;
+    $('cargandoCapas').hidden = false;
+    $('cargandoCapas').textContent = 'Armando la vista previa…';
+    try {
+        const r = await leerRecorridos(resultado.gcode, maxSegmentosVista());
+        if (estado.resultado !== resultado) return; // ya se laminó otra cosa
+        const total = r.inicioCapa.length - 1;
+        if (!total) throw new Error('el G-code no tiene recorridos');
+        if (!visorCapas) visorCapas = crearVisor($('visorCapas'));
+        const d = buscarImpresora(estado.impresoraId).dispositivo;
+        visorCapas.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
+        visorCapas.ponerRecorridos(r, { origenCentro: d.originCenter });
+        visorCapas.pausar(estado.paso !== 4);
+        capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, total };
+
+        $('capa').max = total - 1;
+        $('leyenda').innerHTML = TIPOS.slice(0, -1).map(t =>
+            `<li><i style="background: rgb(${t.color.join(',')})"></i>${t.nombre}</li>`).join('');
+        $('avisoVista').hidden = !r.incompleta;
+        $('avisoVista').textContent = r.incompleta
+            ? `El archivo es muy grande para mostrarlo entero en este equipo: la vista llega hasta la capa ${total}. El G-code está completo.`
+            : '';
+        $('cargandoCapas').hidden = true;
+        $('controlCapas').hidden = false;
+        irACapa(total - 1);
+    } catch (err) {
+        $('cargandoCapas').textContent = 'No se pudo armar la vista previa: ' + err.message;
+    }
+}
+
+function irACapa(n) {
+    if (!capas) return;
+    n = Math.max(0, Math.min(capas.total - 1, n));
+    $('capa').value = n;
+    visorCapas.mostrarCapa(n, $('soloCapa').checked);
+    const z = formato.numero(capas.zCapa[n], 2);
+    $('textoCapa').textContent = `Capa ${n + 1}/${capas.total} · Z ${z} mm`;
+}
+
+$('capa').addEventListener('input', e => { pararReproduccion(); irACapa(Number(e.target.value)); });
+$('capaMenos').onclick = () => { pararReproduccion(); irACapa(Number($('capa').value) - 1); };
+$('capaMas').onclick = () => { pararReproduccion(); irACapa(Number($('capa').value) + 1); };
+$('soloCapa').onchange = () => irACapa(Number($('capa').value));
+
+// "Play": recorre todas las capas en unos 8 segundos (empieza de abajo si está al final).
+$('reproducir').onclick = () => {
+    if (reproduccion) return pararReproduccion();
+    if (!capas) return;
+    let n = Number($('capa').value);
+    if (n >= capas.total - 1) n = 0;
+    const paso = Math.max(1, Math.round(capas.total / 240));
+    $('reproducir').textContent = '❚❚';
+    $('reproducir').setAttribute('aria-label', 'Pausar');
+    reproduccion = setInterval(() => {
+        irACapa(n);
+        n += paso;
+        if (n >= capas.total) {
+            irACapa(capas.total - 1);
+            pararReproduccion();
+        }
+    }, 33);
+};
+
+function pararReproduccion() {
+    if (!reproduccion) return;
+    clearInterval(reproduccion);
+    reproduccion = null;
+    $('reproducir').textContent = '▶';
+    $('reproducir').setAttribute('aria-label', 'Reproducir');
 }
 
 // Usamos text/plain: varios celus no dejan compartir tipos "raros" como text/x-gcode.
