@@ -25,6 +25,8 @@
         <button data-caso="cubo">Cubo 20 mm</button>
         <button data-caso="te">"T" con voladizo</button>
         <button data-caso="esfera">Esfera de 1,2 M triángulos</button>
+        <button data-caso="esferaChica">Esfera chica</button>
+        <button data-caso="tubo">Tubo con agujero</button>
     </p>
     <p id="estado">Listo para probar.</p>
     <pre id="salida"></pre>
@@ -36,13 +38,15 @@
         // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
         window.ponerImpresorasPropias = ponerImpresorasPropias;
         import { maxTriangulos } from './src/config.js';
-        import { esfera, te } from './src/prueba/mallas.js';
+        import { esfera, te, tubo } from './src/prueba/mallas.js';
 
         const estado = document.getElementById('estado');
         const salida = document.getElementById('salida');
 
         async function obtenerSTL(caso) {
             if (caso === 'esfera') return esfera();
+            if (caso === 'esferaChica') return esfera(10, 30); // 20 mm, ~3600 triángulos
+            if (caso === 'tubo') return tubo();
             if (caso === 'te') return te();
             return (await fetch('ejemplos/cubo-20mm.stl')).arrayBuffer();
         }

@@ -257,6 +257,31 @@ try {
     await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
     revisar('de vuelta en PLA', (await fila('Calidad')).includes('PLA') && await pagina.isHidden('#avisoResultado'));
 
+    // --- Avanzado: volvemos un momento al paso 2 (el resultado queda) ---
+    // Elegimos opciones que no cambian lo que revisan las pruebas de abajo
+    // (temperaturas, retracción); se restablecen más abajo, después de recargar.
+    await pagina.goBack();
+    const resumenAv = () => pagina.textContent('#avanzado summary');
+    revisar('avanzado: sin cambios, resumen genérico', (await resumenAv()).startsWith('Avanzado: jarrón, costura'), await resumenAv());
+    await pagina.tap('#avanzado summary');
+    await pagina.tap('label.interruptor:has(#avJarron)');
+    revisar('avanzado: jarrón avisa y deshabilita el relleno', await visible('#avisoJarron') &&
+        await pagina.evaluate(() => document.getElementById('personalizar').classList.contains('sin-relleno')) &&
+        await pagina.isDisabled('#avAlturaVariable') && (await resumenAv()) === 'Avanzado: jarrón', await resumenAv());
+    await captura('2-avanzado-jarron');
+    await pagina.tap('label.interruptor:has(#avJarron)');
+    revisar('avanzado: apagar el jarrón vuelve a lo de fábrica', !(await visible('#avisoJarron')) &&
+        (await resumenAv()).startsWith('Avanzado: jarrón, costura'));
+    await pagina.tap('label.opcion:has(input[name="costura"][value="azar"])');
+    await pagina.locator('#avVelocidad').fill('80');
+    await pagina.locator('#avVentilador').fill('50');
+    revisar('avanzado: resumen con lo cambiado', (await resumenAv()) === 'Avanzado: costura al azar · velocidad 80 % · ventilador 50 %',
+        await resumenAv());
+    await pagina.locator('#avRestablecer').scrollIntoViewIfNeeded();
+    await captura('2-avanzado');
+    await pagina.goForward();
+    revisar('avanzado: adelante vuelve al resultado', await visible('section[data-paso="4"]'));
+
     // --- Vista previa capa por capa ---
     await pagina.waitForSelector('#controlCapas:not([hidden])', { timeout: 30000 });
     const textoCapa = () => pagina.textContent('#textoCapa');
@@ -443,6 +468,16 @@ try {
     await pagina.waitForSelector('#hojaMiImpresora', { state: 'hidden' });
     revisar('borrar la propia vuelve a la inicial', /Ender 3 V3 SE/.test(await pagina.textContent('#impresoraElegida')));
     revisar('se recuerda lo personalizado', (await pagina.textContent('#personalizar summary')).startsWith('Personalizado: Giroide'));
+    revisar('se recuerda lo avanzado', (await pagina.textContent('#avanzado summary')) ===
+        'Avanzado: costura al azar · velocidad 80 % · ventilador 50 %', await pagina.textContent('#avanzado summary'));
+    await pagina.tap('#avanzado summary');
+    revisar('avanzado: los controles muestran lo guardado', await pagina.isChecked('input[name="costura"][value="azar"]') &&
+        (await pagina.inputValue('#avVelocidad')) === '80' && (await pagina.textContent('#avVentiladorValor')) === '50 %');
+    await pagina.tap('#avRestablecer');
+    revisar('avanzado: volver a los valores de fábrica', (await pagina.textContent('#avanzado summary')).startsWith('Avanzado: jarrón, costura') &&
+        await pagina.isChecked('input[name="costura"][value="ultima"]') && (await pagina.inputValue('#avVelocidad')) === '100' &&
+        !(await visible('#avRestablecer')));
+    await pagina.tap('#avanzado summary');
     await pagina.tap('#personalizar summary');
     await pagina.tap('#restablecer');
     revisar('volver a los valores de la calidad', (await pagina.textContent('#personalizar summary')).startsWith('Personalizar'));

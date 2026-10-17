@@ -21,6 +21,7 @@ Parches (marcados con `PARCHE laminar-movil`):
 
 - `src/kiri/mode/fdm/work/export.js`: la macro `{fan_speed}` no se actualizaba cuando el ventilador cambia a mitad de capa (salía `M106 S0` y el ventilador quedaba apagado casi toda la impresión).
 - `src/kiri/mode/fdm/work/prepare.js`: el ventilador de "capa puente" no se aplica a la primera capa.
+- `src/kiri/mode/fdm/work/slice.js`: con altura de capa variable las capas quedaban sin altura (no subía Z) y se cortaban en el borde de arriba en vez del medio.
 - `src/ext/jspoly.js` tiene un parche mínimo (se apagan `require()` de CommonJS que nunca corren en el navegador).
 
 No editar a mano: para actualizar, correr `npm run vendor:kiri`.

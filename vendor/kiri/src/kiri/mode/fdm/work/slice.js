@@ -394,7 +394,7 @@ export function sliceOne(settings, widget, onupdate, ondone) {
             // adaptive slice height
             // first slice/height is fixed from base
             zHeights.push(zIncFirst);
-            zIndexes.push(zIncFirst);
+            zIndexes.push((zIncFirst / 2).round(3)); // PARCHE laminar-movil: mitad de la capa, redondeado
             // console.log({zIncFirst, zOrdered})
             while (zPos < zMax && zOI < zOrdered.length) {
                 nextZ = zOrdered[zOI++];
@@ -419,7 +419,7 @@ export function sliceOne(settings, widget, onupdate, ondone) {
                 // console.log({nextZ, zPos, zDelta, zStep, zDivMin, zDivMax})
                 while (zPos < nextZ) {
                     zHeights.push(zStep);
-                    zIndexes.push(zPos + zStep);
+                    zIndexes.push((zPos + zStep / 2).round(3)); // PARCHE laminar-movil: mitad de la capa, redondeado
                     zPos += zStep;
                     // console.log({D: zPos - lzp, zPos})
                     // lzp = zPos;

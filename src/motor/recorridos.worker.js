@@ -17,6 +17,7 @@ const DESVIO = 0.02;     // mm: cuánto se puede apartar de la recta el punto qu
 const LARGO_CURVA = 3;   // mm: largo máximo de un tramo unido que no es recto (para no aplanar curvas)
 
 import { TIPOS, CUANTIZADO } from './tipos-linea.js';
+import { MARCA as MARCA_ESPIRAL } from './espiral.js';
 
 const OTRO = TIPOS.length - 1;
 
@@ -51,7 +52,7 @@ export function leer(gcode, maxSegmentos) {
     const inicioCapa = [], zCapa = [];
     let x = 0, y = 0, z = 0, e = 0;
     let absoluto = true, eAbsoluto = true;
-    let tipo = OTRO, enPieza = false, capaZ = NaN, incompleta = false;
+    let tipo = OTRO, enPieza = false, capaZ = NaN, incompleta = false, vueltaNueva = false;
     let segmentos = 0;
     // último segmento guardado (para unir los alineados): inicio (sx, sy), fin (ux, uy)
     let sx = 0, sy = 0, ux = 0, uy = 0, uz = NaN, utipo = -1, recto = true;
@@ -73,6 +74,8 @@ export function leer(gcode, maxSegmentos) {
             if (linea.startsWith('; feature ')) {
                 tipo = tipoDe(linea.slice(10));
                 enPieza = true; // lo de antes (purga del G-code de inicio) no se dibuja
+            } else if (linea.startsWith(MARCA_ESPIRAL)) {
+                vueltaNueva = true; // modo jarrón: acá empieza otra vuelta (ver espiral.js)
             }
             continue;
         }
@@ -106,8 +109,11 @@ export function leer(gcode, maxSegmentos) {
             e = eAbsoluto ? ve : e + ve;
         }
         if (extruye && enPieza && (nx !== x || ny !== y)) {
-            // ¿Capa nueva? (cambió la altura a la que se extruye)
-            if (nz !== capaZ) {
+            // ¿Capa nueva? (cambió la altura a la que se extruye). En espiral la Z
+            // sube en cada tramo (la línea trae Z): ahí la capa la marca MARCA_ESPIRAL.
+            const enEspiral = !isNaN(vz);
+            if (vueltaNueva || (nz !== capaZ && !enEspiral) || isNaN(capaZ)) {
+                vueltaNueva = false;
                 // La pausa va antes del movimiento que subió Z (si fue después de la última
                 // extrusión de la capa anterior); si no, antes de esta línea.
                 pausaCapa.push(offCambioZ > offUltimaExtrusion ? offCambioZ : offLinea);

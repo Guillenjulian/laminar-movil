@@ -18,6 +18,7 @@ import { leerSTL } from './stl.js';
 import { decimar } from './decimar.js';
 import { aplicar, esIdentidad } from './transformar.js';
 import { usarMinionsLocales } from './minions-locales.js';
+import { espiralar } from './espiral.js';
 
 const { dispatch, minions } = self.kiri_worker;
 usarMinionsLocales(minions);
@@ -143,8 +144,10 @@ async function laminar(msg) {
     progreso('exportando', 1);
 
     const salida = fin.output || {};
+    // Modo jarrón: Kiri deja cada vuelta plana; la convertimos en espiral.
+    const gcode = proceso.sliceFillType === 'vase' ? espiralar(lineas.join('\n')) : lineas.join('\n');
     return {
-        gcode: lineas.join('\n'),
+        gcode,
         info: {
             tiempo: salida.time,          // segundos estimados
             filamento: salida.distance,   // mm de filamento

@@ -42,3 +42,24 @@ function caja(x0, y0, z0, x1, y1, z1) {
 export function te() {
     return aSTL(new Float32Array([...caja(-5, -5, 0, 5, 5, 20), ...caja(-25, -5, 20, 25, 5, 23)]));
 }
+
+// Tubo de sección cuadrada: lado exterior `lado`, agujero cuadrado de `hueco`,
+// alto `alto` (mm). Malla cerrada, para probar la compensación de agujeros y
+// contorno y el modo jarrón.
+export function tubo(lado = 20, hueco = 10, alto = 10) {
+    const a = lado / 2, b = hueco / 2;
+    // 4 esquinas (sentido antihorario visto desde arriba) a una altura z
+    const cuadrado = (r, z) => [[-r, -r, z], [r, -r, z], [r, r, z], [-r, r, z]];
+    const afuera0 = cuadrado(a, 0), afuera1 = cuadrado(a, alto);
+    const adentro0 = cuadrado(b, 0), adentro1 = cuadrado(b, alto);
+    const t = [];
+    const quad = (p, q, r, s) => t.push(...p, ...q, ...r, ...p, ...r, ...s);
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        quad(afuera0[i], afuera0[j], afuera1[j], afuera1[i]);       // pared de afuera
+        quad(adentro0[j], adentro0[i], adentro1[i], adentro1[j]);   // pared del agujero (mirando adentro)
+        quad(afuera1[i], afuera1[j], adentro1[j], adentro1[i]);     // tapa (anillo de arriba)
+        quad(afuera0[j], afuera0[i], adentro0[i], adentro0[j]);     // fondo (anillo de abajo)
+    }
+    return aSTL(new Float32Array(t));
+}
