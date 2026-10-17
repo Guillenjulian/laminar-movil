@@ -1,0 +1,196 @@
+/* Estilos mobile-first. Botones grandes (mín. 56 px) y acciones abajo para usar con una mano. */
+
+:root {
+    --acento: #f08a24;
+    --acento-texto: #1a1100;
+    --fondo: #f6f7f9;
+    --tarjeta: #ffffff;
+    --texto: #1c2026;
+    --suave: #5d6673;
+    --borde: #d9dee5;
+    --aviso: #fff4d6;
+    --aviso-borde: #e8b931;
+    --error: #ffe1e1;
+    --error-borde: #d04848;
+    --radio: 14px;
+    color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fondo: #14171c;
+        --tarjeta: #1f242b;
+        --texto: #eef1f5;
+        --suave: #a3adba;
+        --borde: #343b45;
+        --aviso: #3a3018;
+        --aviso-borde: #b8902a;
+        --error: #401c1c;
+        --error-borde: #c05050;
+    }
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font: 17px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    -webkit-tap-highlight-color: transparent;
+}
+
+[hidden] { display: none !important; }
+
+/* --- Barra superior --- */
+.barra {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+    background: var(--tarjeta);
+    border-bottom: 1px solid var(--borde);
+}
+.barra h1 { font-size: 1.1rem; margin: 0; flex: 1; }
+.atras {
+    width: 44px; height: 44px; margin-left: -8px;
+    font-size: 2rem; line-height: 1;
+    border: 0; background: none; color: var(--texto);
+}
+.pasos { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.pasos li {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 0.8rem; font-weight: 600;
+    background: var(--borde); color: var(--suave);
+}
+.pasos li.hecho { background: color-mix(in srgb, var(--acento) 40%, transparent); color: var(--texto); }
+.pasos li.actual { background: var(--acento); color: var(--acento-texto); }
+
+/* --- Contenido --- */
+main { flex: 1; overflow-y: auto; }
+.pantalla { padding: 16px; max-width: 640px; margin: 0 auto; }
+.pantalla.centrada { text-align: center; padding-top: 12vh; }
+h2 { font-size: 1.25rem; margin: 18px 0 10px; }
+h2:first-child { margin-top: 4px; }
+.nota { color: var(--suave); font-size: 0.9rem; }
+
+.sin-modelo { display: flex; flex-direction: column; gap: 14px; padding-top: 6vh; text-align: center; }
+.cargando { text-align: center; color: var(--suave); }
+
+/* --- Visor 3D --- */
+.visor {
+    position: relative;
+    height: 52vh;
+    min-height: 260px;
+    border-radius: var(--radio);
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    overflow: hidden;
+    touch-action: none; /* los gestos los maneja el visor, no el scroll de la página */
+}
+.visor canvas { width: 100%; height: 100%; display: block; }
+.ayuda-gestos {
+    position: absolute; left: 0; right: 0; bottom: 6px; margin: 0;
+    text-align: center; font-size: 0.75rem; color: var(--suave);
+    pointer-events: none;
+}
+.ficha { padding: 12px 2px 0; }
+.ficha p { margin: 2px 0; }
+.ficha .nombre { font-weight: 600; word-break: break-all; }
+
+/* --- Avisos --- */
+.aviso {
+    margin: 12px 0;
+    padding: 12px 14px;
+    border-radius: var(--radio);
+    background: var(--aviso);
+    border: 1px solid var(--aviso-borde);
+    text-align: left;
+    font-size: 0.95rem;
+}
+.aviso.error { background: var(--error); border-color: var(--error-borde); }
+
+/* --- Botones --- */
+.boton {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 18px;
+    border-radius: var(--radio);
+    border: 1px solid var(--borde);
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: inherit; font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+.boton.grande { min-height: 56px; font-size: 1.1rem; }
+.boton.chico { width: auto; min-height: 40px; display: inline-flex; margin-top: 10px; font-size: 0.95rem; }
+.boton.primario { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
+.boton.enlace { border: 0; background: none; color: var(--suave); font-weight: 500; }
+.boton:active { transform: scale(0.98); }
+.boton:disabled { opacity: 0.45; }
+
+/* --- Opciones de a una por renglón (sin menús anidados) --- */
+.opciones { display: flex; flex-direction: column; gap: 8px; }
+.opcion {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 56px;
+    padding: 10px 14px;
+    border-radius: var(--radio);
+    border: 2px solid var(--borde);
+    background: var(--tarjeta);
+    cursor: pointer;
+}
+.opcion input { width: 22px; height: 22px; accent-color: var(--acento); margin: 0; flex: none; }
+.opcion small { color: var(--suave); }
+.opcion:has(input:checked) { border-color: var(--acento); }
+
+.interruptor {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    margin-top: 20px; padding: 12px 14px;
+    border-radius: var(--radio); background: var(--tarjeta); border: 1px solid var(--borde);
+}
+.interruptor small { color: var(--suave); }
+.interruptor input {
+    appearance: none; flex: none;
+    width: 52px; height: 32px; border-radius: 16px;
+    background: var(--borde); position: relative; transition: background 0.2s;
+}
+.interruptor input::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 26px; height: 26px; border-radius: 50%; background: #fff;
+    transition: transform 0.2s;
+}
+.interruptor input:checked { background: var(--acento); }
+.interruptor input:checked::after { transform: translateX(20px); }
+
+/* --- Progreso --- */
+.progreso {
+    height: 18px; border-radius: 9px; overflow: hidden;
+    background: var(--borde); margin: 24px 0 8px;
+}
+.relleno { height: 100%; width: 0; background: var(--acento); transition: width 0.3s; }
+.porcentaje { font-size: 2.4rem; font-weight: 700; margin: 8px 0; font-variant-numeric: tabular-nums; }
+
+/* --- Resumen --- */
+.resumen {
+    display: grid; grid-template-columns: auto 1fr; gap: 10px 16px;
+    margin: 0; padding: 16px;
+    background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio);
+}
+.resumen dt { color: var(--suave); }
+.resumen dd { margin: 0; font-weight: 600; text-align: right; }
+
+/* --- Acciones abajo --- */
+.acciones {
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px);
+    background: var(--tarjeta);
+    border-top: 1px solid var(--borde);
+}
+.acciones > div { display: flex; flex-direction: column; gap: 8px; max-width: 640px; margin: 0 auto; }

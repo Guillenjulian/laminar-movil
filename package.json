@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "vendor:kiri": "node scripts/vendor-kiri.mjs",
-    "test:motor": "node scripts/probar-motor.mjs"
+    "test:motor": "node scripts/probar-motor.mjs",
+    "test:app": "node scripts/probar-app.mjs"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",
