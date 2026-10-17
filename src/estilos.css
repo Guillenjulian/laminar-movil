@@ -103,6 +103,21 @@ h2:first-child { margin-top: 4px; }
 .ficha p { margin: 2px 0; }
 .ficha .nombre { font-weight: 600; word-break: break-all; }
 
+/* --- Ajustes del modelo en la cama --- */
+.ajustes-modelo { margin: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+.fila-escala { display: flex; align-items: center; gap: 8px; }
+.fila-escala label { flex: 1; font-weight: 600; }
+.fila-escala input {
+    width: 5.5em; min-height: 48px; padding: 6px 8px; text-align: right;
+    border-radius: 10px; border: 1px solid var(--borde); background: var(--tarjeta); color: var(--texto);
+    font: inherit; font-size: 1.05rem; font-variant-numeric: tabular-nums;
+}
+.botones-modelo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.botones-modelo .boton { min-height: 48px; padding: 6px; font-size: 0.95rem; }
+.botones-modelo #apoyarCara, .botones-modelo #ajustarCama, .botones-modelo #restablecerModelo { grid-column: span 3; }
+.boton.activo { border-color: var(--acento); background: color-mix(in srgb, var(--acento) 18%, transparent); }
+.ajustes-modelo .aviso { margin: 0; }
+
 /* --- Avisos --- */
 .aviso {
     margin: 12px 0;

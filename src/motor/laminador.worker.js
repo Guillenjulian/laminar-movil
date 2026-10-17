@@ -5,7 +5,8 @@
 // self.kiri_worker.dispatch) y lo llamamos directamente, sin su cliente de UI.
 //
 // Mensajes que recibe:
-//   { tipo: 'laminar', stl: ArrayBuffer, dispositivo: {...}, proceso: {...}, maxTriangulos }
+//   { tipo: 'laminar', stl: ArrayBuffer, dispositivo: {...}, proceso: {...}, maxTriangulos,
+//     transformacion?: matriz 3×3 de 9 números (ver transformar.js) }
 // Mensajes que manda:
 //   { tipo: 'progreso', etapa: 'leyendo'|'reduciendo'|'laminando'|'preparando'|'exportando', valor: 0..1 }
 //   { tipo: 'listo', gcode: string, info: { tiempo, filamento, capas, triangulos, tamano, decimado } }
@@ -15,6 +16,7 @@ import '../../vendor/kiri/src/kiri/run/worker.js';
 import { conf } from '../../vendor/kiri/src/kiri/app/conf/defaults.js';
 import { leerSTL } from './stl.js';
 import { decimar } from './decimar.js';
+import { aplicar, esIdentidad } from './transformar.js';
 import { usarMinionsLocales } from './minions-locales.js';
 
 const { dispatch, minions } = self.kiri_worker;
@@ -86,10 +88,16 @@ function progreso(etapa, valor) {
 }
 
 async function laminar(msg) {
-    const { dispositivo, proceso, maxTriangulos = Infinity } = msg;
+    const { dispositivo, proceso, maxTriangulos = Infinity, transformacion } = msg;
     progreso('leyendo', 0);
     let vertices = leerSTL(msg.stl);
     msg.stl = null; // soltar el archivo original lo antes posible
+
+    // Escala y rotaciones que eligió el usuario. Van antes de decimar y de
+    // centrar: así la validación de tamaño ya mide el modelo transformado.
+    if (transformacion && !esIdentidad(transformacion)) {
+        aplicar(transformacion, vertices);
+    }
 
     // Si la malla es muy pesada para el equipo, la simplificamos antes de laminar.
     let decimado = null;

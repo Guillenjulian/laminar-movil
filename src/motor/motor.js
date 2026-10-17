@@ -40,9 +40,12 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
 
 // Lamina un STL. Devuelve { gcode, info }.
 // Ojo: `stl` se transfiere al worker (sin copiarlo) y queda vacío acá.
-export async function laminar({ stl, dispositivo, proceso, maxTriangulos, alProgresar, signal }) {
+// `transformacion` (opcional): matriz 3×3 de 9 números, fila por fila, con la
+// escala y rotación del modelo (ver transformar.js). El worker la aplica antes
+// de centrar el modelo en la cama.
+export async function laminar({ stl, dispositivo, proceso, maxTriangulos, transformacion, alProgresar, signal }) {
     const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
-    const r = await correr(worker, { tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos }, [stl],
+    const r = await correr(worker, { tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos, transformacion }, [stl],
         { alProgresar, signal });
     return { gcode: r.gcode, info: r.info };
 }

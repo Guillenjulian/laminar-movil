@@ -46,7 +46,7 @@
         }
 
         // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
-        window.probar = async ({ caso = 'cubo', impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', soportes = false, personal = {}, limite } = {}) => {
+        window.probar = async ({ caso = 'cubo', impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', soportes = false, personal = {}, limite, transformacion } = {}) => {
             const stl = await obtenerSTL(caso);
             const { dispositivo, proceso, avisos } = armarConfiguracion({
                 impresoraId,
@@ -58,6 +58,7 @@
             const r = await laminar({
                 stl, dispositivo, proceso,
                 maxTriangulos: limite ?? maxTriangulos(),
+                transformacion,
                 alProgresar: (etapa, valor) => estado.textContent = `${etapa} ${Math.round(valor * 100)}%`,
             });
             r.ms = Math.round(performance.now() - inicio);

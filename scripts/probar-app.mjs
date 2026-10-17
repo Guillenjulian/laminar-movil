@@ -9,7 +9,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { esfera } from '../src/prueba/mallas.js';
+import { esfera, te } from '../src/prueba/mallas.js';
 
 function buscarChromium() {
     if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
@@ -28,6 +28,8 @@ fs.mkdirSync(CAPTURAS, { recursive: true });
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'laminar-'));
 const stlPesado = path.join(tmp, 'esfera-pesada.stl');
 fs.writeFileSync(stlPesado, Buffer.from(esfera()));
+const stlTe = path.join(tmp, 'te.stl'); // columna de 10×10×20 con una tapa de 50×10×3 arriba
+fs.writeFileSync(stlTe, Buffer.from(te()));
 
 const servidor = await preview({ preview: { port: 4174 } });
 const url = servidor.resolvedUrls.local[0];
@@ -317,6 +319,61 @@ try {
     await pagina.tap('[data-borrar]:near(.reciente:has-text("esfera-pesada.stl"))');
     await pagina.waitForFunction(() => ![...document.querySelectorAll('.reciente b')].some(b => b.textContent === 'esfera-pesada.stl'));
     revisar('borrar un reciente', true);
+
+    // --- Modelo en la cama: escala, rotar, apoyar cara ---
+    await pagina.goBack();
+    await elegirArchivo('public/ejemplos/cubo-20mm.stl');
+    const medidas = () => pagina.textContent('#datosModelo').then(t => t.split(' · ')[0]);
+    await pagina.tap('#escalaMas');
+    revisar('escala +10 %', (await medidas()) === '22,0 × 22,0 × 22,0 mm' && (await pagina.inputValue('#escala')) === '110', await medidas());
+    await pagina.fill('#escala', '200');
+    await pagina.press('#escala', 'Enter');
+    await pagina.locator('#escala').blur();
+    revisar('escala escrita a mano (200 %)', (await medidas()) === '40,0 × 40,0 × 40,0 mm', await medidas());
+    await pagina.tap('#restablecerModelo');
+    revisar('restablecer', (await medidas()) === '20,0 × 20,0 × 20,0 mm' && await pagina.isHidden('#restablecerModelo'));
+
+    await pagina.fill('#escala', '2000');
+    await pagina.locator('#escala').blur();
+    revisar('modelo que no entra: aviso y botón', /No entra/.test(await pagina.textContent('#avisoModelo')) && await pagina.isVisible('#ajustarCama'));
+    await pagina.tap('#ajustarCama');
+    const ajustada = parseFloat((await medidas()).replace(',', '.'));
+    revisar('"Achicar para que entre" lo ajusta', ajustada <= 220 && ajustada > 200 && await pagina.isHidden('#avisoModelo'), await medidas());
+    await pagina.tap('#restablecerModelo');
+
+    await elegirArchivo(stlTe);
+    revisar('la T original', (await medidas()) === '50,0 × 10,0 × 23,0 mm', await medidas());
+    await pagina.tap('[data-rotar="x"]');
+    revisar('rotar 90° en X', (await medidas()) === '50,0 × 23,0 × 10,0 mm', await medidas());
+    await pagina.tap('[data-rotar="x"]');
+    await pagina.tap('[data-rotar="x"]');
+    await pagina.tap('[data-rotar="x"]');
+    revisar('4 rotaciones vuelven al original', (await medidas()) === '50,0 × 10,0 × 23,0 mm', await medidas());
+
+    // Apoyar cara: tocando el centro del visor el rayo pega en el frente de la columna.
+    await pagina.tap('#apoyarCara');
+    revisar('modo apoyar cara', await pagina.isVisible('#ayudaCara') && (await pagina.textContent('#apoyarCara')) === 'Cancelar');
+    const lienzo = await pagina.locator('#visor canvas').boundingBox();
+    await pagina.touchscreen.tap(lienzo.x + lienzo.width / 2, lienzo.y + lienzo.height / 2);
+    await pagina.waitForFunction(() => document.getElementById('ayudaCara').hidden, null, { timeout: 5000 });
+    revisar('apoyar la cara del frente acuesta la T', (await medidas()) === '50,0 × 23,0 × 10,0 mm', await medidas());
+    await captura('1-apoyar-cara');
+
+    // Laminar la T acostada y a mitad de tamaño: el G-code tiene que respetarlo.
+    await pagina.fill('#escala', '50');
+    await pagina.locator('#escala').blur();
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
+    revisar('el resumen usa el tamaño transformado', (await pagina.textContent('#resumen')).includes('25,0 × 11,5 × 5,0 mm'));
+    const [desc3] = await Promise.all([pagina.waitForEvent('download'), pagina.tap('#descargar')]);
+    const gT = fs.readFileSync(await desc3.path(), 'utf8').split('\n');
+    const fin = gT.findIndex(l => l.startsWith('; --- Fin'));   // el G-code de fin sube Z en relativo
+    const zT = gT.slice(0, fin).map(l => l.match(/^G1 Z([\d.]+)/)).filter(Boolean).map(m => +m[1]);
+    const zPieza = Math.max(...zT);
+    revisar('G-code de la T acostada al 50 %: 5 mm de alto', Math.abs(zPieza - 5) < 0.3, `Z máx ${zPieza}`);
+    await pagina.goBack();
+    await pagina.goBack();
 
     // --- PWA: instalable y sin conexión ---
     const manifest = await pagina.evaluate(async () => (await fetch(document.querySelector('link[rel=manifest]').href)).json());

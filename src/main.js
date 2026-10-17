@@ -3,6 +3,7 @@
 import { laminar, leerParaVista, leerRecorridos } from './motor/motor.js';
 import { TIPOS, COLORES_FILAMENTO } from './motor/tipos-linea.js';
 import { insertarPausas } from './motor/pausas.js';
+import * as transformar from './motor/transformar.js';
 import {
     listaImpresoras, buscarImpresora, existeImpresora, ponerImpresorasPropias, IMPRESORA_INICIAL,
     materiales, opciones, armarConfiguracion, valoresDeCalidad, lineasPausa,
@@ -20,7 +21,10 @@ const estado = {
     paso: 1,
     nombre: '',          // nombre del archivo STL
     stl: null,           // ArrayBuffer original (se copia en cada laminado)
-    vista: null,         // { triangulos, tamano }
+    vista: null,         // { triangulos, tamano } (tamaño original, sin transformar)
+    rotacion: transformar.identidad(), // rotaciones del modelo en la cama (matriz 3×3)
+    escala: 1,           // escala uniforme (1 = 100 %)
+    eligiendoCara: false,
     impresoraId: IMPRESORA_INICIAL,
     propias: [],         // datos de "Mi impresora" (guardados en el celu)
     calidad: 'normal',
@@ -106,6 +110,8 @@ async function cargarArchivo(nombre, buffer, { guardar = true } = {}) {
         estado.stl = buffer;
         estado.vista = { triangulos, tamano };
         estado.resultado = null;
+        estado.rotacion = transformar.identidad();
+        estado.escala = 1;
 
         $('conModelo').hidden = false;
         if (!visor) visor = crearVisor($('visor'));
@@ -114,8 +120,8 @@ async function cargarArchivo(nombre, buffer, { guardar = true } = {}) {
         visor.ponerModelo(vertices);
 
         $('nombreModelo').textContent = nombre;
-        $('datosModelo').textContent = `${formato.milimetros(tamano)} · ${formato.triangulos(triangulos)}`;
-        actualizarAvisoModelo();
+        activarElegirCara(false);
+        aplicarTransformacion();
         $('siguiente').disabled = false;
 
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
@@ -132,14 +138,17 @@ async function cargarArchivo(nombre, buffer, { guardar = true } = {}) {
 // Avisos sobre el modelo: si es muy pesado (se va a simplificar) o si no entra en la cama.
 function actualizarAvisoModelo() {
     if (!estado.vista) return;
-    const { triangulos, tamano } = estado.vista;
+    const { triangulos } = estado.vista;
+    const tamano = tamanoActual();
     const imp = buscarImpresora(estado.impresoraId);
     const d = imp.dispositivo;
     const avisos = [];
-    if (tamano.x > d.bedWidth || tamano.y > d.bedDepth || tamano.z > d.maxHeight) {
+    const noEntra = tamano.x > d.bedWidth || tamano.y > d.bedDepth || tamano.z > d.maxHeight;
+    if (noEntra) {
         avisos.push(`<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
-            'Achicalo o rotalo en tu programa de diseño.');
+            'Rotalo o achicalo con los botones de abajo.');
     }
+    $('ajustarCama').hidden = !noEntra;
     const max = maxTriangulos();
     if (triangulos > max) {
         avisos.push(`<b>Modelo pesado:</b> tiene ${formato.triangulos(triangulos)}. Para que el celu no se quede ` +
@@ -205,6 +214,75 @@ $('ejemplo').onclick = async () => {
 };
 
 $('siguiente').onclick = () => irA(2);
+
+// --- Modelo en la cama: escala, rotaciones y "apoyar cara" ---
+
+// Matriz final: primero las rotaciones, después la escala.
+function matrizModelo() {
+    return transformar.multiplicar(transformar.escala(estado.escala), estado.rotacion);
+}
+
+// Tamaño del modelo como va a quedar en la cama.
+function tamanoActual() {
+    return visor?.tamanoModelo() || estado.vista.tamano;
+}
+
+function aplicarTransformacion() {
+    visor.ponerTransformacion(matrizModelo());
+    const pct = Math.round(estado.escala * 1000) / 10;
+    $('escala').value = pct;
+    $('datosModelo').textContent = `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
+    $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
+    actualizarAvisoModelo();
+}
+
+function ponerEscala(s) {
+    if (!(s > 0)) return;
+    estado.escala = Math.min(20, Math.max(0.01, s));
+    aplicarTransformacion();
+}
+
+$('escalaMenos').onclick = () => ponerEscala(Math.round(estado.escala * 10 - 1) / 10 || 0.05);
+$('escalaMas').onclick = () => ponerEscala(Math.round(estado.escala * 10 + 1) / 10);
+$('escala').addEventListener('change', e => ponerEscala(Number(e.target.value) / 100));
+
+document.querySelectorAll('[data-rotar]').forEach(b => {
+    b.onclick = () => {
+        estado.rotacion = transformar.multiplicar(transformar.rotacion90(b.dataset.rotar), estado.rotacion);
+        aplicarTransformacion();
+    };
+});
+
+// "Achicar para que entre": la escala más grande que entra en la cama (con un 2 % de margen).
+$('ajustarCama').onclick = () => {
+    const d = buscarImpresora(estado.impresoraId).dispositivo;
+    const t = tamanoActual(), s = estado.escala;
+    const factor = Math.min(d.bedWidth / t.x, d.bedDepth / t.y, d.maxHeight / t.z) * 0.98;
+    ponerEscala(Math.floor(s * factor * 100) / 100);
+};
+
+$('restablecerModelo').onclick = () => {
+    estado.rotacion = transformar.identidad();
+    estado.escala = 1;
+    activarElegirCara(false);
+    aplicarTransformacion();
+};
+
+// "Apoyar cara": el usuario toca una cara y el modelo gira para que quede sobre la cama.
+function activarElegirCara(activo) {
+    estado.eligiendoCara = activo;
+    $('apoyarCara').classList.toggle('activo', activo);
+    $('apoyarCara').textContent = activo ? 'Cancelar' : 'Apoyar cara';
+    $('ayudaCara').hidden = !activo;
+    visor?.elegirCara(activo, normal => {
+        // La normal viene en coordenadas de la impresora; la escala es uniforme, así
+        // que alcanza con agregar la rotación que la lleva hacia abajo.
+        estado.rotacion = transformar.multiplicar(transformar.rotacionQueApoya(normal), estado.rotacion);
+        activarElegirCara(false);
+        aplicarTransformacion();
+    });
+}
+$('apoyarCara').onclick = () => activarElegirCara(!estado.eligiendoCara);
 
 // ---------------------------------------------------------------------------
 // Paso 2: impresora, calidad, material y soportes (todo en una sola pantalla)
@@ -566,6 +644,7 @@ async function empezarLaminado() {
             stl: estado.stl.slice(0), // copia: el original queda para volver a laminar
             dispositivo, proceso,
             maxTriangulos: maxTriangulos(),
+            transformacion: matrizModelo(),
             alProgresar: ponerProgreso,
             signal: estado.cancelar.signal,
         });

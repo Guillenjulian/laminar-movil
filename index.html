@@ -49,6 +49,27 @@
                     <p class="nombre" id="nombreModelo"></p>
                     <p id="datosModelo"></p>
                     <div class="aviso" id="avisoModelo" hidden></div>
+
+                    <!-- Ajustes del modelo en la cama -->
+                    <div class="ajustes-modelo">
+                        <div class="fila-escala">
+                            <label for="escala">Escala</label>
+                            <button type="button" class="boton-capa" id="escalaMenos" aria-label="Achicar 10 %">−</button>
+                            <input type="number" id="escala" inputmode="decimal" min="1" max="2000" step="1" value="100" aria-label="Escala en por ciento">
+                            <span>%</span>
+                            <button type="button" class="boton-capa" id="escalaMas" aria-label="Agrandar 10 %">+</button>
+                        </div>
+                        <div class="botones-modelo">
+                            <button type="button" class="boton" data-rotar="x">↻ X 90°</button>
+                            <button type="button" class="boton" data-rotar="y">↻ Y 90°</button>
+                            <button type="button" class="boton" data-rotar="z">↻ Z 90°</button>
+                            <button type="button" class="boton" id="apoyarCara">Apoyar cara</button>
+                            <button type="button" class="boton" id="ajustarCama" hidden>Achicar para que entre</button>
+                            <button type="button" class="boton" id="restablecerModelo" hidden>Restablecer</button>
+                        </div>
+                        <p class="aviso" id="ayudaCara" hidden>Tocá la cara del modelo que querés apoyar sobre la cama.</p>
+                    </div>
+
                     <button class="boton chico" id="otroModelo">Elegir otro modelo</button>
                 </div>
             </div>

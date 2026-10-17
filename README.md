@@ -18,6 +18,8 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
 ## Qué hace
 
 1. **Subir STL** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
+   **Acomodar el modelo en la cama**: escala (%), rotar de a 90° en X/Y/Z, **apoyar cara** (tocás una
+   cara y queda sobre la cama) y "Achicar para que entre" si es más grande que la cama.
 2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
    En **Personalizar**: patrón de relleno (panal, cuadrícula, giroide, cúbico, triángulos, líneas),
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
@@ -57,6 +59,7 @@ Pruebas automáticas (usan Chromium; en otra máquina definí `CHROMIUM_PATH`):
 ```bash
 npm run build
 npm run test:motor   # lamina mallas de prueba y valida el G-code (perfil, calidades, soportes, malla de 1,2 M triángulos)
+npm run test:transformar  # matrices de escala/rotación (Node, sin navegador)
 npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
 ```
 
@@ -132,6 +135,7 @@ src/motor/decimar.js        Simplificación de malla (agrupamiento en grilla)
 src/motor/minions-locales.js  Soportes de Kiri sin su pool de sub-workers
 src/motor/recorridos.worker.js  Lee el G-code para la vista previa capa por capa (y dónde pausar)
 src/motor/pausas.js         Inserta las pausas de cambio de filamento al descargar
+src/motor/transformar.js    Matrices 3×3: escala, rotaciones y "apoyar cara" (las usa el laminador)
 src/perfiles/               Impresoras, materiales y opciones en JSON; generico.js arma
                             calidades y perfiles a partir de pocos datos
 scripts/importar-impresoras-kiri.mjs  Trae los perfiles de impresoras de Kiri:Moto
