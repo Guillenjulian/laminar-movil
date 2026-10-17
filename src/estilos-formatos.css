@@ -1,0 +1,22 @@
+/* Estilos de "más formatos" (OBJ, 3MF) y de la hoja "Litofanía desde una foto". */
+
+/* Botón chico debajo del ejemplo, centrado. */
+.sin-modelo .boton-foto { align-self: center; margin-top: 0; }
+
+/* Vista de la foto elegida. */
+.foto-litofania {
+    margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.foto-litofania img {
+    display: block; height: min(28vh, 220px); width: auto; max-width: 100%; object-fit: contain;
+    border-radius: 10px; border: 1px solid var(--borde); background: #fff;
+}
+.foto-litofania figcaption { font-size: 0.85rem; color: var(--suave); word-break: break-all; }
+
+/* Dentro del formulario las etiquetas van en columna; las opciones de tipo, en fila. */
+.formulario label.opcion {
+    flex-direction: row; align-items: center; gap: 12px;
+    font-size: 1rem; color: var(--texto);
+}
+.formulario label.opcion input { width: 22px; height: 22px; min-height: 0; padding: 0; }
+#formLitofania .nota { margin: 0; }

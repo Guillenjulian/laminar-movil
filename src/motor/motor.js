@@ -63,3 +63,22 @@ export async function leerRecorridos(gcode, maxSegmentos) {
     const worker = new Worker(new URL('./recorridos.worker.js', import.meta.url), { type: 'module' });
     return correr(worker, { gcode, maxSegmentos }, []);
 }
+
+// Convierte un OBJ o un 3MF a STL binario (en un worker). Devuelve { stl: ArrayBuffer }.
+// Si el archivo está roto, la promesa se rechaza con un mensaje en castellano.
+// También transfiere `buffer`.
+export async function convertirAStl(nombre, buffer) {
+    const worker = new Worker(new URL('./convertir.worker.js', import.meta.url), { type: 'module' });
+    const r = await correr(worker, { tipo: 'convertir', nombre, buffer }, [buffer]);
+    return { stl: r.stl };
+}
+
+// Arma una litofanía (o relieve) a partir de una imagen en escala de grises
+// (ver litofania.js). Devuelve { stl: ArrayBuffer }. Transfiere `grises`.
+export async function litofaniaAStl({ grises, ancho, alto, anchoMm, minMm, maxMm, tipo, marco }) {
+    const worker = new Worker(new URL('./convertir.worker.js', import.meta.url), { type: 'module' });
+    const r = await correr(worker, {
+        tipo: 'litofania', grises, ancho, alto, anchoMm, minMm, maxMm, tipoLitofania: tipo, marco,
+    }, [grises.buffer]);
+    return { stl: r.stl };
+}

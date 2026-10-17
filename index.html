@@ -10,6 +10,7 @@
     <meta name="description" content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión.">
     <title>Laminar Móvil</title>
     <link rel="stylesheet" href="./src/estilos.css">
+    <link rel="stylesheet" href="./src/estilos-formatos.css">
 </head>
 <body>
     <header class="barra">
@@ -30,12 +31,16 @@
         <section class="pantalla" data-paso="1">
             <div class="sin-modelo" id="sinModelo">
                 <h2>Subí tu modelo</h2>
-                <p>Elegí un archivo <b>.stl</b> del celu. Todo se procesa acá, no se sube a ningún lado.</p>
+                <p>Elegí un archivo <b>STL, OBJ o 3MF</b> del celu. Todo se procesa acá, no se sube a ningún lado.</p>
                 <label class="boton grande primario">
-                    Elegir archivo STL
-                    <input type="file" id="archivo" accept=".stl,model/stl,application/sla,application/vnd.ms-pki.stl" hidden>
+                    Elegir archivo
+                    <input type="file" id="archivo" accept=".stl,.obj,.3mf,model/stl,application/sla,application/vnd.ms-pki.stl,model/obj,model/3mf,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,image/png,image/jpeg,image/webp" hidden>
                 </label>
                 <button class="boton" id="ejemplo">Probar con un cubo de ejemplo</button>
+                <label class="boton chico boton-foto">
+                    Litofanía desde una foto
+                    <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" hidden>
+                </label>
                 <div id="recientes" hidden>
                     <h2>Recientes</h2>
                     <ul class="recientes" id="listaRecientes"></ul>
@@ -265,6 +270,45 @@
             <p class="aviso error" id="errorImpresora" hidden></p>
             <button type="submit" class="boton grande primario">Guardar impresora</button>
             <button type="button" class="boton enlace" id="borrarImpresora" hidden>Borrar esta impresora</button>
+        </form>
+    </section>
+
+    <section class="hoja" id="hojaLitofania" hidden aria-label="Litofanía desde una foto">
+        <header class="barra">
+            <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+            <h1>Litofanía desde una foto</h1>
+        </header>
+        <form class="contenido-hoja formulario" id="formLitofania" novalidate>
+            <figure class="foto-litofania">
+                <img id="fotoLitofania" alt="Foto elegida">
+                <figcaption id="nombreFoto"></figcaption>
+            </figure>
+
+            <fieldset>
+                <legend>Tipo</legend>
+                <label class="opcion">
+                    <input type="radio" name="tipo" value="litofania" checked>
+                    <span><b>Litofanía</b><br><small>Lo oscuro queda grueso: se ve a contraluz.</small></span>
+                </label>
+                <label class="opcion">
+                    <input type="radio" name="tipo" value="relieve">
+                    <span><b>Relieve</b><br><small>Lo claro queda alto.</small></span>
+                </label>
+            </fieldset>
+
+            <fieldset>
+                <legend>Medidas (mm)</legend>
+                <label>Ancho <input name="ancho" type="number" inputmode="decimal" min="10" max="500" step="1" value="100" required></label>
+                <div class="dos">
+                    <label>Espesor mínimo <input name="minimo" type="number" inputmode="decimal" min="0.2" max="50" step="0.1" value="0.8" required></label>
+                    <label>Espesor máximo <input name="maximo" type="number" inputmode="decimal" min="0.2" max="50" step="0.1" value="3.2" required></label>
+                </div>
+                <label class="tilde"><input type="checkbox" name="marco"> Agregar un marco de 2 mm</label>
+                <p class="nota">Va a medir <b id="medidasLitofania"></b> (el alto sale de la proporción de la foto).</p>
+            </fieldset>
+
+            <p class="aviso error" id="errorLitofania" hidden></p>
+            <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
         </form>
     </section>
 

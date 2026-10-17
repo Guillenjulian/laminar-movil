@@ -1,6 +1,6 @@
 // Lógica de la app: 4 pasos (subir → configurar → laminar → listo).
 
-import { laminar, leerParaVista, leerRecorridos } from './motor/motor.js';
+import { laminar, leerParaVista, leerRecorridos, convertirAStl } from './motor/motor.js';
 import { TIPOS, COLORES_FILAMENTO } from './motor/tipos-linea.js';
 import { insertarPausas } from './motor/pausas.js';
 import * as transformar from './motor/transformar.js';
@@ -14,6 +14,7 @@ import { maxTriangulos, maxSegmentosVista } from './config.js';
 import { crearVisor } from './ui/visor.js';
 import * as formato from './ui/formato.js';
 import * as almacen from './almacen.js';
+import { tipoArchivo, prepararLitofania } from './ui/litofania.js';
 
 const $ = id => document.getElementById(id);
 
@@ -50,6 +51,7 @@ let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
 function mostrar(paso, hoja = null) {
     $('hojaImpresoras').hidden = hoja !== 'impresoras';
     $('hojaMiImpresora').hidden = hoja !== 'mi';
+    $('hojaLitofania').hidden = hoja !== 'litofania';
     if (paso === estado.paso && estado.yaMostrado) return;
     estado.yaMostrado = true;
     estado.paso = paso;
@@ -96,14 +98,23 @@ history.replaceState({ paso: 1 }, '');
 // ---------------------------------------------------------------------------
 // Paso 1: subir el STL
 
-async function cargarArchivo(nombre, buffer, { guardar = true } = {}) {
-    if (!/\.stl$/i.test(nombre)) {
-        alert('Ese archivo no es un .stl. Elegí un modelo en formato STL.');
+// Acepta STL, OBJ y 3MF (estos dos se convierten a STL en un worker y sigue
+// todo igual). Una foto abre la hoja de litofanía.
+// `esStl`: el buffer ya es STL aunque el nombre diga .obj/.3mf (los recientes
+// guardan el STL convertido con el nombre original).
+// `generar`: función que devuelve una promesa con el STL (litofanía).
+async function cargarArchivo(nombre, buffer, { guardar = true, esStl = false, generar = null } = {}) {
+    const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
+    if (tipo === 'imagen') return litofania.abrirFoto(nombre, buffer);
+    if (!tipo) {
+        alert('No sabemos leer ese archivo. Elegí un modelo STL, OBJ o 3MF (o una foto para hacer una litofanía).');
         return;
     }
     $('cargando').hidden = false;
     $('sinModelo').hidden = true;
     try {
+        if (generar) buffer = await generar();
+        else if (tipo !== 'stl') buffer = (await convertirAStl(nombre, buffer)).stl;
         // La vista previa se arma en un worker; le pasamos una copia del archivo.
         const { vertices, triangulos, tamano } = await leerParaVista(buffer.slice(0));
         estado.nombre = nombre;
@@ -165,6 +176,14 @@ async function alElegirArchivo(e) {
     if (archivo) await cargarArchivo(archivo.name, await archivo.arrayBuffer());
 }
 $('archivo').onchange = alElegirArchivo;
+$('foto').onchange = alElegirArchivo;
+
+// Hoja "Litofanía desde una foto" (ver ui/litofania.js).
+const litofania = prepararLitofania({
+    abrir: () => abrirHoja('litofania'),
+    cerrar: cerrarHojas,
+    cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar }),
+});
 
 // "Elegir otro modelo": vuelve a la pantalla inicial (archivo, ejemplo y recientes).
 $('otroModelo').onclick = () => {
@@ -201,7 +220,7 @@ $('listaRecientes').onclick = async e => {
     const id = Number(boton.dataset.id);
     const modelo = (await almacen.listarModelos()).find(m => m.id === id);
     const stl = await almacen.leerModelo(id);
-    if (modelo && stl) await cargarArchivo(modelo.nombre, stl);
+    if (modelo && stl) await cargarArchivo(modelo.nombre, stl, { esStl: true });
 };
 
 function escapar(texto) {
@@ -648,7 +667,7 @@ async function empezarLaminado() {
             alProgresar: ponerProgreso,
             signal: estado.cancelar.signal,
         });
-        const base = estado.nombre.replace(/\.stl$/i, '').replace(/[^\w.-]+/g, '_');
+        const base = estado.nombre.replace(/\.(stl|obj|3mf)$/i, '').replace(/[^\w.-]+/g, '_');
         estado.resultado = { ...r, avisos, archivo: `${base}_${estado.calidad}.gcode`, impresoraId: estado.impresoraId };
         mostrarResultado();
         irA(4, { reemplazar: true }); // así "atrás" desde el resultado vuelve a la configuración

@@ -9,6 +9,8 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import zlib from 'node:zlib';
+import JSZip from 'jszip';
 import { esfera, te } from '../src/prueba/mallas.js';
 
 function buscarChromium() {
@@ -54,6 +56,34 @@ async function elegirArchivo(ruta) {
     const nombre = path.basename(ruta);
     await pagina.waitForFunction(n => document.getElementById('nombreModelo').textContent === n, nombre, { timeout: 60000 });
 }
+// PNG mínimo en escala de grises (8 bits); `gris(x, y)` da el valor de cada píxel.
+function pngGrises(ancho, alto, gris) {
+    const tabla = Array.from({ length: 256 }, (_, n) => {
+        for (let k = 0; k < 8; k++) n = n & 1 ? 0xedb88320 ^ (n >>> 1) : n >>> 1;
+        return n >>> 0;
+    });
+    const crc = b => {
+        let c = 0xffffffff;
+        for (const x of b) c = tabla[(c ^ x) & 0xff] ^ (c >>> 8);
+        return (c ^ 0xffffffff) >>> 0;
+    };
+    const bloque = (tipo, datos) => {
+        const largo = Buffer.alloc(4);
+        largo.writeUInt32BE(datos.length);
+        const cuerpo = Buffer.concat([Buffer.from(tipo), datos]);
+        const c = Buffer.alloc(4);
+        c.writeUInt32BE(crc(cuerpo));
+        return Buffer.concat([largo, cuerpo, c]);
+    };
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(ancho, 0);
+    ihdr.writeUInt32BE(alto, 4);
+    ihdr[8] = 8; // 8 bits por píxel, tipo 0 = escala de grises
+    const filas = Buffer.alloc((ancho + 1) * alto); // cada fila empieza con el filtro 0
+    for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) filas[y * (ancho + 1) + 1 + x] = gris(x, y);
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), bloque('IHDR', ihdr),
+        bloque('IDAT', zlib.deflateSync(filas)), bloque('IEND', Buffer.alloc(0))]);
+}
 const captura = async nombre => pagina.screenshot({ path: path.join(CAPTURAS, nombre + '.png') });
 
 try {
@@ -73,6 +103,60 @@ try {
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
     revisar('datos del cubo', /20,0 × 20,0 × 20,0 mm/.test(await pagina.textContent('#datosModelo')));
     revisar('sin avisos para el cubo', !(await visible('#avisoModelo')));
+
+    // --- Otros formatos: OBJ, 3MF y litofanía desde una foto ---
+    {
+        const datos = () => pagina.textContent('#datosModelo');
+        // OBJ: caja de 30 × 10 × 5 con caras cuadradas e índices negativos.
+        const obj = path.join(tmp, 'caja.obj');
+        fs.writeFileSync(obj, 'v 0 0 0\nv 30 0 0\nv 30 10 0\nv 0 10 0\nv 0 0 5\nv 30 0 5\nv 30 10 5\nv 0 10 5\n' +
+            'f 1/1/1 4/1/1 3/1/1 2/1/1\nf 5 6 7 8\nf -8 -7 -3 -4\nf 2 3 7 6\nf -6 -5 -1 -2\nf 4 1 5 8\n');
+        await elegirArchivo(obj);
+        revisar('OBJ: medidas y triángulos', /^30,0 × 10,0 × 5,0 mm · 12 triángulos$/.test(await datos()), await datos());
+
+        // 3MF: un cubo de 1 pulgada repetido dos veces (el segundo corrido 2" en X).
+        const cubo = '<mesh><vertices>' + [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
+            .map(([x, y, z]) => `<vertex x="${x}" y="${y}" z="${z}"/>`).join('') + '</vertices><triangles>' +
+            [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]]
+                .map(([a, b, c]) => `<triangle v1="${a}" v2="${b}" v3="${c}"/>`).join('') + '</triangles></mesh>';
+        const zip = new JSZip();
+        zip.file('3D/3dmodel.model', `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="inch" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+<resources><object id="1" type="model">${cubo}</object></resources>
+<build><item objectid="1"/><item objectid="1" transform="1 0 0 0 1 0 0 0 1 2 0 0"/></build></model>`);
+        const tmf = path.join(tmp, 'dos-cubos.3mf');
+        fs.writeFileSync(tmf, await zip.generateAsync({ type: 'nodebuffer' }));
+        await elegirArchivo(tmf);
+        revisar('3MF: medidas en mm y triángulos', /^76,2 × 25,4 × 25,4 mm · 24 triángulos$/.test(await datos()), await datos());
+        await captura('1-3mf');
+
+        // Litofanía: PNG en escala de grises de 40 × 20 (degradé de negro a blanco).
+        const png = path.join(tmp, 'degrade.png');
+        fs.writeFileSync(png, pngGrises(40, 20, x => Math.round(255 * x / 39)));
+        await pagina.tap('#otroModelo');
+        await pagina.setInputFiles('#foto', png);
+        await pagina.waitForSelector('#hojaLitofania:not([hidden])');
+        revisar('foto: abre la hoja de litofanía', await pagina.isChecked('input[name=tipo][value=litofania]') &&
+            (await pagina.inputValue('#formLitofania [name=ancho]')) === '100' && (await pagina.textContent('#medidasLitofania')) === '100,0 × 50,0 × 3,2 mm',
+            await pagina.textContent('#medidasLitofania'));
+        await captura('1-litofania');
+        await pagina.tap('#generarLitofania');
+        await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'degrade-litofania.stl', null, { timeout: 60000 });
+        revisar('litofanía: modelo cargado con medidas coherentes', !(await visible('#hojaLitofania')) &&
+            /^100,0 × 50,0 × 3,[0-2] mm/.test(await datos()), await datos());
+        await pagina.waitForTimeout(500);
+        await captura('1-litofania-modelo');
+
+        // El OBJ quedó en recientes ya convertido a STL: se abre sin volver a convertirlo.
+        await pagina.tap('#otroModelo');
+        await pagina.tap('.reciente:has-text("caja.obj")');
+        await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'caja.obj');
+        revisar('abrir un OBJ reciente', /^30,0 × 10,0 × 5,0 mm · 12 triángulos$/.test(await datos()), await datos());
+
+        // Dejar el cubo cargado para seguir como antes.
+        await elegirArchivo('public/ejemplos/cubo-20mm.stl');
+        revisar('de vuelta al cubo', /^20,0 × 20,0 × 20,0 mm/.test(await datos()) && await visible('section[data-paso="1"]'));
+    }
 
     // Gestos: un arrastre con un dedo no tiene que romper nada.
     const caja = await pagina.locator('#visor canvas').boundingBox();
