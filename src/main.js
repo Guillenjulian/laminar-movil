@@ -1,7 +1,11 @@
 // Lógica de la app: 4 pasos (subir → configurar → laminar → listo).
 
 import { laminar, leerParaVista } from './motor/motor.js';
-import { impresoras, materiales, opciones, buscarImpresora, armarConfiguracion, valoresDeCalidad } from './perfiles/perfiles.js';
+import {
+    listaImpresoras, buscarImpresora, existeImpresora, ponerImpresorasPropias, IMPRESORA_INICIAL,
+    materiales, opciones, armarConfiguracion, valoresDeCalidad,
+} from './perfiles/perfiles.js';
+import { PLANTILLAS_GCODE } from './perfiles/generico.js';
 import { iconoRelleno } from './ui/iconos-relleno.js';
 import { maxTriangulos } from './config.js';
 import { crearVisor } from './ui/visor.js';
@@ -15,7 +19,8 @@ const estado = {
     nombre: '',          // nombre del archivo STL
     stl: null,           // ArrayBuffer original (se copia en cada laminado)
     vista: null,         // { triangulos, tamano }
-    impresoraId: impresoras[0].id,
+    impresoraId: IMPRESORA_INICIAL,
+    propias: [],         // datos de "Mi impresora" (guardados en el celu)
     calidad: 'normal',
     material: 'pla',
     soportes: false,
@@ -30,7 +35,13 @@ let visor = null;
 // Navegación entre pasos. Usamos el historial del navegador para que el botón
 // "atrás" del celu vuelva al paso anterior en vez de salir de la app.
 
-function mostrar(paso) {
+// `hoja` es una pantalla que se abre encima ('impresoras' o 'mi'), con su nivel
+// (cuántas hojas hay abiertas) para poder cerrarlas todas juntas.
+function mostrar(paso, hoja = null) {
+    $('hojaImpresoras').hidden = hoja !== 'impresoras';
+    $('hojaMiImpresora').hidden = hoja !== 'mi';
+    if (paso === estado.paso && estado.yaMostrado) return;
+    estado.yaMostrado = true;
     estado.paso = paso;
     document.querySelectorAll('.pantalla, .acciones > div').forEach(el => {
         el.hidden = Number(el.dataset.paso) !== paso;
@@ -50,10 +61,23 @@ function irA(paso, { reemplazar = false } = {}) {
     mostrar(paso);
 }
 
+function abrirHoja(hoja) {
+    const nivel = (history.state?.nivel || 0) + 1;
+    history.pushState({ paso: estado.paso, hoja, nivel }, '');
+    mostrar(estado.paso, hoja);
+}
+
+// Cierra todas las hojas abiertas (vuelve en el historial lo necesario).
+function cerrarHojas() {
+    const nivel = history.state?.nivel || 0;
+    if (nivel) history.go(-nivel);
+}
+
 window.addEventListener('popstate', e => {
     if (estado.paso === 3) estado.cancelar?.abort();
-    mostrar(e.state?.paso || 1);
+    mostrar(e.state?.paso || 1, e.state?.hoja);
 });
+document.querySelectorAll('[data-cerrar]').forEach(b => { b.onclick = () => history.back(); });
 $('atras').onclick = () => history.back();
 history.replaceState({ paso: 1 }, '');
 
@@ -184,13 +208,27 @@ function opcion(grupo, valor, titulo, detalle, marcado) {
     </label>`;
 }
 
+const ETIQUETAS = {
+    revisado: 'Perfil armado a mano',
+    importado: 'Importado de Kiri · sin revisar',
+    propio: 'Tuya',
+};
+
+function detalleImpresora(i) {
+    const d = i.dispositivo;
+    return `Cama ${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm · boquilla ${d.extruders[0].extNozzle.toLocaleString('es-AR', { maximumFractionDigits: 2 })} mm`;
+}
+
 function dibujarOpciones() {
     const imp = buscarImpresora(estado.impresoraId);
-    $('impresoras').innerHTML = impresoras.map(i => {
-        const d = i.dispositivo;
-        return opcion('impresora', i.id, i.nombre, `Cama ${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm · ` +
-            `boquilla ${formato.numero(d.extruders[0].extNozzle, 1)} mm`, i.id === imp.id);
-    }).join('');
+    $('impresoraElegida').innerHTML = `<div class="impresora-elegida">
+        <b>${escapar(imp.nombre)}</b> <span class="etiqueta ${imp.estado}">${ETIQUETAS[imp.estado]}</span>
+        <small>${detalleImpresora(imp)}</small>
+        ${imp.aviso ? `<p class="aviso">${escapar(imp.aviso)}</p>` : ''}
+        ${imp.estado === 'importado' ? '<p class="nota">Valores traídos de Kiri:Moto sin revisar. Mirá el G-code de inicio antes de imprimir.</p>' : ''}
+        <button type="button" class="boton chico" id="${imp.estado === 'propio' ? 'editarImpresora' : 'copiarImpresora'}">
+            ${imp.estado === 'propio' ? 'Editar' : 'Copiar como mía para ajustarla'}</button>
+    </div>`;
     $('calidades').innerHTML = Object.entries(imp.calidades).map(([id, c]) =>
         opcion('calidad', id, c.nombre, c.descripcion, id === estado.calidad)).join('');
     $('materiales').innerHTML = Object.entries(materiales).filter(([id]) => !id.startsWith('_')).map(([id, m]) =>
@@ -267,17 +305,6 @@ $('restablecer').onclick = () => {
 
 document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e => {
     const { name, value, checked } = e.target;
-    if (name === 'impresora') {
-        estado.impresoraId = value;
-        const imp = buscarImpresora(value);
-        if (!imp.calidades[estado.calidad]) estado.calidad = Object.keys(imp.calidades)[0];
-        dibujarOpciones();
-        if (visor) {
-            const d = imp.dispositivo;
-            visor.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
-        }
-        actualizarAvisoModelo();
-    }
     if (name === 'calidad') {
         estado.calidad = value;
         dibujarPersonalizar();
@@ -290,6 +317,167 @@ document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e 
     guardarPreferencias();
 });
 
+function elegirImpresora(id) {
+    estado.impresoraId = id;
+    const imp = buscarImpresora(id);
+    if (!imp.calidades[estado.calidad]) estado.calidad = Object.keys(imp.calidades)[0];
+    dibujarOpciones();
+    if (visor) {
+        const d = imp.dispositivo;
+        visor.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
+    }
+    actualizarAvisoModelo();
+    guardarPreferencias();
+}
+
+// --- Elegir impresora (hoja con búsqueda) ---
+
+$('cambiarImpresora').onclick = () => {
+    $('buscarImpresora').value = '';
+    dibujarListaImpresoras();
+    abrirHoja('impresoras');
+};
+$('buscarImpresora').addEventListener('input', dibujarListaImpresoras);
+
+function dibujarListaImpresoras() {
+    const q = $('buscarImpresora').value.trim().toLowerCase();
+    const lista = listaImpresoras().filter(i => !q || `${i.marca} ${i.nombre}`.toLowerCase().includes(q));
+    const grupos = [];
+    for (const i of lista) {
+        const titulo = i.estado === 'propio' ? 'Tus impresoras'
+            : i.estado === 'revisado' ? 'Perfiles armados a mano'
+            : `${i.marca} · importadas de Kiri (sin revisar)`;
+        if (grupos.at(-1)?.titulo !== titulo) grupos.push({ titulo, items: [] });
+        grupos.at(-1).items.push(i);
+    }
+    $('listaImpresoras').innerHTML = grupos.map(g => `<h3>${escapar(g.titulo)}</h3>` + g.items.map(i =>
+        `<button type="button" class="opcion impresora ${i.id === estado.impresoraId ? 'elegida' : ''}" data-id="${i.id}">
+            <span><b>${escapar(i.nombre)}</b><br><small>${detalleImpresora(i)}</small></span>
+        </button>`).join('')).join('') || '<p class="nota">No encontramos esa impresora. Podés agregarla con "Agregar mi impresora".</p>';
+}
+
+$('listaImpresoras').onclick = e => {
+    const b = e.target.closest('[data-id]');
+    if (!b) return;
+    elegirImpresora(b.dataset.id);
+    cerrarHojas();
+};
+
+// --- Mi impresora (formulario) ---
+
+const form = $('formImpresora');
+
+function abrirFormulario(datos, titulo) {
+    for (const [k, v] of Object.entries(datos)) {
+        const campo = form.elements[k];
+        if (!campo) continue;
+        if (campo.type === 'checkbox') campo.checked = !!v;
+        else campo.value = Array.isArray(v) ? v.join('\n') : v;
+        // Valor que no está entre las opciones (ej. boquilla de 0,45): lo agregamos.
+        if (campo.tagName === 'SELECT' && campo.value !== String(v)) {
+            campo.add(new Option(`${String(v).replace('.', ',')} mm`, v));
+            campo.value = v;
+        }
+    }
+    form.dataset.id = datos.id;
+    form.elements.inicio.dataset.tocado = form.elements.fin.dataset.tocado = datos.inicio ? '1' : '';
+    $('tituloMiImpresora').textContent = titulo;
+    $('borrarImpresora').hidden = !estado.propias.some(p => p.id === datos.id);
+    $('errorImpresora').hidden = true;
+    abrirHoja('mi');
+    form.parentElement.scrollTo?.(0, 0);
+}
+
+function datosNuevos() {
+    const p = PLANTILLAS_GCODE.marlin;
+    return {
+        id: 'propia-' + Date.now().toString(36), nombre: '', ancho: 220, profundidad: 220, alto: 250,
+        origenCentro: false, boquilla: 0.4, filamento: 1.75, extrusor: 'directo', retraccion: 0.8,
+        hotendMax: 260, camaMax: 100, velocidad: 60, firmware: 'marlin', inicio: undefined, fin: undefined,
+        _inicio: p.inicio, _fin: p.fin,
+    };
+}
+
+// Datos del formulario a partir de una impresora existente (para "Copiar como mía").
+function datosDesde(imp) {
+    const d = imp.dispositivo, normal = imp.calidades.normal?.proceso || {};
+    const retraccion = imp.proceso.outputRetractDist ?? 1.5;
+    return {
+        id: imp.estado === 'propio' ? imp.id : 'propia-' + Date.now().toString(36),
+        nombre: imp.estado === 'propio' ? imp.nombre : `${imp.nombre} (mía)`,
+        ancho: d.bedWidth, profundidad: d.bedDepth, alto: d.maxHeight, origenCentro: !!d.originCenter,
+        boquilla: d.extruders[0].extNozzle, filamento: d.extruders[0].extFilament,
+        extrusor: retraccion > 2 ? 'bowden' : 'directo', retraccion,
+        hotendMax: imp.limites?.hotendMax ?? 260, camaMax: imp.limites?.camaMax ?? 100,
+        velocidad: normal.outputFeedrate ?? 60, firmware: imp.firmware || 'marlin',
+        inicio: d.gcodePre, fin: d.gcodePost,
+    };
+}
+
+$('nuevaImpresora').onclick = () => {
+    const datos = datosNuevos();
+    abrirFormulario({ ...datos, inicio: datos._inicio, fin: datos._fin }, 'Agregar mi impresora');
+    form.elements.inicio.dataset.tocado = form.elements.fin.dataset.tocado = '';
+};
+$('impresoraElegida').onclick = e => {
+    if (e.target.id === 'editarImpresora') {
+        abrirFormulario(estado.propias.find(p => p.id === estado.impresoraId), 'Editar mi impresora');
+    } else if (e.target.id === 'copiarImpresora') {
+        abrirFormulario(datosDesde(buscarImpresora(estado.impresoraId)), 'Mi impresora');
+    }
+};
+
+// Si no editó el G-code a mano, al cambiar de firmware se pone la plantilla que corresponde.
+form.elements.inicio.addEventListener('input', e => { e.target.dataset.tocado = '1'; });
+form.elements.fin.addEventListener('input', e => { e.target.dataset.tocado = '1'; });
+form.elements.firmware.addEventListener('change', e => {
+    const p = PLANTILLAS_GCODE[e.target.value];
+    if (!form.elements.inicio.dataset.tocado) form.elements.inicio.value = p.inicio.join('\n');
+    if (!form.elements.fin.dataset.tocado) form.elements.fin.value = p.fin.join('\n');
+});
+// Retracción típica según el extrusor.
+form.elements.extrusor.addEventListener('change', e => {
+    form.elements.retraccion.value = e.target.value === 'bowden' ? 5 : 0.8;
+});
+
+form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!form.checkValidity()) {
+        const malo = [...form.elements].find(c => c.validity && !c.validity.valid);
+        $('errorImpresora').textContent = `Revisá "${malo.closest('label')?.firstChild.textContent.trim() || malo.name}": ` +
+            (malo.validationMessage || 'valor inválido');
+        $('errorImpresora').hidden = false;
+        malo.focus();
+        return;
+    }
+    const f = form.elements, num = n => Number(f[n].value);
+    const lineas = t => t.split('\n').map(l => l.trimEnd()).filter(Boolean);
+    const datos = {
+        id: form.dataset.id, nombre: f.nombre.value.trim(),
+        ancho: num('ancho'), profundidad: num('profundidad'), alto: num('alto'), origenCentro: f.origenCentro.checked,
+        boquilla: num('boquilla'), filamento: num('filamento'), extrusor: f.extrusor.value, retraccion: num('retraccion'),
+        hotendMax: num('hotendMax'), camaMax: num('camaMax'), velocidad: num('velocidad'), firmware: f.firmware.value,
+        inicio: lineas(f.inicio.value), fin: lineas(f.fin.value),
+    };
+    estado.propias = [...estado.propias.filter(p => p.id !== datos.id), datos];
+    await guardarPropias();
+    elegirImpresora(datos.id);
+    cerrarHojas();
+});
+
+$('borrarImpresora').onclick = async () => {
+    if (!confirm('¿Borrar esta impresora?')) return;
+    estado.propias = estado.propias.filter(p => p.id !== form.dataset.id);
+    await guardarPropias();
+    if (!existeImpresora(estado.impresoraId)) elegirImpresora(IMPRESORA_INICIAL);
+    cerrarHojas();
+};
+
+async function guardarPropias() {
+    ponerImpresorasPropias(estado.propias);
+    await almacen.guardarAjuste('impresorasPropias', estado.propias).catch(() => {});
+}
+
 // Las elecciones del paso 2 se recuerdan para la próxima vez.
 function guardarPreferencias() {
     const { impresoraId, calidad, material, soportes, personal } = estado;
@@ -297,11 +485,12 @@ function guardarPreferencias() {
 }
 
 async function cargarPreferencias() {
+    estado.propias = (await almacen.leerAjuste('impresorasPropias').catch(() => null)) || [];
+    ponerImpresorasPropias(estado.propias);
     const p = await almacen.leerAjuste('preferencias').catch(() => null);
     if (!p) return;
     // Sólo usamos lo que todavía existe (puede haber cambiado algún perfil).
-    const imp = impresoras.find(i => i.id === p.impresoraId);
-    if (imp) estado.impresoraId = imp.id;
+    if (existeImpresora(p.impresoraId)) estado.impresoraId = p.impresoraId;
     if (buscarImpresora(estado.impresoraId).calidades[p.calidad]) estado.calidad = p.calidad;
     if (materiales[p.material]) estado.material = p.material;
     estado.soportes = !!p.soportes;

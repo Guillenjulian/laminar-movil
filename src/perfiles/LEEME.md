@@ -1,9 +1,22 @@
 # Perfiles de impresoras y materiales
 
-- `impresoras/*.json`: un archivo por impresora. **Se detectan solos**: para sumar una
-  impresora, copiá `creality-ender-3-v3-se.json`, cambiale `id` y `nombre`, ajustá los
-  valores y listo (no hay que tocar código).
+- `impresoras/*.json`: perfiles **armados a mano** (`"estado": "revisado"`). **Se detectan
+  solos**: para sumar una impresora, copiá `creality-ender-3-v3-se.json`, cambiale `id` y
+  `nombre`, ajustá los valores y listo (no hay que tocar código).
+- `impresoras/kiri/*.json`: 50 perfiles **importados de Kiri:Moto** (`"estado": "importado"`),
+  generados por `npm run importar:impresoras`. No los edites a mano (el importador los
+  regenera): si querés mejorar uno, copialo a `impresoras/` con otro `id` y revisalo ahí.
+- Impresoras **propias** (`"estado": "propio"`): las crea cada usuario con "Agregar mi
+  impresora" y quedan guardadas sólo en su celu (IndexedDB).
+- `generico.js`: arma las calidades Rápido/Normal/Detalle a partir de la boquilla y la
+  velocidad (lo usan el importador y "Mi impresora").
 - `materiales.json`: materiales comunes a todas las impresoras.
+- `opciones.json`: patrones de relleno, atajos de densidad y tipos de adhesión.
+
+El importador **saltea** las Bambu Lab (usan `.gcode.3mf`), las de cinta, la Makerbot
+Replicator 2 (G-code propio), la LulzBot 747 (su G-code es de otro modelo) y las dos
+plantillas genéricas. A las que traen el G-code de inicio sin `{temp}` o `{bed_temp}` les
+agrega un aviso que se ve en la app.
 
 Las claves que empiezan con `_` son comentarios y se ignoran.
 
@@ -12,7 +25,7 @@ Las claves que empiezan con `_` son comentarios y se ignoran.
 Lo de la derecha pisa a lo de la izquierda:
 
 ```
-valores por defecto de Kiri → impresora.proceso → calidad.proceso → material.proceso → opciones del usuario
+valores por defecto de Kiri → impresora.proceso → calidad.proceso → material.proceso → adhesión → personalizado → soportes
 ```
 
 Después, las temperaturas se recortan a `limites.hotendMax` y `limites.camaMax`.
@@ -23,6 +36,10 @@ Después, las temperaturas se recortan a `limites.hotendMax` y `limites.camaMax`
 |---|---|
 | `id` | Identificador único, sin espacios (ej. `creality-ender-3-v3-se`). |
 | `nombre` | Lo que ve el usuario. |
+| `marca` | Para agrupar y buscar. |
+| `estado` | `revisado`, `importado` o `propio` (ver arriba). |
+| `aviso` | Opcional: texto que se muestra al elegirla (ej. un problema conocido). |
+| `adhesion` | Adhesión por defecto: `nada`, `falda`, `borde` o `balsa`. |
 | `limites.hotendMax`, `limites.camaMax` | Temperaturas máximas en °C. |
 | `dispositivo` | La máquina (claves de Kiri:Moto, ver abajo). |
 | `proceso` | Valores de laminado comunes a todas las calidades. |

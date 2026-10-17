@@ -58,7 +58,8 @@
         <!-- Paso 2: impresora y calidad -->
         <section class="pantalla" data-paso="2" hidden>
             <h2>Impresora</h2>
-            <div class="opciones" id="impresoras"></div>
+            <div id="impresoraElegida"></div>
+            <button class="boton" id="cambiarImpresora">Cambiar impresora</button>
 
             <h2>Calidad</h2>
             <div class="opciones" id="calidades"></div>
@@ -137,6 +138,83 @@
             <p class="nota">Pasá el archivo a la tarjeta microSD de la impresora (o mandalo por la app que uses).</p>
         </section>
     </main>
+
+    <!-- Pantallas que se abren encima (el botón "atrás" del celu las cierra) -->
+    <section class="hoja" id="hojaImpresoras" hidden aria-label="Elegir impresora">
+        <header class="barra">
+            <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+            <h1>Elegí tu impresora</h1>
+        </header>
+        <div class="contenido-hoja">
+            <input type="search" class="buscar" id="buscarImpresora" placeholder="Buscar (ej.: Ender, Prusa, Kobra)" autocomplete="off">
+            <button class="boton" id="nuevaImpresora">+ Agregar mi impresora</button>
+            <div id="listaImpresoras"></div>
+        </div>
+    </section>
+
+    <section class="hoja" id="hojaMiImpresora" hidden aria-label="Mi impresora">
+        <header class="barra">
+            <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+            <h1 id="tituloMiImpresora">Mi impresora</h1>
+        </header>
+        <form class="contenido-hoja formulario" id="formImpresora" novalidate>
+            <label>Nombre <input name="nombre" required maxlength="60" placeholder="Ej.: Mi Ender 3 Pro"></label>
+
+            <fieldset>
+                <legend>Volumen de impresión (mm)</legend>
+                <div class="tres">
+                    <label>Ancho (X) <input name="ancho" type="number" inputmode="numeric" min="50" max="1000" required></label>
+                    <label>Fondo (Y) <input name="profundidad" type="number" inputmode="numeric" min="50" max="1000" required></label>
+                    <label>Alto (Z) <input name="alto" type="number" inputmode="numeric" min="50" max="1000" required></label>
+                </div>
+                <label class="tilde"><input type="checkbox" name="origenCentro"> El (0,0) está en el centro de la cama (deltas, algunas Klipper)</label>
+            </fieldset>
+
+            <fieldset>
+                <legend>Boquilla y filamento</legend>
+                <div class="dos">
+                    <label>Boquilla
+                        <select name="boquilla">
+                            <option value="0.2">0,2 mm</option><option value="0.4">0,4 mm</option>
+                            <option value="0.6">0,6 mm</option><option value="0.8">0,8 mm</option>
+                        </select>
+                    </label>
+                    <label>Filamento
+                        <select name="filamento"><option value="1.75">1,75 mm</option><option value="2.85">2,85 mm</option></select>
+                    </label>
+                </div>
+                <div class="dos">
+                    <label>Extrusor
+                        <select name="extrusor"><option value="directo">Directo (direct drive)</option><option value="bowden">Bowden (tubo)</option></select>
+                    </label>
+                    <label>Retracción (mm) <input name="retraccion" type="number" inputmode="decimal" min="0" max="10" step="0.1" required></label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Límites y velocidad</legend>
+                <div class="tres">
+                    <label>Boquilla máx. (°C) <input name="hotendMax" type="number" inputmode="numeric" min="150" max="500" required></label>
+                    <label>Cama máx. (°C) <input name="camaMax" type="number" inputmode="numeric" min="0" max="150" required></label>
+                    <label>Velocidad (mm/s) <input name="velocidad" type="number" inputmode="numeric" min="10" max="500" required></label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Firmware y G-code</legend>
+                <label>Firmware
+                    <select name="firmware"><option value="marlin">Marlin (la mayoría)</option><option value="klipper">Klipper</option></select>
+                </label>
+                <label>G-code de inicio <textarea name="inicio" rows="7" spellcheck="false"></textarea></label>
+                <label>G-code de fin <textarea name="fin" rows="5" spellcheck="false"></textarea></label>
+                <p class="nota">Variables: {temp}, {bed_temp}, {layer}, {layers}, {top} (fondo de la cama).</p>
+            </fieldset>
+
+            <p class="aviso error" id="errorImpresora" hidden></p>
+            <button type="submit" class="boton grande primario">Guardar impresora</button>
+            <button type="button" class="boton enlace" id="borrarImpresora" hidden>Borrar esta impresora</button>
+        </form>
+    </section>
 
     <!-- Botones principales siempre abajo, donde llega el pulgar -->
     <footer class="acciones">

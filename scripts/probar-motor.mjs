@@ -25,11 +25,15 @@ function buscarChromium() {
 // Datos útiles de un G-code para comparar.
 function analizar(gcode) {
     const lineas = gcode.split('\n');
-    // Sólo la pieza: desde la primera capa (así no cuenta la línea de purga del start G-code).
-    const pieza = lineas.slice(lineas.findIndex(l => l.startsWith(';LAYER:')));
+    // Sólo la pieza: desde la primera línea que Kiri marca con "; feature" hasta la
+    // última extrusión (así no cuentan la purga del inicio ni los movimientos del final).
+    const desde = lineas.findIndex(l => l.startsWith('; feature'));
+    let hasta = lineas.length - 1;
+    while (hasta > desde && !/^G1 .*E\d/.test(lineas[hasta])) hasta--;
+    const pieza = lineas.slice(desde, hasta + 1);
     const extrusiones = pieza.filter(l => /^G1 .*E\d/.test(l));
     const valores = eje => extrusiones.map(l => l.match(new RegExp(eje + '(-?[\\d.]+)'))).filter(Boolean).map(m => +m[1]);
-    const zs = lineas.map(l => l.match(/^G[01] .*Z([\d.]+)/)).filter(Boolean).map(m => +m[1]);
+    const zs = pieza.map(l => l.match(/^G[01] .*Z([\d.]+)/)).filter(Boolean).map(m => +m[1]);
     const xs = valores('X'), ys = valores('Y');
     const min = v => v.reduce((a, b) => Math.min(a, b), Infinity);
     const max = v => v.reduce((a, b) => Math.max(a, b), -Infinity);
@@ -139,7 +143,32 @@ try {
     revisar('adhesión balsa: capas extra debajo', balsa.g.zMax > nada.g.zMax + 0.3 && balsa.info.filamento > nada.info.filamento * 1.1,
         `Z máx ${nada.g.zMax} → ${balsa.g.zMax}`);
 
-    // 5. Malla pesada: tiene que decimarse por debajo del límite y laminar igual.
+    // 5. Todas las impresoras importadas de Kiri laminan bien el cubo.
+    const lista = await pagina.evaluate(() => window.impresoras);
+    const problemas = [];
+    for (const imp of lista.filter(i => i.estado === 'importado')) {
+        try {
+            const r = await pagina.evaluate(o => window.probar(o), { caso: 'cubo', impresoraId: imp.id, calidad: 'rapido' });
+            const g = analizar(r.gcode);
+            const d = await pagina.evaluate(id => window.buscarImpresora(id).dispositivo, imp.id);
+            // dónde tendría que estar el centro del cubo según el origen de la cama
+            const cx = d.originCenter ? 0 : d.bedWidth / 2, cy = d.originCenter ? 0 : d.bedDepth / 2;
+            const centrado = Math.abs((g.x[0] + g.x[1]) / 2 - cx) < 1 && Math.abs((g.y[0] + g.y[1]) / 2 - cy) < 1;
+            const fallas = [
+                !centrado && `no centrado (X ${g.x} Y ${g.y})`,
+                !g.tiene('M106 S255') && 'sin ventilador',
+                /\{[a-z_]+\}/.test(r.gcode) && 'macros sin reemplazar',
+                Math.abs(g.zMax - 20) > 1.5 && `Z máx ${g.zMax}`,
+            ].filter(Boolean);
+            if (fallas.length) problemas.push(`${imp.nombre}: ${fallas.join(', ')}`);
+        } catch (err) {
+            problemas.push(`${imp.nombre}: ERROR ${err.message.slice(0, 120)}`);
+        }
+    }
+    revisar(`las ${lista.filter(i => i.estado === 'importado').length} impresoras importadas laminan bien`, problemas.length === 0,
+        problemas.length ? '\n      ' + problemas.join('\n      ') : '');
+
+    // 6. Malla pesada: tiene que decimarse por debajo del límite y laminar igual.
     const pesada = await laminar({ caso: 'esfera', limite: 250000 });
     const d = pesada.info.decimado;
     revisar('esfera decimada', d && d.original > 1e6 && d.final <= 250000,

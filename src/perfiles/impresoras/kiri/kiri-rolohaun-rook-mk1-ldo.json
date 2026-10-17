@@ -1,0 +1,142 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Rolohaun.Rook.MK1.LDO.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-rolohaun-rook-mk1-ldo",
+    "nombre": "Rolohaun Rook MK1 LDO",
+    "marca": "Rolohaun",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "deviceName": "Rolohaun Rook MK1 LDO",
+        "bedWidth": 110,
+        "bedDepth": 110,
+        "maxHeight": 110,
+        "originCenter": false,
+        "bedRound": false,
+        "fwRetract": false,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "M190 S{bed_temp} ; wait for bed to reach target temp",
+            "M109 S{temp} ; wait for extruder to reach target temp",
+            "PRINT_START EXTRUDER={temp} BED={bed_temp}"
+        ],
+        "gcodePost": [
+            "PRINT_END"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            "G92 E0"
+        ],
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {
+        "sliceAngle": 45,
+        "sliceShellOrder": "alternate",
+        "sliceLayerStart": "last",
+        "sliceLayerStartX": 0,
+        "sliceLayerStartY": 0,
+        "sliceLineWidth": 0,
+        "sliceFillGrow": 0,
+        "sliceFillAngle": 45,
+        "sliceFillWidth": 1,
+        "sliceFillOverlap": 0.25,
+        "sliceFillRepeat": 1,
+        "sliceFillRate": 150,
+        "sliceSolidRate": 150,
+        "sliceSolidMinArea": 1,
+        "firstLayerRate": 50,
+        "firstLayerFillRate": 105,
+        "firstLayerPrintMult": 1,
+        "firstLayerLineMult": 1.2,
+        "firstLayerYOffset": 0,
+        "firstLayerBeltLead": 3,
+        "firstLayerBeltBump": 0,
+        "firstLayerFlatten": 0,
+        "outputDraftShield": false,
+        "outputFeedrate": 150,
+        "outputFinishrate": 150,
+        "outputSeekrate": 500,
+        "outputShellMult": 1,
+        "outputFillMult": 1,
+        "outputSparseMult": 1,
+        "outputFanLayer": 1,
+        "outputRetractDist": 2.9,
+        "outputRetractSpeed": 50,
+        "outputRetractWipe": 1,
+        "outputRetractDwell": 20,
+        "outputShortPoly": 100,
+        "outputMinSpeed": 10,
+        "outputCoastDist": 0,
+        "outputPurgeTower": 0,
+        "outputBeltFirst": false,
+        "outputAvoidGaps": true,
+        "outputAlternating": false,
+        "outputLayerRetract": false,
+        "outputNozzle": 0,
+        "outputLoops": 0,
+        "outputInvertX": false,
+        "outputInvertY": false,
+        "sliceDetectThin": "off",
+        "sliceMinHeight": 0,
+        "sliceAdaptive": false,
+        "zHopDistance": 0.2,
+        "arcTolerance": 0,
+        "antiBacklash": 0
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 180,
+                "outputFinishrate": 180,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 150,
+                "outputFinishrate": 150,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 105,
+                "outputFinishrate": 105,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

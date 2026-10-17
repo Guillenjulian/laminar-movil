@@ -1,20 +1,45 @@
 // Carga los perfiles (impresoras y materiales) y arma la configuración final
 // que recibe el motor. Para sumar una impresora alcanza con agregar un JSON
 // en src/perfiles/impresoras/ (se detecta solo, ver LEEME.md).
+//
+// Hay tres tipos de impresora (campo `estado`):
+//   revisado  -> perfiles hechos a mano en src/perfiles/impresoras/*.json
+//   importado -> traídos de Kiri:Moto (src/perfiles/impresoras/kiri/), sin revisar
+//   propio    -> creados por el usuario con "Mi impresora" (guardados en el celu)
 
 import materiales from './materiales.json';
 import opciones from './opciones.json';
+import { perfilPropio } from './generico.js';
 
-// Vite junta todos los JSON de la carpeta en tiempo de build.
-const archivos = import.meta.glob('./impresoras/*.json', { eager: true, import: 'default' });
+// Vite junta todos los JSON de las carpetas en tiempo de build.
+const archivos = import.meta.glob('./impresoras/**/*.json', { eager: true, import: 'default' });
+const incluidas = Object.values(archivos).map(i => ({ estado: 'revisado', ...i }));
 
-export const impresoras = Object.values(archivos)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+export const IMPRESORA_INICIAL = 'creality-ender-3-v3-se';
+const ORDEN = { propio: 0, revisado: 1, importado: 2 };
+
+let propias = [];
+
+// Las impresoras del usuario (datos del formulario, ver generico.js).
+export function ponerImpresorasPropias(lista) {
+    propias = lista.map(perfilPropio);
+}
+
+// Todas: primero las propias, después las revisadas y al final las importadas.
+export function listaImpresoras() {
+    return [...propias, ...incluidas].sort((a, b) =>
+        ORDEN[a.estado] - ORDEN[b.estado] || (a.marca || '').localeCompare(b.marca || '') || a.nombre.localeCompare(b.nombre));
+}
 
 export { materiales, opciones };
 
+export function existeImpresora(id) {
+    return listaImpresoras().some(i => i.id === id);
+}
+
 export function buscarImpresora(id) {
-    return impresoras.find(i => i.id === id) || impresoras[0];
+    const lista = listaImpresoras();
+    return lista.find(i => i.id === id) || lista.find(i => i.id === IMPRESORA_INICIAL) || lista[0];
 }
 
 // Saca las claves que empiezan con "_" (son comentarios dentro del JSON).

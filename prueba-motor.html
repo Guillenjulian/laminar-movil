@@ -30,7 +30,9 @@
     <pre id="salida"></pre>
     <script type="module">
         import { laminar } from './src/motor/motor.js';
-        import { armarConfiguracion } from './src/perfiles/perfiles.js';
+        import { armarConfiguracion, listaImpresoras, buscarImpresora } from './src/perfiles/perfiles.js';
+        window.impresoras = listaImpresoras().map(i => ({ id: i.id, nombre: i.nombre, estado: i.estado }));
+        window.buscarImpresora = buscarImpresora;
         import { maxTriangulos } from './src/config.js';
         import { esfera, te } from './src/prueba/mallas.js';
 

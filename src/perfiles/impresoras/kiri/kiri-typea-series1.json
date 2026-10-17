@@ -1,0 +1,108 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/TypeA.Series1.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-typea-series1",
+    "nombre": "TypeA Series1",
+    "marca": "TypeA",
+    "estado": "importado",
+    "aviso": "El G-code de inicio no usa la temperatura elegida de cama (tiene valores fijos o ninguno).",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "bedWidth": 305,
+        "bedDepth": 305,
+        "maxHeight": 305,
+        "originCenter": false,
+        "bedRound": false,
+        "extrudeAbs": false,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "G1 Z15.0 F12000         ; move the platform down 15mm",
+            "G1 X150 Y5 F12000       ; center extruder on X",
+            "M107                    ; turn off filament cooling fan",
+            "M83                     ; use relative positioning for extruder",
+            "M104 S{temp}            ; set extruder temperature",
+            "G21                     ; use metric values",
+            "G90                     ; use absolute positioning mode",
+            "G28                     ; move to endstops",
+            "G29                     ; perform auto-levelling",
+            "M109 S{temp}            ; wait for extruder to reach target temp",
+            "G1 X150 Y5 Z0.3         ; move the platform to purge extrusion",
+            "G92 E0                  ; zero the extruded length",
+            "G1 F200 X250 E30        ; extrude 30mm of feed stock",
+            "G92 E0                  ; zero the extruded length again",
+            "G1 X150 Y150 Z25 F12000 ; center head for print",
+            "G1 F12000               ; set head seek rate"
+        ],
+        "gcodePost": [
+            "G1 E-1 F300             ; retract the filament to release pressure",
+            "G1 Z{z_max} E-5 F1200   ; drop bed, retract more filament",
+            "G28 X0 Y0               ; move X/Y to min endstops",
+            "M107                    ; turn off filament cooling fan",
+            "M104 S0                 ; turn off extruder",
+            "M84                     ; disable stepper motors"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}"
+        ],
+        "gcodeFExt": "gcode",
+        "deviceName": "TypeA Series1",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {},
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

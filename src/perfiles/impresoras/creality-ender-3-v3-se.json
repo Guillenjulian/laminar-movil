@@ -2,6 +2,8 @@
     "_nota": "Perfil de impresora. Las claves de 'dispositivo' y 'proceso' son las de Kiri:Moto; ver src/perfiles/LEEME.md. Las claves que empiezan con _ son comentarios y se ignoran.",
     "id": "creality-ender-3-v3-se",
     "nombre": "Creality Ender 3 V3 SE",
+    "marca": "Creality",
+    "estado": "revisado",
     "adhesion": "falda",
     "limites": {
         "_nota": "Máximos del fabricante. La app no deja pasar estas temperaturas.",

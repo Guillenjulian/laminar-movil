@@ -1,0 +1,159 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Prusa.i3.MK2S.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-prusa-i3-mk2s",
+    "nombre": "Prusa i3 MK2S",
+    "marca": "Prusa",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "deviceName": "Prusa i3 MK2S",
+        "bedWidth": 250,
+        "bedDepth": 210,
+        "maxHeight": 210,
+        "originCenter": false,
+        "bedRound": false,
+        "fwRetract": false,
+        "extrudeAbs": false,
+        "deviceZMax": 0,
+        "gcodePre": [
+            "M107               ; disable cooling fan",
+            "M104 S160          ; set extruder temp",
+            "M140 S{bed_temp}   ; set bed temp",
+            "M190 S{bed_temp}   ; wait for bed temp",
+            "G28 W              ; home all without mesh bed level",
+            "G80                ; mesh bed leveling",
+            "G90                ; set absolute positioning mode",
+            "M83                ; set relative positioning for extruder",
+            "G1 F1000           ; set feedrate",
+            "G1 Y-3.0 Z0.5      ; park outside print area",
+            "M104 S{temp}       ; set extruder actual required temp",
+            "M109 S{temp}       ; wait for extruder actual required temp",
+            "G1 X60.0 E9.0      ; purge line",
+            "G1 X100.0 E12.5    ; purge line",
+            "M117 Printing"
+        ],
+        "gcodePost": [
+            "G0 E-1 F900  ; retract slightly",
+            "M104 S0      ; turn off nozzle heat",
+            "M140 S0      ; turn off bed heat",
+            "M107         ; turn off fan",
+            "G0 F3000     ; set feedrate",
+            "G0 Y210 Z210 ; serve up print",
+            "G4           ; wait",
+            "M84          ; disable steppers",
+            "M117 Print Done"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [
+            "M73 P{progress}"
+        ],
+        "gcodeLayer": [
+            ";; LAYER {layer} of {layers}",
+            "M117 Layer {layer} of {layers}"
+        ],
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.45
+            }
+        ]
+    },
+    "proceso": {
+        "sliceShellOrder": "in-out",
+        "sliceLayerStart": "center",
+        "sliceFillAngle": 45,
+        "sliceFillOverlap": 0.35,
+        "sliceAdaptive": false,
+        "sliceMinHeight": 0,
+        "sliceSolidMinArea": 1,
+        "sliceSolidLayers": 3,
+        "firstLayerRate": 10,
+        "firstLayerPrintMult": 1,
+        "firstLayerYOffset": 0,
+        "firstLayerBeltLead": 200,
+        "outputFeedrate": 100,
+        "outputFinishrate": 30,
+        "outputSeekrate": 150,
+        "outputShellMult": 1,
+        "outputFillMult": 1.1,
+        "outputSparseMult": 1.1,
+        "outputRetractDist": 1,
+        "outputRetractSpeed": 80,
+        "outputRetractWipe": 2,
+        "outputRetractDwell": 0,
+        "outputShortPoly": 50,
+        "outputMinSpeed": 1,
+        "outputCoastDist": 0,
+        "outputLayerRetract": false,
+        "zHopDistance": 0.12,
+        "antiBacklash": 0,
+        "sliceFillWidth": 1,
+        "sliceFillRate": 0,
+        "firstLayerFillRate": 35,
+        "firstLayerLineMult": 1,
+        "outputPurgeTower": 0,
+        "outputInvertX": false,
+        "outputInvertY": false,
+        "arcTolerance": 0,
+        "outputLoops": 0,
+        "firstLayerBeltBump": 0,
+        "outputBeltFirst": false,
+        "sliceFillRepeat": 4,
+        "sliceLineWidth": 0,
+        "firstLayerFlatten": 0,
+        "outputDraftShield": false,
+        "outputAvoidGaps": true,
+        "sliceDetectThin": "off",
+        "beltAnchor": 200
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,32 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.32,
+                "firstSliceHeight": 0.32,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 2,
+                "outputFeedrate": 120,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,22 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.22,
+                "firstSliceHeight": 0.22,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 100,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,14 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.14,
+                "firstSliceHeight": 0.22,
+                "sliceTopLayers": 6,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 70,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

@@ -1,0 +1,163 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Prusa.mini.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar. Cambios: se agregó gcodeFan (sin esto Kiri nunca prende el ventilador).",
+    "id": "kiri-prusa-mini",
+    "nombre": "Prusa mini",
+    "marca": "Prusa",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "deviceName": "Prusa mini",
+        "bedWidth": 180,
+        "bedDepth": 180,
+        "maxHeight": 180,
+        "originCenter": false,
+        "bedRound": false,
+        "fwRetract": false,
+        "deviceZMax": 0,
+        "gcodePre": [
+            "G90                 ; use absolute coordinates",
+            "M83                 ; extruder relative mode",
+            "M104 S170           ; set extruder temp for bed leveling",
+            "M140 S{bed_temp}    ; set bed temp",
+            "M109 R170           ; wait for bed leveling temp",
+            "M190 S{bed_temp}    ; wait for bed temp",
+            "G28                 ; home all without mesh bed level",
+            "G29                 ; mesh bed leveling ",
+            "M104 S{temp}        ; set extruder temp",
+            "G92 E0.0",
+            "G1 Y-2.0 X179 F2400",
+            "G1 Z3 F720",
+            "M109 S{temp}        ; wait for extruder temp",
+            "                    ; intro line",
+            "G1 X170 F1000       ; purge line",
+            "G1 Z0.2 F720        ; purge line",
+            "G1 X110.0 E8.0 F900 ; purge line",
+            "G1 X40.0 E10.0 F700 ; purge line",
+            "G92 E0.0",
+            "M221 S95            ; set flow"
+        ],
+        "gcodePost": [
+            "G1 E-1 F2100              ; retract",
+            "G1 Z178 Y178 F4200        ; park print head",
+            "G4                        ; wait",
+            "M104 S0                   ; turn off temperature",
+            "M140 S0                   ; turn off heatbed",
+            "M107                      ; turn off fan",
+            "M221 S100                 ; reset flow",
+            "M900 K0                   ; reset LA",
+            "M84                       ; disable motors"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";AFTER_LAYER_CHANGE",
+            ";[layer_z]"
+        ],
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {
+        "sliceShellOrder": "in-out",
+        "sliceLayerStart": "last",
+        "sliceLineWidth": 0.45,
+        "sliceFillGrow": 0,
+        "sliceFillAngle": 45,
+        "sliceFillWidth": 1,
+        "sliceFillOverlap": 0.4,
+        "sliceFillRepeat": 1,
+        "sliceFillRate": 0,
+        "sliceSolidRate": 0,
+        "sliceSolidMinArea": 1,
+        "sliceSolidLayers": 3,
+        "firstLayerRate": 8,
+        "firstLayerFillRate": 35,
+        "firstLayerPrintMult": 1,
+        "firstLayerLineMult": 2,
+        "firstLayerYOffset": 0,
+        "firstLayerBeltLead": 3,
+        "firstLayerBeltBump": 0,
+        "firstLayerFlatten": 0,
+        "outputDraftShield": false,
+        "outputFeedrate": 40,
+        "outputFinishrate": 50,
+        "outputSeekrate": 150,
+        "outputShellMult": 1.25,
+        "outputFillMult": 1.25,
+        "outputSparseMult": 1.25,
+        "outputRetractDist": 3.2,
+        "outputRetractSpeed": 70,
+        "outputRetractWipe": 0,
+        "outputRetractDwell": 20,
+        "outputShortPoly": 100,
+        "outputMinSpeed": 10,
+        "outputCoastDist": 0,
+        "outputPurgeTower": 0,
+        "outputBeltFirst": false,
+        "outputAvoidGaps": true,
+        "outputLayerRetract": false,
+        "outputLoops": 0,
+        "outputInvertX": false,
+        "outputInvertY": false,
+        "sliceDetectThin": "off",
+        "sliceMinHeight": 0,
+        "sliceAdaptive": false,
+        "zHopDistance": 0.2,
+        "arcTolerance": 0,
+        "antiBacklash": 1,
+        "beltAnchor": 3
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 48,
+                "outputFinishrate": 60,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 40,
+                "outputFinishrate": 50,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 28,
+                "outputFinishrate": 35,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

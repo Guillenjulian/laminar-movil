@@ -1,0 +1,167 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Creality.Ender.7.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-creality-ender-7",
+    "nombre": "Creality Ender 7",
+    "marca": "Creality",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "deviceName": "Creality Ender 7",
+        "bedWidth": 252,
+        "bedDepth": 252,
+        "maxHeight": 302,
+        "originCenter": false,
+        "bedRound": false,
+        "fwRetract": false,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "M140 S{bed_temp}",
+            "M105",
+            "M190 S{bed_temp}",
+            "M104 S{temp}",
+            "M105",
+            "M109 S{temp}",
+            "M82                               ; absolute extrusion mode",
+            "G28                               ; Home",
+            "G92 E0                            ; Reset Extruder",
+            "G1 Z2.0 F3000                     ; Move Z Axis up",
+            "G1 X10.1 Y20 Z0.28 F5000.0        ; Move to start position",
+            "G1 X10.1 Y200.0 Z0.28 F1500.0 E15 ; Draw the first line",
+            "G1 X10.4 Y200.0 Z0.28 F5000.0     ; Move to side a little",
+            "G1 X10.4 Y20 Z0.28 F1500.0 E30    ; Draw the second line",
+            "G92 E0                            ; Reset Extruder",
+            "G1 Z2.0 F3000                     ; Move Z Axis up"
+        ],
+        "gcodePost": [
+            "G91               ; Relative positionning",
+            "G1 E-2 F2700      ; Retract a bit",
+            "G1 E-2 Z0.2 F2400 ; Retract and raise Z",
+            "G1 X5 Y5 F3000    ; Wipe out",
+            "G1 Z10            ; Raise Z more",
+            "G90               ; Absolute positionning",
+            "G28 X Y           ; Present print",
+            "M106 S0           ; Turn-off fan",
+            "M104 S0           ; Turn-off hotend",
+            "M140 S0           ; Turn-off bed",
+            "M84 X Y E         ; Disable all steppers but Z"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}"
+        ],
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {
+        "antiBacklash": 0,
+        "arcTolerance": 0,
+        "firstLayerBeltBump": 0,
+        "firstLayerBeltLead": 3,
+        "firstLayerBeltFact": 1,
+        "firstLayerFillRate": 35,
+        "firstLayerFlatten": 0,
+        "firstLayerRate": 30,
+        "firstLayerYOffset": 0,
+        "outputAlternating": false,
+        "outputAvoidGaps": true,
+        "outputBeltFirst": false,
+        "outputCoastDist": 0,
+        "outputDraftShield": false,
+        "outputFanLayer": 1,
+        "outputFeedrate": 50,
+        "outputFillMult": 1.25,
+        "outputFinishrate": 50,
+        "outputInvertX": false,
+        "outputInvertY": false,
+        "outputLayerRetract": false,
+        "outputLoops": 0,
+        "outputMaxFlowrate": 15,
+        "outputMinLayerTime": 10,
+        "outputMinSpeed": 5,
+        "outputPurgeTower": 0,
+        "outputRetractDist": 10,
+        "outputRetractDwell": 20,
+        "outputRetractSpeed": 40,
+        "outputRetractWipe": 0,
+        "outputScarfLength": 0,
+        "outputSeekrate": 250,
+        "outputShellMult": 1.25,
+        "outputShortPoly": 0,
+        "outputSparseMult": 1.25,
+        "sliceAdaptive": false,
+        "sliceAngle": 45,
+        "sliceCompInner": 0,
+        "sliceCompOuter": 0,
+        "sliceDetectThin": "basic",
+        "sliceFillAngle": 45,
+        "sliceFillGrow": 0,
+        "sliceFillOverlap": 0.35,
+        "sliceFillRepeat": 1,
+        "sliceFillWidth": 1,
+        "sliceLayerStart": "last",
+        "sliceLayerStartX": 0,
+        "sliceLayerStartY": 0,
+        "sliceLineWidth": 0,
+        "sliceMinHeight": 0,
+        "sliceShellOrder": "in-out",
+        "sliceSolidMinArea": 1,
+        "sliceZInterleave": false,
+        "zHopDistance": 0.2
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 60,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 50,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 35,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}
