@@ -10,7 +10,11 @@
   impresora" y quedan guardadas sólo en su celu (IndexedDB).
 - `generico.js`: arma las calidades Rápido/Normal/Detalle a partir de la boquilla y la
   velocidad (lo usan el importador y "Mi impresora").
-- `materiales.json`: materiales comunes a todas las impresoras.
+- `materiales.json`: materiales comunes a todas las impresoras (PLA, PLA+, PETG, TPU, ABS, ASA).
+  Cada uno trae `nombre`, `descripcion`, `densidad` (g/cm³, para los gramos y el costo),
+  `proceso` (pisa a la calidad: por eso el TPU imprime lento aunque elijas Rápido) y, opcionales,
+  `aviso` (se muestra al elegirlo) y `avisoBowden` (si la impresora retrae más de 2 mm).
+  El precio del rollo lo carga cada usuario en el paso 2 y queda en el celu.
 - `opciones.json`: patrones de relleno, atajos de densidad y tipos de adhesión.
 
 El importador **saltea** las Bambu Lab (usan `.gcode.3mf`), las de cinta, la Makerbot

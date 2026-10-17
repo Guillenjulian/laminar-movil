@@ -214,6 +214,49 @@ try {
     revisar('paso 4 visible', true);
     revisar('el resultado usa lo personalizado', (await pagina.textContent('#resumen')).includes('Giroide 40 % · 3 paredes · Borde'));
 
+    // --- Materiales y costo ---
+    // Sin precio cargado, el costo invita a ponerlo; el enlace vuelve al paso 2.
+    // Ahí elegimos PETG, ponemos el precio y relaminamos. Al final volvemos a PLA
+    // y relaminamos, así la vista previa de abajo arranca con el mismo cubo de siempre.
+    const fila = clave => pagina.$eval('#resumen', (dl, k) =>
+        [...dl.querySelectorAll('dt')].find(dt => dt.textContent === k)?.nextElementSibling.textContent.trim(), clave);
+    revisar('sin precio: el costo pide ponerlo', /Poné el precio del rollo/.test(await fila('Costo')), await fila('Costo'));
+    await pagina.tap('[data-poner-precio]');
+    await pagina.waitForSelector('section[data-paso="2"]:not([hidden])');
+    revisar('"poner precio" vuelve al paso 2 con el foco en el precio',
+        await pagina.waitForFunction(() => document.activeElement?.id === 'precioRollo', null, { timeout: 3000 }).then(() => true, () => false));
+    await pagina.tap('label.opcion:has(input[value="petg"])');
+    const tarjetaPetg = await pagina.textContent('#tarjetaMaterial');
+    revisar('tarjeta de PETG con su aviso y el precio', /PEI liso/.test(tarjetaPetg) && /Precio del rollo \(1 kg\)/.test(tarjetaPetg) &&
+        await pagina.isVisible('#precioRollo'));
+    await pagina.fill('#precioRollo', '20000');
+    await pagina.locator('#tarjetaMaterial').scrollIntoViewIfNeeded();
+    await captura('2-material');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
+    {
+        // "1,93 m (≈ 6 g)": con el largo recalculamos los gramos con la densidad del PETG (1,27).
+        const filamento = await fila('Filamento');
+        const [, metros, g] = filamento.match(/^([\d,]+) m \(≈ (\d+) g\)$/) || [];
+        const gramos = Math.PI * 0.875 ** 2 * parseFloat(metros.replace(',', '.')) * 1.27;
+        revisar('PETG: filamento con la densidad del PETG', Math.abs(Number(g) - gramos) <= 0.6, `${filamento} (esperado ≈ ${gramos.toFixed(2)} g)`);
+        // Costo = gramos × precio / 1000. El largo viene redondeado a 1 cm: ±0,03 g → ±$ 1.
+        const costo = await fila('Costo');
+        const pesos = Number((costo.match(/^≈ \$ ([\d.]+)$/)?.[1] || 'NaN').replace(/\./g, ''));
+        revisar('PETG: costo = gramos × precio / 1000', Math.abs(pesos - gramos * 20000 / 1000) <= 1.5 &&
+            Math.abs(pesos - gramos / 1.27 * 1.24 * 20) > 1.5, `${costo} (esperado ≈ $ ${(gramos * 20).toFixed(1)})`);
+        revisar('PETG: se ve el aviso del material', /PEI liso/.test(await pagina.textContent('#avisoResultado')) &&
+            await pagina.isVisible('#avisoResultado'));
+        await pagina.locator('#resumen').scrollIntoViewIfNeeded();
+        await captura('4-costo');
+    }
+    await pagina.goBack();
+    await pagina.tap('label.opcion:has(input[value="pla"])');
+    revisar('el precio es por material (PLA sin precio)', (await pagina.inputValue('#precioRollo')) === '');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
+    revisar('de vuelta en PLA', (await fila('Calidad')).includes('PLA') && await pagina.isHidden('#avisoResultado'));
+
     // --- Vista previa capa por capa ---
     await pagina.waitForSelector('#controlCapas:not([hidden])', { timeout: 30000 });
     const textoCapa = () => pagina.textContent('#textoCapa');
@@ -276,7 +319,11 @@ try {
     await captura('4-pausas');
 
     // Filamento 2 en verde puro: en la capa 20 tiene que verse verde; por tipo de línea, no.
-    const verdes = () => pagina.evaluate(() => new Promise(listo => requestAnimationFrame(() => {
+    // Forzamos un dibujo (como en "se dibujan los recorridos") y leemos el canvas en ese
+    // mismo cuadro: si el visor ya dibujó en un cuadro anterior, WebGL descartó la imagen.
+    const verdes = () => pagina.evaluate(() => new Promise(listo => {
+        document.getElementById('capa').dispatchEvent(new Event('input'));
+        requestAnimationFrame(() => {
         const c = document.querySelector('#visorCapas canvas');
         const t = document.createElement('canvas'); t.width = 96; t.height = 96;
         const ctx = t.getContext('2d');
@@ -285,7 +332,8 @@ try {
         let n = 0;
         for (let i = 0; i < d.length; i += 4) if (d[i + 1] > 150 && d[i] < 90 && d[i + 2] < 90) n++;
         listo(n);
-    })));
+        });
+    }));
     await pagina.locator('#listaPausas input[data-filamento="1"]').fill('#00ff00');
     await pagina.locator('#capa').fill('19');
     const conVerde = await verdes();

@@ -30,9 +30,11 @@
     <pre id="salida"></pre>
     <script type="module">
         import { laminar } from './src/motor/motor.js';
-        import { armarConfiguracion, listaImpresoras, buscarImpresora } from './src/perfiles/perfiles.js';
+        import { armarConfiguracion, listaImpresoras, buscarImpresora, ponerImpresorasPropias } from './src/perfiles/perfiles.js';
         window.impresoras = listaImpresoras().map(i => ({ id: i.id, nombre: i.nombre, estado: i.estado }));
         window.buscarImpresora = buscarImpresora;
+        // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
+        window.ponerImpresorasPropias = ponerImpresorasPropias;
         import { maxTriangulos } from './src/config.js';
         import { esfera, te } from './src/prueba/mallas.js';
 
@@ -46,11 +48,12 @@
         }
 
         // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
-        window.probar = async ({ caso = 'cubo', impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', soportes = false, personal = {}, limite, transformacion } = {}) => {
+        window.probar = async ({ caso = 'cubo', impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', material = 'pla', soportes = false, personal = {}, limite, transformacion } = {}) => {
             const stl = await obtenerSTL(caso);
             const { dispositivo, proceso, avisos } = armarConfiguracion({
                 impresoraId,
                 calidad,
+                material,
                 soportes,
                 personal,
             });
