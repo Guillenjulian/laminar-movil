@@ -41,7 +41,7 @@ function serviceWorker() {
 
 export default defineConfig({
     // Rutas relativas: así el build funciona tanto en la raíz de un dominio
-    // (Cloudflare Pages) como en un subdirectorio (GitHub Pages /laminar-movil/).
+    // (Vercel, Cloudflare Pages) como en un subdirectorio (GitHub Pages /laminar-movil/).
     base: './',
     plugins: [serviceWorker()],
     worker: {

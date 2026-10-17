@@ -58,16 +58,17 @@ dirección que muestra. Ojo: el service worker (offline/instalación) sólo func
 El build es una carpeta estática (`dist/`) con rutas relativas, así que funciona en la raíz de un
 dominio o en un subdirectorio. No hace falta configurar nada especial en el hosting.
 
-### Opción A: GitHub Pages (con el workflow incluido)
+### Opción A: Vercel (la que usa este repo)
 
-1. Subí el repo a GitHub con la rama `main`.
-2. En el repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-3. Hacé push a `main` (o corré el workflow a mano en **Actions → Publicar en GitHub Pages → Run workflow**).
-4. La app queda en `https://<tu-usuario>.github.io/<nombre-del-repo>/`.
+1. En [vercel.com](https://vercel.com): **Add New → Project** e importá el repo de GitHub.
+2. Vercel detecta Vite solo: build `npm run build`, carpeta `dist`. No hay que cambiar nada.
+3. **Deploy.** Cada push a `main` publica en producción (`https://<proyecto>.vercel.app`) y cada
+   PR tiene su propia URL de prueba, ideal para probar en el celu antes de mergear.
 
-El workflow está en `.github/workflows/deploy-pages.yml` (instala, hace `npm run build` y publica `dist/`).
+El plan gratis (Hobby) alcanza, pero es para uso personal no comercial. Las URLs de prueba de
+los PR pueden pedir login de Vercel (Deployment Protection); la de producción es pública.
 
-### Opción B: Cloudflare Pages
+### Opción B: Cloudflare Pages (alternativa)
 
 1. En el panel de Cloudflare: **Workers & Pages → Create → Pages → Connect to Git** y elegí el repo.
 2. Configuración del build:
@@ -78,6 +79,8 @@ El workflow está en `.github/workflows/deploy-pages.yml` (instala, hace `npm ru
 3. Guardá. Cada push a la rama elegida publica una versión nueva en `https://<proyecto>.pages.dev`.
 
 Sin conectar Git también se puede subir a mano: `npm run build && npx wrangler pages deploy dist`.
+
+También funciona en GitHub Pages u otro hosting estático: alcanza con publicar la carpeta `dist/`.
 
 ### Actualizaciones
 
@@ -178,7 +181,7 @@ Esto queda pendiente de validar a mano:
 
 ### Otros
 
-- [ ] Deploy real en GitHub Pages / Cloudflare Pages (el workflow está escrito pero no lo pude correr).
+- [ ] Probar la URL de Vercel en un celu real (instalar la app y usarla sin conexión).
 - [ ] Licencia: el repo de Kiri:Moto es MIT (`license.md`), pero los archivos fuente dicen
       "Copyright Stewart Allen -- All Rights Reserved" en el encabezado. Lo interpreto como aviso de
       copyright compatible con la MIT (el readme dice "free for use without restriction"); para
