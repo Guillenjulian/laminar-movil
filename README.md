@@ -1,20 +1,189 @@
 # Laminar Móvil
 
-Laminador STL → G-code 100% en el navegador, pensado para usar con el celu.
-Sin servidor y sin costos. El motor es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (MIT).
+Laminador **STL → G-code 100 % en el navegador**, pensado para usar con el celu y con una mano.
+Sin servidor, sin cuentas y sin costos: el archivo nunca sale del teléfono.
+Funciona sin conexión y se puede instalar como app (PWA).
 
-> En construcción: la documentación completa (deploy gratis, cómo sumar impresoras) llega en la última etapa.
+El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (licencia MIT).
+
+<p>
+<img src="docs/capturas/1-modelo.jpg" width="180" alt="Paso 1: modelo en el visor 3D">
+<img src="docs/capturas/2-configurar.jpg" width="180" alt="Paso 2: impresora y calidad">
+<img src="docs/capturas/3-laminando.jpg" width="180" alt="Paso 3: laminando">
+<img src="docs/capturas/4-listo.jpg" width="180" alt="Paso 4: listo para descargar">
+</p>
+
+## Qué hace
+
+1. **Subir STL** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
+2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
+3. **Laminar** con barra de progreso, en un Web Worker (la pantalla no se congela). Se puede cancelar.
+4. **Descargar o compartir** el G-code (Web Share API en celus que lo soportan).
+
+Además:
+
+- Si el STL tiene demasiados triángulos para la RAM del equipo, se **simplifica antes de laminar** y se avisa.
+- Recuerda la última configuración y los últimos 6 modelos (IndexedDB, en el celu).
+- Avisa si el modelo no entra en la cama y limita las temperaturas a los máximos de la impresora.
+
+Impresora incluida: **Creality Ender 3 V3 SE**. Sumar otras es agregar un JSON (ver abajo).
 
 ## Desarrollo
 
+Requiere Node 20 o más nuevo.
+
 ```bash
 npm install
-npm run dev        # servidor local
-npm run build      # build estático en dist/
-npm run test:motor # lamina un cubo en Chromium headless y valida el G-code
+npm run dev          # servidor local en http://localhost:5173
+npm run build        # build estático en dist/
+npm run preview      # sirve dist/ (para probar la PWA y el modo offline)
 ```
 
-## Motor
+Pruebas automáticas (usan Chromium; en otra máquina definí `CHROMIUM_PATH`):
 
-`vendor/kiri/` tiene sólo los archivos de Kiri:Moto que usa el worker de laminado,
-copiados por `npm run vendor:kiri` (ver `vendor/kiri/ORIGEN.md`).
+```bash
+npm run build
+npm run test:motor   # lamina mallas de prueba y valida el G-code (perfil, calidades, soportes, malla de 1,2 M triángulos)
+npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
+```
+
+Para probar en el celu en la misma red Wi-Fi: `npm run build && npx vite preview --host` y abrí la
+dirección que muestra. Ojo: el service worker (offline/instalación) sólo funciona con **HTTPS** o en
+`localhost`, así que para probar eso conviene deployar (es gratis, ver abajo).
+
+`prueba-motor.html` es una página de diagnóstico que lamina mallas sin pasar por la interfaz.
+
+## Deploy gratis
+
+El build es una carpeta estática (`dist/`) con rutas relativas, así que funciona en la raíz de un
+dominio o en un subdirectorio. No hace falta configurar nada especial en el hosting.
+
+### Opción A: GitHub Pages (con el workflow incluido)
+
+1. Subí el repo a GitHub con la rama `main`.
+2. En el repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. Hacé push a `main` (o corré el workflow a mano en **Actions → Publicar en GitHub Pages → Run workflow**).
+4. La app queda en `https://<tu-usuario>.github.io/<nombre-del-repo>/`.
+
+El workflow está en `.github/workflows/deploy-pages.yml` (instala, hace `npm run build` y publica `dist/`).
+
+### Opción B: Cloudflare Pages
+
+1. En el panel de Cloudflare: **Workers & Pages → Create → Pages → Connect to Git** y elegí el repo.
+2. Configuración del build:
+   - Framework preset: **None** (o Vite)
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+   - La versión de Node la toma del archivo `.node-version` (22).
+3. Guardá. Cada push a la rama elegida publica una versión nueva en `https://<proyecto>.pages.dev`.
+
+Sin conectar Git también se puede subir a mano: `npm run build && npx wrangler pages deploy dist`.
+
+### Actualizaciones
+
+Cuando publicás una versión nueva, la app instalada la baja sola en segundo plano y muestra
+"Hay una versión nueva de la app" con un botón **Actualizar** (no se actualiza sola para no cortar
+un laminado a la mitad).
+
+## Agregar una impresora
+
+1. Copiá `src/perfiles/impresoras/creality-ender-3-v3-se.json` con otro nombre en la misma carpeta.
+2. Cambiá `id` (único, sin espacios) y `nombre`.
+3. Ajustá `limites` (temperaturas máximas), `dispositivo` (tamaño de cama, boquilla, filamento,
+   G-code de inicio/fin) y los valores de `proceso` y `calidades`.
+4. `npm run build`. La impresora aparece sola en la lista; no hay que tocar código.
+
+Las claves son las de Kiri:Moto y están explicadas en español en
+[`src/perfiles/LEEME.md`](src/perfiles/LEEME.md). Importante: definí `gcodeFan`, si no Kiri no
+prende nunca el ventilador de capa. Los materiales se agregan en `src/perfiles/materiales.json`.
+
+## Cómo está armado
+
+```
+index.html, src/main.js     Interfaz de 4 pasos (JS sin frameworks)
+src/ui/visor.js             Visor 3D (three.js + OrbitControls)
+src/motor/motor.js          API del motor para la interfaz (un worker por tarea)
+src/motor/laminador.worker.js  Worker de laminado: lee STL, simplifica, llama a Kiri
+src/motor/vista.worker.js   Worker liviano para la vista previa
+src/motor/decimar.js        Simplificación de malla (agrupamiento en grilla)
+src/motor/minions-locales.js  Soportes de Kiri sin su pool de sub-workers
+src/perfiles/               Impresoras y materiales en JSON
+src/almacen.js              IndexedDB: preferencias y modelos recientes
+src/sw.js                   Service worker (offline); la lista de archivos la completa vite.config.js
+vendor/kiri/                Motor Kiri:Moto (sólo los archivos que usa el worker)
+```
+
+Decisiones para celus de gama baja:
+
+- Todo el laminado corre en **un solo** Web Worker (Kiri normalmente abre 4 o más sub-workers;
+  así gasta mucha menos RAM, a costa de tardar más en una PC).
+- Cada laminado abre un worker nuevo y lo cierra al terminar, liberando toda la memoria.
+- Máximo de triángulos según `navigator.deviceMemory`: 100 mil (≤ 2 GB), 200 mil (4 GB),
+  500 mil (≥ 8 GB) y 250 mil si el navegador no informa la memoria (iPhone, Firefox). Se cambia en `src/config.js`.
+- Mientras lamina se pide que la pantalla no se apague (Wake Lock).
+
+### Actualizar Kiri:Moto
+
+```bash
+npm run vendor:kiri                      # clona GridSpace/grid-apps y copia lo necesario
+npm run vendor:kiri -- /ruta/a/grid-apps # o usando un clon que ya tengas
+npm run build && npm run test:motor
+```
+
+El script copia sólo los ~114 archivos que importa el worker de Kiri, conserva su licencia y
+encabezados, y reemplaza por "shims" las librerías que no hacen falta para FDM (QuickJS, manifold,
+RasterPath). Detalle en `vendor/kiri/ORIGEN.md`.
+
+También aplica dos parches a bugs de Kiri 4.7.0 que afectaban el G-code (marcados con
+`PARCHE laminar-movil`): el ventilador de capa quedaba apagado casi toda la impresión
+(la macro `M106 S{fan_speed}` salía con el valor viejo) y la primera capa se trataba como
+"capa puente" para el ventilador. Si al actualizar Kiri el parche ya no aplica, el script avisa.
+
+## Lo que NO pude validar
+
+Todo lo de arriba está probado de forma automática en Chromium de escritorio emulando un celu.
+Esto queda pendiente de validar a mano:
+
+### Perfil de la Ender 3 V3 SE (contrastar con Creality Print / OrcaSlicer oficiales)
+
+- [ ] **Imprimir de verdad** un G-code generado (empezar por el cubo de ejemplo en calidad Normal).
+- [ ] Volumen 220 × 220 × 250 mm y origen en la esquina frontal izquierda.
+- [ ] **Start G-code**: sólo `G28`, sin `G29`. Confirmar si el firmware aplica la malla guardada
+      después de `G28`; si no, agregar `M420 S1` después del `G28`.
+- [ ] Línea de purga en X = 2 mm (el perfil oficial de Creality purga en X = −2,1, fuera de la cama;
+      la dejé adentro por seguridad).
+- [ ] End G-code: retracción de 4 mm, subida de 10 mm y "presentar" la pieza en Y = 220.
+- [ ] Retracción 0,8 mm a 40 mm/s y sin z-hop.
+- [ ] Velocidades: Rápido 120/80, Normal 100/60, Detalle 70/40 mm/s (relleno/perímetro exterior),
+      viajes a 150 mm/s, primera capa a 30 mm/s. Kiri no manda aceleraciones (`M204`): usa las del firmware.
+- [ ] Caudal máximo 15 mm³/s (frena la velocidad si se supera).
+- [ ] Multiplicador de extrusión de Kiri (1,25 por defecto, compensa su fórmula): revisar con un cubo
+      que las paredes salgan del ancho correcto.
+- [ ] PLA a 200 °C / cama 60 °C, ventilador al 100 % desde la capa 2, precalentado de boquilla a 150 °C.
+- [ ] Paredes, capas sólidas y relleno de cada calidad.
+- [ ] La estimación de tiempo de Kiri no tiene en cuenta aceleraciones: puede quedar corta.
+
+### En un celu real
+
+- [ ] Rendimiento y memoria en un celu de gama baja (2–3 GB). Ajustar los máximos de triángulos si se cuelga.
+- [ ] Selector de archivos: en algunos Android los `.stl` aparecen en gris con el filtro de tipos.
+- [ ] Compartir el G-code (Web Share con archivos) en Android e iOS: que lo acepten como
+      `text/plain` y que se conserve la extensión `.gcode`.
+- [ ] Descarga en iOS Safari (a veces abre una vista previa en vez de guardar).
+- [ ] Gestos táctiles reales (pellizcar para zoom, girar con un dedo).
+- [ ] Instalación como app (Android: "Instalar app"; iOS: Compartir → "Agregar a inicio") y uso sin conexión.
+- [ ] Workers con módulos ES: requiere iOS 15 o más nuevo; Wake Lock: iOS 16.4 o más nuevo.
+- [ ] iOS Safari puede borrar los datos guardados (recientes) si la app no está instalada y no se usa por un tiempo.
+- [ ] Flujo de "Hay una versión nueva" después de publicar una actualización.
+
+### Otros
+
+- [ ] Deploy real en GitHub Pages / Cloudflare Pages (el workflow está escrito pero no lo pude correr).
+- [ ] Licencia: el repo de Kiri:Moto es MIT (`license.md`), pero los archivos fuente dicen
+      "Copyright Stewart Allen -- All Rights Reserved" en el encabezado. Lo interpreto como aviso de
+      copyright compatible con la MIT (el readme dice "free for use without restriction"); para
+      tener certeza, se le puede consultar al autor.
+
+## Licencia
+
+MIT (ver `LICENSE`). El motor en `vendor/kiri/` es Kiri:Moto, © Stewart Allen, MIT (`vendor/kiri/license.md`).

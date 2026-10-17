@@ -44,6 +44,13 @@ function revisar(nombre, condicion, detalle = '') {
     if (!condicion) fallas++;
 }
 const visible = sel => pagina.isVisible(sel);
+// Carga un STL; si ya hay un modelo, primero toca "Elegir otro modelo".
+async function elegirArchivo(ruta) {
+    if (await visible('#otroModelo')) await pagina.tap('#otroModelo');
+    await pagina.setInputFiles('#archivo', ruta);
+    const nombre = path.basename(ruta);
+    await pagina.waitForFunction(n => document.getElementById('nombreModelo').textContent === n, nombre, { timeout: 60000 });
+}
 const captura = async nombre => pagina.screenshot({ path: path.join(CAPTURAS, nombre + '.png') });
 
 try {
@@ -53,17 +60,14 @@ try {
     revisar('"Siguiente" deshabilitado sin modelo', await pagina.isDisabled('#siguiente'));
 
     // Modelo pesado: tiene que avisar que se va a simplificar.
-    await pagina.setInputFiles('#archivo', stlPesado);
-    await pagina.waitForSelector('#conModelo:not([hidden])', { timeout: 60000 });
+    await elegirArchivo(stlPesado);
     const aviso = await pagina.textContent('#avisoModelo');
     revisar('aviso de modelo pesado', /Modelo pesado/.test(aviso), `"${aviso.slice(0, 60)}…"`);
     await pagina.waitForTimeout(800);
     await captura('1-modelo-pesado');
 
     // Cubo de ejemplo
-    await pagina.click('#ejemplo').catch(() => {}); // está oculto si ya hay modelo
-    await pagina.setInputFiles('#archivo2', 'public/ejemplos/cubo-20mm.stl');
-    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'cubo-20mm.stl');
+    await elegirArchivo('public/ejemplos/cubo-20mm.stl');
     revisar('datos del cubo', /20,0 × 20,0 × 20,0 mm/.test(await pagina.textContent('#datosModelo')));
     revisar('sin avisos para el cubo', !(await visible('#avisoModelo')));
 
@@ -87,8 +91,7 @@ try {
 
     // Cancelar a mitad de camino (con la esfera pesada, que tarda).
     await pagina.goBack();
-    await pagina.setInputFiles('#archivo2', stlPesado);
-    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'esfera-pesada.stl', null, { timeout: 60000 });
+    await elegirArchivo(stlPesado);
     await pagina.tap('#siguiente');
     await pagina.tap('#laminar');
     await pagina.waitForFunction(() => parseInt(document.getElementById('porcentaje').textContent) >= 10, null, { timeout: 60000 });
@@ -98,8 +101,7 @@ try {
 
     // Laminar el cubo hasta el final.
     await pagina.goBack();
-    await pagina.setInputFiles('#archivo2', 'public/ejemplos/cubo-20mm.stl');
-    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'cubo-20mm.stl');
+    await elegirArchivo('public/ejemplos/cubo-20mm.stl');
     await pagina.tap('#siguiente');
     await pagina.tap('#laminar');
     await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
@@ -116,6 +118,41 @@ try {
     // "Atrás" desde el resultado vuelve a la configuración (no a la barra de progreso).
     await pagina.goBack();
     revisar('atrás desde el resultado → paso 2', await visible('section[data-paso="2"]'));
+
+    // --- Guardado en el celu (IndexedDB) ---
+    await pagina.reload();
+    await pagina.waitForSelector('#recientes:not([hidden])');
+    const recientes = await pagina.$$eval('.reciente b', bs => bs.map(b => b.textContent));
+    revisar('modelos recientes guardados', recientes[0] === 'cubo-20mm.stl' && recientes.includes('esfera-pesada.stl'),
+        JSON.stringify(recientes));
+    await captura('1-recientes');
+    await pagina.tap('.reciente:has-text("cubo-20mm.stl")');
+    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'cubo-20mm.stl');
+    revisar('abrir un reciente', true);
+    await pagina.tap('#siguiente');
+    revisar('se recuerda la calidad elegida', await pagina.isChecked('input[value="rapido"]'));
+    await pagina.goBack();
+    await pagina.tap('#otroModelo');
+    await pagina.tap('[data-borrar]:near(.reciente:has-text("esfera-pesada.stl"))');
+    await pagina.waitForFunction(() => ![...document.querySelectorAll('.reciente b')].some(b => b.textContent === 'esfera-pesada.stl'));
+    revisar('borrar un reciente', true);
+
+    // --- PWA: instalable y sin conexión ---
+    const manifest = await pagina.evaluate(async () => (await fetch(document.querySelector('link[rel=manifest]').href)).json());
+    revisar('manifest con íconos', manifest.icons.length === 3 && manifest.display === 'standalone');
+    await pagina.evaluate(() => navigator.serviceWorker.ready);
+    await pagina.reload();
+    revisar('service worker controlando la página', await pagina.evaluate(() => !!navigator.serviceWorker.controller));
+    await contexto.setOffline(true);
+    await pagina.reload();
+    revisar('abre sin conexión', await visible('section[data-paso="1"]'));
+    await pagina.tap('#ejemplo');
+    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'cubo-20mm.stl');
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('section[data-paso="4"]:not([hidden])', { timeout: 60000 });
+    revisar('lamina sin conexión', true);
+    await contexto.setOffline(false);
 } finally {
     await navegador.close();
     servidor.httpServer.close();

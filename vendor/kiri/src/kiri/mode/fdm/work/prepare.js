@@ -1818,7 +1818,7 @@ function slicePrintPath(print, slice, startPoint, offset, output, opt = {}) {
     print.addPrintPoints(preout, output);
 
     // bridge layer fan change
-    if (preout.length && slice.isBridgeLayer) {
+    if (preout.length && slice.isBridgeLayer && slice.index > 0) { // PARCHE laminar-movil
         preout[0].fan = Math.round(fanSpeed / 3);
         preout.peek().fan = fanSpeed;
     }

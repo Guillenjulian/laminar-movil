@@ -5,6 +5,7 @@ import { impresoras, materiales, buscarImpresora, armarConfiguracion } from './p
 import { maxTriangulos } from './config.js';
 import { crearVisor } from './ui/visor.js';
 import * as formato from './ui/formato.js';
+import * as almacen from './almacen.js';
 
 const $ = id => document.getElementById(id);
 
@@ -57,7 +58,7 @@ history.replaceState({ paso: 1 }, '');
 // ---------------------------------------------------------------------------
 // Paso 1: subir el STL
 
-async function cargarArchivo(nombre, buffer) {
+async function cargarArchivo(nombre, buffer, { guardar = true } = {}) {
     if (!/\.stl$/i.test(nombre)) {
         alert('Ese archivo no es un .stl. Elegí un modelo en formato STL.');
         return;
@@ -82,6 +83,9 @@ async function cargarArchivo(nombre, buffer) {
         $('datosModelo').textContent = `${formato.milimetros(tamano)} · ${formato.triangulos(triangulos)}`;
         actualizarAvisoModelo();
         $('siguiente').disabled = false;
+
+        // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
+        if (guardar) await almacen.guardarModelo(nombre, buffer).catch(err => console.warn('No se guardó el modelo', err));
     } catch (err) {
         // Si ya había un modelo cargado, queda ése; si no, volvemos a la pantalla inicial.
         $('sinModelo').hidden = !!estado.stl;
@@ -118,7 +122,48 @@ async function alElegirArchivo(e) {
     if (archivo) await cargarArchivo(archivo.name, await archivo.arrayBuffer());
 }
 $('archivo').onchange = alElegirArchivo;
-$('archivo2').onchange = alElegirArchivo;
+
+// "Elegir otro modelo": vuelve a la pantalla inicial (archivo, ejemplo y recientes).
+$('otroModelo').onclick = () => {
+    estado.stl = null;
+    estado.vista = null;
+    visor?.quitarModelo();
+    $('conModelo').hidden = true;
+    $('sinModelo').hidden = false;
+    $('siguiente').disabled = true;
+    mostrarRecientes();
+};
+
+// Lista de modelos recientes guardados en el celu.
+async function mostrarRecientes() {
+    const lista = await almacen.listarModelos().catch(() => []);
+    $('recientes').hidden = lista.length === 0;
+    $('listaRecientes').innerHTML = lista.map(m => `<li>
+        <button class="reciente" data-id="${m.id}">
+            <b>${escapar(m.nombre)}</b>
+            <small>${new Date(m.fecha).toLocaleDateString('es-AR')} · ${formato.bytes(m.bytes)}</small>
+        </button>
+        <button class="borrar" data-borrar="${m.id}" aria-label="Borrar ${escapar(m.nombre)}">×</button>
+    </li>`).join('');
+}
+
+$('listaRecientes').onclick = async e => {
+    const boton = e.target.closest('button');
+    if (!boton) return;
+    if (boton.dataset.borrar) {
+        await almacen.borrarModelo(Number(boton.dataset.borrar));
+        mostrarRecientes();
+        return;
+    }
+    const id = Number(boton.dataset.id);
+    const modelo = (await almacen.listarModelos()).find(m => m.id === id);
+    const stl = await almacen.leerModelo(id);
+    if (modelo && stl) await cargarArchivo(modelo.nombre, stl);
+};
+
+function escapar(texto) {
+    return texto.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+}
 
 $('ejemplo').onclick = async () => {
     const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
@@ -168,7 +213,25 @@ document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e 
     if (name === 'calidad') estado.calidad = value;
     if (name === 'material') estado.material = value;
     if (e.target.id === 'soportes') estado.soportes = checked;
+    guardarPreferencias();
 });
+
+// Las elecciones del paso 2 se recuerdan para la próxima vez.
+function guardarPreferencias() {
+    const { impresoraId, calidad, material, soportes } = estado;
+    almacen.guardarAjuste('preferencias', { impresoraId, calidad, material, soportes }).catch(() => {});
+}
+
+async function cargarPreferencias() {
+    const p = await almacen.leerAjuste('preferencias').catch(() => null);
+    if (!p) return;
+    // Sólo usamos lo que todavía existe (puede haber cambiado algún perfil).
+    const imp = impresoras.find(i => i.id === p.impresoraId);
+    if (imp) estado.impresoraId = imp.id;
+    if (buscarImpresora(estado.impresoraId).calidades[p.calidad]) estado.calidad = p.calidad;
+    if (materiales[p.material]) estado.material = p.material;
+    estado.soportes = !!p.soportes;
+}
 
 // ---------------------------------------------------------------------------
 // Paso 3: laminar
@@ -306,9 +369,44 @@ $('descargar').onclick = () => {
 
 $('otro').onclick = () => {
     estado.resultado = null;
+    $('otroModelo').click();
     irA(1);
 };
 
 // ---------------------------------------------------------------------------
+// App instalable y offline: registrar el service worker (sólo en el build;
+// en `npm run dev` molestaría porque guarda versiones viejas).
+
+function registrarServiceWorker() {
+    if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
+    navigator.serviceWorker.register('./sw.js').then(registro => {
+        // Si hay una versión nueva esperando, ofrecemos actualizar (no lo hacemos
+        // solos para no cortar un laminado a la mitad).
+        const ofrecer = sw => {
+            if (!sw || !navigator.serviceWorker.controller) return;
+            $('actualizacion').hidden = false;
+            $('actualizar').onclick = () => sw.postMessage('actualizar');
+        };
+        ofrecer(registro.waiting);
+        registro.addEventListener('updatefound', () => {
+            const nuevo = registro.installing;
+            nuevo.addEventListener('statechange', () => nuevo.state === 'installed' && ofrecer(nuevo));
+        });
+    }).catch(err => console.warn('No se pudo registrar el service worker', err));
+
+    let recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!recargando && !$('actualizacion').hidden) {
+            recargando = true;
+            location.reload();
+        }
+    });
+}
+
+// ---------------------------------------------------------------------------
+await cargarPreferencias();
 dibujarOpciones();
 mostrar(1);
+mostrarRecientes();
+almacen.pedirAlmacenamientoPersistente();
+registrarServiceWorker();

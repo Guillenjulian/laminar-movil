@@ -77,7 +77,12 @@ try {
     // 1. Cubo con calidad Normal: perfil completo de la Ender 3 V3 SE.
     const normal = await laminar({ caso: 'cubo', calidad: 'normal' });
     revisar('start G-code con temperaturas PLA', ['M140 S60', 'M190 S60', 'M104 S200', 'M109 S200', 'G28'].every(normal.g.tiene));
-    revisar('ventilador de capa', normal.g.tiene('M106 S255'));
+    // Ventilador: apagado en la primera capa y al 100 % desde la segunda.
+    const capa = n => normal.g.lineas.indexOf(`;LAYER:${n}`);
+    const ventilador = normal.g.lineas.map((l, i) => [i, l.match(/^M106 S(\d+)/)]).filter(([, m]) => m);
+    const prendidoAntes = n => ventilador.some(([i, m]) => i < capa(n) && +m[1] > 0);
+    revisar('ventilador apagado en la capa 0', !prendidoAntes(1));
+    revisar('ventilador al 100 % desde la capa 1', ventilador.some(([i, m]) => i > capa(1) && i < capa(2) && m[1] === '255'));
     revisar('retracción de 0,8 mm', normal.g.tiene('G1 E-0.8'));
     revisar('cubo centrado en la cama', normal.g.x[0] > 95 && normal.g.x[1] < 125 && normal.g.y[0] > 95 && normal.g.y[1] < 125,
         `X ${normal.g.x} Y ${normal.g.y}`);

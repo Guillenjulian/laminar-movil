@@ -115,6 +115,32 @@ h2:first-child { margin-top: 4px; }
 }
 .aviso.error { background: var(--error); border-color: var(--error-borde); }
 
+/* --- Modelos recientes --- */
+.recientes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.recientes li { display: flex; gap: 8px; }
+.reciente {
+    flex: 1; min-width: 0; min-height: 56px;
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+    padding: 8px 14px; border-radius: var(--radio);
+    border: 1px solid var(--borde); background: var(--tarjeta); color: var(--texto);
+    font: inherit; text-align: left; cursor: pointer;
+}
+.reciente b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reciente small { color: var(--suave); }
+.borrar {
+    width: 56px; flex: none; border-radius: var(--radio);
+    border: 1px solid var(--borde); background: var(--tarjeta); color: var(--suave);
+    font-size: 1.6rem; cursor: pointer;
+}
+
+/* --- Aviso de versión nueva --- */
+.banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 12px 16px 0; padding: 8px 8px 8px 14px;
+    border-radius: var(--radio); background: var(--aviso); border: 1px solid var(--aviso-borde);
+}
+.banner .boton { margin: 0; }
+
 /* --- Botones --- */
 .boton {
     display: flex; align-items: center; justify-content: center;

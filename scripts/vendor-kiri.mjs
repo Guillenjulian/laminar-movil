@@ -133,6 +133,29 @@ fs.writeFileSync(jspoly, '// PARCHE laminar-movil: require() deshabilitado (ver 
         .replaceAll('typeof require !== "undefined" && require !== null', 'false')
         .replace(/\brequire\(/g, 'requireDeshabilitado('));
 
+// 4c. Parches a bugs de Kiri que afectan al G-code. Si el texto no aparece
+// (cambió upstream), se corta acá para revisarlo a mano.
+function parchar(rel, buscar, reemplazo, motivo) {
+    const archivo = path.join(DESTINO, 'src', rel);
+    const codigo = fs.readFileSync(archivo, 'utf8');
+    if (codigo.split(buscar).length !== 2) {
+        throw new Error(`No se pudo aplicar el parche en ${rel} (${motivo}): revisar a mano`);
+    }
+    fs.writeFileSync(archivo, codigo.replace(buscar, reemplazo));
+}
+// El ventilador cambia por punto (capas puente) pero la macro {fan_speed}
+// usaba el valor viejo: salía "M106 S0" en vez de prenderlo, y después no
+// se volvía a mandar. Resultado: ventilador apagado casi toda la impresión.
+parchar('kiri/mode/fdm/work/export.js',
+    'fanSpeed = out.fan ?? fanSpeed;',
+    'fanSpeed = out.fan ?? fanSpeed;\n                subst.fan_speed = fanSpeed; // PARCHE laminar-movil',
+    'macro de ventilador desactualizada');
+// La primera capa no es "puente" para el ventilador (igual que para la velocidad).
+parchar('kiri/mode/fdm/work/prepare.js',
+    'if (preout.length && slice.isBridgeLayer) {',
+    'if (preout.length && slice.isBridgeLayer && slice.index > 0) { // PARCHE laminar-movil',
+    'ventilador en la primera capa');
+
 // 5. Escribir shims
 for (const [rel, codigo] of Object.entries(SHIMS)) {
     const dst = path.join(DESTINO, 'src', rel);
@@ -155,7 +178,11 @@ son shims propios (no vienen de upstream):
 
 ${Object.keys(SHIMS).map(s => '- `src/' + s + '`').join('\n')}
 
-\`src/ext/jspoly.js\` tiene un parche mínimo (se apagan \`require()\` de CommonJS que nunca corren en el navegador).
+Parches (marcados con \`PARCHE laminar-movil\`):
+
+- \`src/kiri/mode/fdm/work/export.js\`: la macro \`{fan_speed}\` no se actualizaba cuando el ventilador cambia a mitad de capa (salía \`M106 S0\` y el ventilador quedaba apagado casi toda la impresión).
+- \`src/kiri/mode/fdm/work/prepare.js\`: el ventilador de "capa puente" no se aplica a la primera capa.
+- \`src/ext/jspoly.js\` tiene un parche mínimo (se apagan \`require()\` de CommonJS que nunca corren en el navegador).
 
 No editar a mano: para actualizar, correr \`npm run vendor:kiri\`.
 `);

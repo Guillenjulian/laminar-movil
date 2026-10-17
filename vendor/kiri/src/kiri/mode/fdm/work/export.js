@@ -604,6 +604,7 @@ export function fdm_export(print, online, ondone, ondebug) {
             speedMMM = (speed || process.outputFeedrate) * 60; // range
             if (!isBelt) {
                 fanSpeed = out.fan ?? fanSpeed;
+                subst.fan_speed = fanSpeed; // PARCHE laminar-movil
             }
 
             // hint to controller that we're working on a specific object
