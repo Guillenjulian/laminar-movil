@@ -328,15 +328,27 @@ input[type=range] { width: 100%; height: 36px; accent-color: var(--acento); }
     border-radius: 2px; background: var(--error-borde);
 }
 #pausarCapa { margin-top: 4px; }
-.pausas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.pausas li[data-capa] { display: flex; border: 1px solid var(--error-borde); border-radius: 999px; overflow: hidden; }
-.pausas button {
-    min-height: 40px; border: 0; background: var(--error); color: var(--texto);
-    font: inherit; font-size: 0.9rem; cursor: pointer;
+.modo-color { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: var(--suave); }
+.modo-color button {
+    flex: 1; min-height: 40px; border-radius: 10px;
+    border: 1px solid var(--borde); background: var(--tarjeta); color: var(--texto); font: inherit; font-size: 0.9rem;
 }
-.pausas .ir { padding: 0 6px 0 12px; }
-.pausas .quitar { width: 40px; font-size: 1.2rem; }
-.pausas .nota { width: 100%; margin: 2px 0 0; }
+.modo-color button.activo { border-color: var(--acento); background: color-mix(in srgb, var(--acento) 18%, transparent); }
+.filamentos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.filamentos li:not(.nota) {
+    display: flex; align-items: stretch; gap: 0;
+    border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; background: var(--tarjeta);
+}
+.filamentos input[type=color] {
+    width: 52px; min-height: 52px; flex: none; padding: 6px; border: 0; background: none; cursor: pointer;
+}
+.filamentos button {
+    border: 0; background: none; color: var(--texto); font: inherit; font-size: 0.9rem; cursor: pointer; text-align: left;
+}
+.filamentos .ir { flex: 1; padding: 6px 4px; }
+.filamentos .ir small { display: block; color: var(--suave); }
+.filamentos .quitar { width: 52px; flex: none; font-size: 1.3rem; color: var(--suave); border-left: 1px solid var(--borde); }
+.filamentos .nota { margin: 2px 0 0; }
 
 /* --- Resumen --- */
 .resumen {

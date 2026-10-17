@@ -23,7 +23,8 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
 3. **Laminar** con barra de progreso, en un Web Worker (la pantalla no se congela). Se puede cancelar.
 4. **Vista previa capa por capa** (deslizador, ±, reproducir, "sólo esta capa", colores por tipo de
-   línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores)
+   línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores,
+   con la vista previa pintada del color de cada filamento)
    y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
 
 Además:

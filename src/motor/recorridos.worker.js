@@ -2,6 +2,7 @@
 //
 // Recibe: { gcode: string, maxSegmentos }
 // Manda:  { tipo: 'listo', posiciones: Uint16Array (6 por segmento, ver CUANTIZADO), colores: Uint8Array (6 por segmento),
+//           tipos: Uint8Array (tipo de línea de cada segmento, índice en TIPOS),
 //           inicioCapa: Uint32Array (índice del primer segmento de cada capa, + uno final),
 //           pausaCapa: Float64Array (posición en el texto del G-code donde insertar una pausa
 //                      antes de cada capa: justo antes de subir Z, con la capa anterior terminada),
@@ -46,6 +47,7 @@ function valor(linea, letra, desde) {
 export function leer(gcode, maxSegmentos) {
     const pos = new Lista(Uint16Array, 6 * 65536);
     const col = new Lista(Uint8Array, 6 * 65536);
+    const tip = new Lista(Uint8Array, 65536);
     const inicioCapa = [], zCapa = [];
     let x = 0, y = 0, z = 0, e = 0;
     let absoluto = true, eAbsoluto = true;
@@ -135,6 +137,8 @@ export function leer(gcode, maxSegmentos) {
                 }
                 pos.asegurar(6);
                 col.asegurar(6);
+                tip.asegurar(1);
+                tip.datos[tip.n++] = tipo;
                 const p = pos.datos, c = col.datos, color = TIPOS[tipo].color;
                 p[pos.n] = q(x); p[pos.n + 1] = q(y); p[pos.n + 2] = q(nz);
                 p[pos.n + 3] = q(nx); p[pos.n + 4] = q(ny); p[pos.n + 5] = q(nz);
@@ -159,6 +163,7 @@ export function leer(gcode, maxSegmentos) {
     return {
         posiciones: pos.final(),
         colores: col.final(),
+        tipos: tip.final(),
         inicioCapa: Uint32Array.from(inicioCapa),
         pausaCapa: Float64Array.from(pausaCapa),
         zCapa: Float32Array.from(zCapa),
@@ -171,7 +176,7 @@ self.onmessage = e => {
     try {
         const r = leer(e.data.gcode, e.data.maxSegmentos || Infinity);
         self.postMessage({ tipo: 'listo', ...r },
-            [r.posiciones.buffer, r.colores.buffer, r.inicioCapa.buffer, r.zCapa.buffer, r.pausaCapa.buffer]);
+            [r.posiciones.buffer, r.colores.buffer, r.tipos.buffer, r.inicioCapa.buffer, r.zCapa.buffer, r.pausaCapa.buffer]);
     } catch (err) {
         self.postMessage({ tipo: 'error', mensaje: err.message || String(err) });
     }

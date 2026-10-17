@@ -108,7 +108,7 @@ export function crearVisor(contenedor) {
         const centro = new THREE.Vector3(
             (caja.min[0] + caja.max[0]) / 2 - dx, (caja.min[1] + caja.max[1]) / 2 - dy, (caja.min[2] + caja.max[2]) / 2);
         const radio = Math.hypot(caja.max[0] - caja.min[0], caja.max[1] - caja.min[1], caja.max[2] - caja.min[2]) / 2;
-        recorridos = { grupo, abajo, actual, inicioCapa, esfera: { centro, radio } };
+        recorridos = { grupo, abajo, actual, inicioCapa, col, esfera: { centro, radio } };
         vistaInicial();
     }
 
@@ -120,6 +120,23 @@ export function crearVisor(contenedor) {
         actual.geometry.setDrawRange(desde * 2, (hasta - desde) * 2);
         abajo.geometry.setDrawRange(0, desde * 2);
         abajo.visible = !sola;
+        redibujar();
+    }
+
+    // Cambia los colores de los recorridos: `rellenar(array)` escribe RGB por vértice.
+    function pintarRecorridos(rellenar) {
+        if (!recorridos) return;
+        rellenar(recorridos.col.array);
+        recorridos.col.needsUpdate = true;
+        redibujar();
+    }
+
+    // Cuánto se atenúan las capas de abajo: fuerte por tipo de línea (para que resalte la
+    // capa actual) y suave por filamento (para que se vean bien los colores).
+    function atenuarAbajo(fuerte) {
+        if (!recorridos) return;
+        recorridos.abajo.material.color.set(fuerte ? 0x9a9a9a : 0xe6e6e6);
+        recorridos.abajo.material.opacity = fuerte ? 0.55 : 0.9;
         redibujar();
     }
 
@@ -193,6 +210,8 @@ export function crearVisor(contenedor) {
         quitarModelo,
         ponerRecorridos,
         mostrarCapa,
+        pintarRecorridos,
+        atenuarAbajo,
         quitarRecorridos,
         vistaInicial,
         pausar(p) { activo = !p; redibujar(); },

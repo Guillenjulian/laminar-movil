@@ -151,8 +151,13 @@
                     <span class="texto-capa" id="textoCapa"></span>
                     <label class="tilde-capa"><input type="checkbox" id="soloCapa"> Sólo esta</label>
                 </div>
-                <button type="button" class="boton" id="pausarCapa">⏸ Pausar en esta capa (cambio de filamento)</button>
-                <ul class="pausas" id="listaPausas"></ul>
+                <button type="button" class="boton" id="pausarCapa">⏸ Pausar acá para cambiar filamento</button>
+                <div class="modo-color" id="modoColor" role="group" aria-label="Colores de la vista previa" hidden>
+                    <span>Colores:</span>
+                    <button type="button" data-modo="tipo">Tipo de línea</button>
+                    <button type="button" data-modo="filamento">Filamento</button>
+                </div>
+                <ul class="filamentos" id="listaPausas"></ul>
                 <ul class="leyenda" id="leyenda"></ul>
                 <p class="aviso" id="avisoVista" hidden></p>
             </div>

@@ -1,7 +1,7 @@
 // Lógica de la app: 4 pasos (subir → configurar → laminar → listo).
 
 import { laminar, leerParaVista, leerRecorridos } from './motor/motor.js';
-import { TIPOS } from './motor/tipos-linea.js';
+import { TIPOS, COLORES_FILAMENTO } from './motor/tipos-linea.js';
 import { insertarPausas } from './motor/pausas.js';
 import {
     listaImpresoras, buscarImpresora, existeImpresora, ponerImpresorasPropias, IMPRESORA_INICIAL,
@@ -29,6 +29,8 @@ const estado = {
     personal: {},        // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
     resultado: null,     // { gcode, info, archivo, impresoraId }
     pausas: new Map(),   // capa -> { capa, offset, z }: pausas para cambiar filamento
+    coloresFilamento: [...COLORES_FILAMENTO], // color de cada filamento (1º, 2º, ...) en la vista previa
+    modoColor: 'tipo',   // vista previa coloreada por 'tipo' de línea o por 'filamento'
     cancelar: null,      // AbortController del laminado en curso
 };
 
@@ -633,6 +635,7 @@ async function armarVistaPrevia() {
     const resultado = estado.resultado;
     capas = null;
     estado.pausas = new Map();
+    estado.modoColor = 'tipo';
     dibujarPausas();
     pararReproduccion();
     visorCapas?.quitarRecorridos(); // liberar la memoria de la vista anterior
@@ -649,7 +652,7 @@ async function armarVistaPrevia() {
         visorCapas.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
         visorCapas.ponerRecorridos(r, { origenCentro: d.originCenter });
         visorCapas.pausar(estado.paso !== 4);
-        capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, pausaCapa: r.pausaCapa, total };
+        capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, pausaCapa: r.pausaCapa, tipos: r.tipos, total };
 
         $('capa').max = total - 1;
         $('leyenda').innerHTML = TIPOS.slice(0, -1).map(t =>
@@ -678,7 +681,7 @@ function irACapa(n) {
     b.disabled = n === 0;
     b.textContent = n === 0 ? '⏸ No se puede pausar en la primera capa'
         : estado.pausas.has(n) ? '✕ Quitar la pausa de esta capa'
-        : '⏸ Pausar en esta capa (cambio de filamento)';
+        : '⏸ Pausar acá para cambiar filamento';
 }
 
 // --- Pausas para cambiar filamento ---
@@ -686,35 +689,103 @@ function irACapa(n) {
 $('pausarCapa').onclick = () => {
     const n = Number($('capa').value);
     if (!capas || n === 0) return;
-    if (estado.pausas.has(n)) estado.pausas.delete(n);
-    else estado.pausas.set(n, { capa: n, offset: capas.pausaCapa[n], z: capas.zCapa[n] });
+    if (estado.pausas.has(n)) {
+        estado.pausas.delete(n);
+    } else {
+        estado.pausas.set(n, { capa: n, offset: capas.pausaCapa[n], z: capas.zCapa[n] });
+        estado.modoColor = 'filamento'; // con pausas, lo natural es ver los colores
+    }
     dibujarPausas();
     irACapa(n);
 };
 
+// Lista de filamentos: tocar uno lleva a su primera capa; × quita la pausa; el color se elige.
 $('listaPausas').onclick = e => {
-    const li = e.target.closest('[data-capa]');
-    if (!li) return;
-    const n = Number(li.dataset.capa);
-    if (e.target.closest('.quitar')) {
+    const b = e.target.closest('button[data-capa]');
+    if (!b) return;
+    const n = Number(b.dataset.capa);
+    if (b.classList.contains('quitar')) {
         estado.pausas.delete(n);
         dibujarPausas();
     }
     pararReproduccion();
     irACapa(n);
 };
+$('listaPausas').addEventListener('input', e => {
+    if (!e.target.matches('input[type=color]')) return;
+    estado.coloresFilamento[Number(e.target.dataset.filamento)] = e.target.value;
+    estado.modoColor = 'filamento';
+    actualizarModoColor();
+    pintarRecorridos();
+});
+
+$('modoColor').onclick = e => {
+    const b = e.target.closest('[data-modo]');
+    if (!b) return;
+    estado.modoColor = b.dataset.modo;
+    actualizarModoColor();
+    pintarRecorridos();
+};
+
+function colorFilamento(i) {
+    return estado.coloresFilamento[i] ?? COLORES_FILAMENTO[i % COLORES_FILAMENTO.length];
+}
 
 function dibujarPausas() {
     const lista = [...estado.pausas.values()].sort((a, b) => a.capa - b.capa);
-    $('listaPausas').innerHTML = lista.map(p => `<li data-capa="${p.capa}">
-        <button type="button" class="ir">⏸ Capa ${p.capa + 1} · Z ${formato.numero(p.z, 2)} mm</button>
-        <button type="button" class="quitar" aria-label="Quitar la pausa de la capa ${p.capa + 1}">×</button>
-    </li>`).join('') + (lista.length ? `<li class="nota">La impresora se va a detener al empezar
-        ${lista.length === 1 ? 'esa capa' : 'cada una de esas capas'} para que cambies el filamento
-        (usa <code>${escapar(lineasPausa(buscarImpresora(estado.resultado.impresoraId)).join(' · '))}</code>).</li>` : '');
+    const total = capas?.total || 0;
+    // Tramos de capas que van con cada filamento (antes de la 1ª pausa, entre pausas, después).
+    const tramos = [0, ...lista.map(p => p.capa)].map((desde, i, a) => ({ desde, hasta: (a[i + 1] ?? total) - 1, pausa: lista[i - 1] }));
+    $('listaPausas').innerHTML = lista.length ? tramos.map((t, i) => `<li>
+        <input type="color" value="${colorFilamento(i)}" data-filamento="${i}" aria-label="Color del filamento ${i + 1}">
+        <button type="button" class="ir" data-capa="${t.desde}">
+            <b>Filamento ${i + 1}</b> · capas ${t.desde + 1}–${t.hasta + 1}
+            ${t.pausa ? `<small>⏸ pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}
+        </button>
+        ${t.pausa ? `<button type="button" class="quitar" data-capa="${t.desde}" aria-label="Quitar la pausa de la capa ${t.desde + 1}">×</button>` : ''}
+    </li>`).join('') + `<li class="nota">La impresora se va a detener al empezar ${lista.length === 1 ? 'esa capa' : 'cada una de esas capas'}
+        para que cambies el filamento (usa <code>${escapar(lineasPausa(buscarImpresora(estado.resultado.impresoraId)).join(' · '))}</code>).
+        Los colores son sólo para la vista previa.</li>` : '';
     // marcas sobre el deslizador
-    $('marcasPausa').innerHTML = capas && capas.total > 1 ? lista.map(p =>
-        `<i style="left: calc(${p.capa / (capas.total - 1)} * (100% - 24px) + 12px)"></i>`).join('') : '';
+    $('marcasPausa').innerHTML = total > 1 ? lista.map(p =>
+        `<i style="left: calc(${p.capa / (total - 1)} * (100% - 24px) + 12px)"></i>`).join('') : '';
+    if (!lista.length) estado.modoColor = 'tipo';
+    actualizarModoColor();
+    pintarRecorridos();
+}
+
+function actualizarModoColor() {
+    const conPausas = estado.pausas.size > 0;
+    $('modoColor').hidden = !conPausas;
+    $('modoColor').querySelectorAll('[data-modo]').forEach(b =>
+        b.classList.toggle('activo', b.dataset.modo === estado.modoColor));
+    $('leyenda').hidden = estado.modoColor !== 'tipo';
+}
+
+// Pinta los recorridos según el modo: por tipo de línea, o con el color de cada
+// filamento (cada tipo un poco más claro u oscuro para seguir distinguiéndolos).
+function pintarRecorridos() {
+    if (!capas || !visorCapas) return;
+    const { tipos, inicioCapa, total } = capas;
+    const porFilamento = estado.modoColor === 'filamento';
+    visorCapas.atenuarAbajo(!porFilamento);
+    const cortes = [...estado.pausas.keys()].sort((a, b) => a - b);
+    const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    // tabla [filamento][tipo] -> [r, g, b]
+    const tabla = [0, ...cortes].map((_, f) => TIPOS.map(t => porFilamento
+        ? rgb(colorFilamento(f)).map(v => Math.round(v * t.brillo))
+        : t.color));
+    visorCapas.pintarRecorridos(c => {
+        let f = 0;
+        for (let capa = 0; capa < total; capa++) {
+            if (capa === cortes[f]) f++;
+            const fila = tabla[f];
+            for (let i = inicioCapa[capa], fin = inicioCapa[capa + 1]; i < fin; i++) {
+                const [r, g, b] = fila[tipos[i]], o = i * 6;
+                c[o] = c[o + 3] = r; c[o + 1] = c[o + 4] = g; c[o + 2] = c[o + 5] = b;
+            }
+        }
+    });
 }
 
 $('capa').addEventListener('input', e => { pararReproduccion(); irACapa(Number(e.target.value)); });
