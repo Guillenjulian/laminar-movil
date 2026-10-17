@@ -10,6 +10,7 @@
     <meta name="description" content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión.">
     <title>Laminar Móvil</title>
     <link rel="stylesheet" href="./src/estilos.css">
+    <link rel="stylesheet" href="./src/estilos-avanzado.css">
 </head>
 <body>
     <header class="barra">
@@ -135,6 +136,107 @@
                 <div class="opciones" id="adhesiones"></div>
 
                 <button type="button" class="boton enlace" id="restablecer">Volver a los valores de la calidad</button>
+            </details>
+
+            <!-- Avanzado: plano, sin submenús. La lógica está en src/ui/avanzado.js -->
+            <details class="personalizar" id="avanzado">
+                <summary>Avanzado</summary>
+
+                <label class="interruptor">
+                    <span>
+                        <b>Modo jarrón</b><br>
+                        <small>Una sola pared que sube en espiral, sin relleno ni tapa.</small>
+                    </span>
+                    <input type="checkbox" id="avJarron">
+                </label>
+                <p class="aviso" id="avisoJarron" hidden>Sirve para piezas huecas tipo maceta, vaso o florero:
+                    queda el fondo y una pared finita. El relleno y las paredes de "Personalizar" no se usan.</p>
+
+                <label class="interruptor">
+                    <span>
+                        <b>Altura de capa variable</b><br>
+                        <small id="detalleAlturaVariable">Capas más finas donde hay curvas; la de la calidad es la más gruesa.</small>
+                    </span>
+                    <input type="checkbox" id="avAlturaVariable">
+                </label>
+
+                <h3>Costura <small>(dónde empieza cada capa)</small></h3>
+                <div class="opciones" id="avCosturas"></div>
+
+                <h3>Retracción y viajes</h3>
+                <div class="contadores">
+                    <div class="contador" data-av="retraccion">
+                        <span>Retracción</span>
+                        <button type="button" data-paso-av="-1" aria-label="Menos retracción">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Más retracción">+</button>
+                    </div>
+                    <div class="contador" data-av="zHop">
+                        <span>Z-hop (subir al viajar)</span>
+                        <button type="button" data-paso-av="-1" aria-label="Menos z-hop">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Más z-hop">+</button>
+                    </div>
+                    <div class="contador" data-av="coasting">
+                        <span>Coasting (cortar antes)</span>
+                        <button type="button" data-paso-av="-1" aria-label="Menos coasting">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Más coasting">+</button>
+                    </div>
+                    <div class="contador" data-av="wipe">
+                        <span>Wipe (limpiar al retraer)</span>
+                        <button type="button" data-paso-av="-1" aria-label="Menos wipe">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Más wipe">+</button>
+                    </div>
+                </div>
+
+                <h3>Compensación de medidas</h3>
+                <p class="nota">En mm, en total (no por lado). +0,1 agranda el agujero o la pieza 0,1 mm; − los achica.</p>
+                <div class="contadores">
+                    <div class="contador" data-av="compAgujeros">
+                        <span>Agujeros</span>
+                        <button type="button" data-paso-av="-1" aria-label="Achicar agujeros">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Agrandar agujeros">+</button>
+                    </div>
+                    <div class="contador" data-av="compExterior">
+                        <span>Contorno exterior</span>
+                        <button type="button" data-paso-av="-1" aria-label="Achicar contorno">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Agrandar contorno">+</button>
+                    </div>
+                </div>
+
+                <h3>Velocidad</h3>
+                <div class="fila-deslizador">
+                    <label for="avVelocidad">Velocidad de impresión</label>
+                    <output id="avVelocidadValor"></output>
+                </div>
+                <input type="range" id="avVelocidad" min="50" max="150" step="10">
+
+                <h3>Temperatura y ventilador</h3>
+                <div class="contadores">
+                    <div class="contador" data-av="tempBoquilla">
+                        <span>Boquilla</span>
+                        <button type="button" data-paso-av="-1" aria-label="Bajar boquilla">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Subir boquilla">+</button>
+                    </div>
+                    <div class="contador" data-av="tempCama">
+                        <span>Cama</span>
+                        <button type="button" data-paso-av="-1" aria-label="Bajar cama">−</button>
+                        <output></output>
+                        <button type="button" data-paso-av="1" aria-label="Subir cama">+</button>
+                    </div>
+                </div>
+                <div class="fila-deslizador">
+                    <label for="avVentilador">Ventilador de capa</label>
+                    <output id="avVentiladorValor"></output>
+                </div>
+                <input type="range" id="avVentilador" min="0" max="100" step="5">
+
+                <button type="button" class="boton enlace" id="avRestablecer">Volver a los valores de fábrica</button>
             </details>
         </section>
 

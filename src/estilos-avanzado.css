@@ -1,0 +1,29 @@
+/* Sección "Avanzado" del paso 2 (src/ui/avanzado.js). Reusa los estilos de
+   "Personalizar" (.personalizar, .interruptor, .contador, .fila-deslizador). */
+
+#avanzado .interruptor { margin-top: 12px; }
+#avanzado .interruptor:has(input:disabled) { opacity: 0.55; }
+#avanzado h3 small { font-weight: 400; color: var(--suave); }
+#avanzado .aviso { margin: 8px 0 0; }
+#avanzado .nota { margin: 0 0 8px; }
+#avRestablecer { margin-top: 12px; }
+
+/* Contador con un valor distinto al de fábrica: el número resaltado. */
+#avanzado .contador.cambiado output { color: var(--acento); }
+/* Los valores tienen unidad ("0,8 mm", "215 °C"): un poco más de lugar. */
+#avanzado .contador output { min-width: 7ch; }
+
+/* Costura deshabilitada en modo jarrón. */
+#avCosturas.deshabilitado { opacity: 0.5; }
+
+/* Modo jarrón activo: el relleno de "Personalizar" no se usa. */
+#personalizar.sin-relleno :is(#patrones, .fila-deslizador, #densidad, #atajosDensidad) {
+    opacity: 0.4;
+    pointer-events: none;
+}
+#personalizar.sin-relleno #patrones::before {
+    content: "Modo jarrón: sin relleno";
+    grid-column: 1 / -1;
+    font-size: 0.85rem;
+    color: var(--suave);
+}

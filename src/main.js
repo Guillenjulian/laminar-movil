@@ -12,6 +12,7 @@ import { PLANTILLAS_GCODE } from './perfiles/generico.js';
 import { iconoRelleno } from './ui/iconos-relleno.js';
 import { maxTriangulos, maxSegmentosVista } from './config.js';
 import { crearVisor } from './ui/visor.js';
+import { crearAvanzado, validarAvanzado } from './ui/avanzado.js';
 import * as formato from './ui/formato.js';
 import * as almacen from './almacen.js';
 
@@ -31,6 +32,7 @@ const estado = {
     material: 'pla',
     soportes: false,
     personal: {},        // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
+    avanzado: {},        // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
     resultado: null,     // { gcode, info, archivo, impresoraId }
     pausas: new Map(),   // capa -> { capa, offset, z }: pausas para cambiar filamento
     coloresFilamento: [...COLORES_FILAMENTO], // color de cada filamento (1º, 2º, ...) en la vista previa
@@ -322,6 +324,7 @@ function dibujarOpciones() {
             id === estado.material)).join('');
     $('soportes').checked = estado.soportes;
     dibujarPersonalizar();
+    avanzado.dibujar();
 }
 
 // --- Personalizar: relleno, paredes y adhesión ---
@@ -353,7 +356,7 @@ function dibujarPersonalizar() {
     $('atajosDensidad').innerHTML = opciones.densidades.map(d =>
         `<button type="button" class="atajo ${Math.abs(d.valor - v.densidad) < 0.001 ? 'activo' : ''}" data-densidad="${d.valor}">
             ${d.nombre} <small>${Math.round(d.valor * 100)} %</small></button>`).join('');
-    document.querySelectorAll('.contador').forEach(c => { c.querySelector('output').textContent = v[c.dataset.clave]; });
+    document.querySelectorAll('#personalizar .contador').forEach(c => { c.querySelector('output').textContent = v[c.dataset.clave]; });
     $('adhesiones').innerHTML = Object.entries(opciones.adhesiones).map(([id, a]) =>
         opcion('adhesion', id, a.nombre, a.descripcion, id === v.adhesion)).join('');
 
@@ -376,7 +379,7 @@ $('atajosDensidad').onclick = e => {
     const b = e.target.closest('[data-densidad]');
     if (b) cambiarPersonal('densidad', Number(b.dataset.densidad));
 };
-document.querySelectorAll('.contador').forEach(c => c.addEventListener('click', e => {
+document.querySelectorAll('#personalizar .contador').forEach(c => c.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
     const clave = c.dataset.clave;
@@ -402,6 +405,9 @@ document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e 
     if (e.target.id === 'densidad') return cambiarPersonal('densidad', Number(value) / 100);
     guardarPreferencias();
 });
+
+// --- Avanzado (src/ui/avanzado.js) ---
+const avanzado = crearAvanzado({ estado, alCambiar: guardarPreferencias });
 
 function elegirImpresora(id) {
     estado.impresoraId = id;
@@ -568,8 +574,8 @@ async function guardarPropias() {
 
 // Las elecciones del paso 2 se recuerdan para la próxima vez.
 function guardarPreferencias() {
-    const { impresoraId, calidad, material, soportes, personal } = estado;
-    almacen.guardarAjuste('preferencias', { impresoraId, calidad, material, soportes, personal }).catch(() => {});
+    const { impresoraId, calidad, material, soportes, personal, avanzado } = estado;
+    almacen.guardarAjuste('preferencias', { impresoraId, calidad, material, soportes, personal, avanzado }).catch(() => {});
 }
 
 async function cargarPreferencias() {
@@ -589,6 +595,7 @@ async function cargarPreferencias() {
     for (const clave of ['densidad', 'paredes', 'arriba', 'abajo']) {
         if (typeof pers[clave] === 'number') estado.personal[clave] = pers[clave];
     }
+    estado.avanzado = validarAvanzado(p.avanzado);
 }
 
 // ---------------------------------------------------------------------------
@@ -628,7 +635,7 @@ async function empezarLaminado() {
         calidad: estado.calidad,
         material: estado.material,
         soportes: estado.soportes,
-        personal: estado.personal,
+        personal: { ...estado.personal, avanzado: estado.avanzado },
     });
 
     irA(3);
