@@ -55,6 +55,8 @@ export const PLANTILLAS_GCODE = {
             'M140 S0                 ; apagar cama',
             'M84                     ; soltar motores',
         ],
+        // M600: cambio de filamento (necesita ADVANCED_PAUSE_FEATURE, viene en casi todas las actuales)
+        pausa: ['M600'],
     },
     klipper: {
         nombre: 'Klipper',
@@ -65,6 +67,8 @@ export const PLANTILLAS_GCODE = {
             'G92 E0',
         ],
         fin: ['PRINT_END                ; macro de tu printer.cfg'],
+        // PAUSE viene con [pause_resume]; si tenés una macro M600, podés usar esa.
+        pausa: ['PAUSE'],
     },
 };
 
@@ -79,6 +83,7 @@ export function perfilPropio(datos) {
         adhesion: 'falda',
         limites: { hotendMax: datos.hotendMax, camaMax: datos.camaMax },
         firmware: datos.firmware,
+        pausa: datos.pausa?.length ? datos.pausa : plantilla.pausa,
         dispositivo: {
             deviceName: datos.nombre,
             bedWidth: datos.ancho,

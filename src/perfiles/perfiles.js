@@ -37,6 +37,11 @@ export function existeImpresora(id) {
     return listaImpresoras().some(i => i.id === id);
 }
 
+// G-code que se inserta para pausar en una capa (cambio de filamento).
+export function lineasPausa(imp) {
+    return imp.pausa?.length ? imp.pausa : ['M600'];
+}
+
 export function buscarImpresora(id) {
     const lista = listaImpresoras();
     return lista.find(i => i.id === id) || lista.find(i => i.id === IMPRESORA_INICIAL) || lista[0];

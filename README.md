@@ -23,7 +23,8 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
 3. **Laminar** con barra de progreso, en un Web Worker (la pantalla no se congela). Se puede cancelar.
 4. **Vista previa capa por capa** (deslizador, ±, reproducir, "sólo esta capa", colores por tipo de
-   línea) y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
+   línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores)
+   y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
 
 Además:
 
@@ -128,7 +129,8 @@ src/motor/laminador.worker.js  Worker de laminado: lee STL, simplifica, llama a 
 src/motor/vista.worker.js   Worker liviano para la vista previa
 src/motor/decimar.js        Simplificación de malla (agrupamiento en grilla)
 src/motor/minions-locales.js  Soportes de Kiri sin su pool de sub-workers
-src/motor/recorridos.worker.js  Lee el G-code para la vista previa capa por capa
+src/motor/recorridos.worker.js  Lee el G-code para la vista previa capa por capa (y dónde pausar)
+src/motor/pausas.js         Inserta las pausas de cambio de filamento al descargar
 src/perfiles/               Impresoras, materiales y opciones en JSON; generico.js arma
                             calidades y perfiles a partir de pocos datos
 scripts/importar-impresoras-kiri.mjs  Trae los perfiles de impresoras de Kiri:Moto
@@ -202,6 +204,10 @@ Esto queda pendiente de validar a mano:
 - [ ] Fluidez de la vista previa capa por capa con un G-code grande (1–2 millones de tramos) en la
       GPU de un celu. Acá sólo pude probar con render por software.
 - [ ] Formulario "Mi impresora" con el teclado del celu (campos numéricos, G-code largo).
+- [ ] **Pausa de filamento en una impresora real**: que la Ender 3 V3 SE acepte `M600` (con su
+      firmware de fábrica), estacione el cabezal y retome bien. En Klipper se usa `PAUSE`
+      (necesita `[pause_resume]` en `printer.cfg`). La posición de la pausa en el G-code sí está
+      probada: queda entre la última línea de la capa anterior y la subida de Z.
 - [ ] Instalación como app (Android: "Instalar app"; iOS: Compartir → "Agregar a inicio") y uso sin conexión.
 - [ ] Workers con módulos ES: requiere iOS 15 o más nuevo; Wake Lock: iOS 16.4 o más nuevo.
 - [ ] iOS Safari puede borrar los datos guardados (recientes) si la app no está instalada y no se usa por un tiempo.

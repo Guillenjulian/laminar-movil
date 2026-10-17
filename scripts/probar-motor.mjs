@@ -9,6 +9,32 @@
 import { chromium } from 'playwright-core';
 import { preview, createServer } from 'vite';
 import fs from 'node:fs';
+import { insertarPausas } from '../src/motor/pausas.js';
+
+// El lector de la vista previa es un worker: lo cargamos en Node simulando `self`.
+globalThis.self ??= {};
+const { leer: leerRecorridos } = await import('../src/motor/recorridos.worker.js');
+
+// Inserta una pausa antes de la capa `capa` y verifica que quede justo entre la
+// última extrusión de la capa anterior y la primera de esa capa.
+function probarPausa(gcode, capa) {
+    const r = leerRecorridos(gcode, Infinity);
+    const conPausa = insertarPausas(gcode, [{ capa, offset: r.pausaCapa[capa], z: r.zCapa[capa] }], ['M600']);
+    const lineas = conPausa.split('\n');
+    const iPausa = lineas.indexOf('M600');
+    let z = 0, zAntes = NaN, zDespues = NaN;
+    for (let i = 0; i < lineas.length; i++) {
+        const m = lineas[i].match(/^G[01] .*Z(-?[\d.]+)/);
+        if (m) z = +m[1];
+        if (/^G1 .*X.*E\d|^G1 .*Y.*E\d/.test(lineas[i])) {
+            if (i < iPausa) zAntes = z;
+            else if (isNaN(zDespues)) zDespues = z;
+        }
+    }
+    const ok = conPausa.split('\nM600\n').length === 2 &&
+        Math.abs(zAntes - r.zCapa[capa - 1]) < 0.001 && Math.abs(zDespues - r.zCapa[capa]) < 0.001;
+    return { ok, detalle: `capa ${capa + 1}: Z antes ${zAntes}, después ${zDespues} (esperado ${r.zCapa[capa - 1].toFixed(2)} → ${r.zCapa[capa].toFixed(2)})` };
+}
 
 function buscarChromium() {
     if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
@@ -95,6 +121,12 @@ try {
     revisar('end G-code', normal.g.tiene('M84 X Y E') && normal.g.tiene('G1 X0 Y220'));
     revisar('sin macros sin reemplazar', !normal.gcode.includes('{'));
 
+    // Pausa de filamento en el G-code del cubo (capa 10 y la última).
+    for (const capa of [9, normal.g.capas - 1]) {
+        const p = probarPausa(normal.gcode, capa);
+        revisar('pausa entre capas', p.ok, p.detalle);
+    }
+
     // 2. Las otras calidades cambian la altura de capa.
     const rapido = await laminar({ caso: 'cubo', calidad: 'rapido' });
     revisar('Rápido: capas de 0,28 mm', Math.abs(rapido.g.capas - 20 / 0.28) <= 2, `(${rapido.g.capas} capas)`);
@@ -104,6 +136,8 @@ try {
     // 3. Soportes automáticos (con los minions locales).
     const sinSop = await laminar({ caso: 'te' });
     const conSop = await laminar({ caso: 'te', soportes: true });
+    const pSop = probarPausa(conSop.gcode, 50);
+    revisar('pausa con soportes', pSop.ok, pSop.detalle);
     revisar('soportes agregan material', conSop.info.filamento > sinSop.info.filamento * 1.1,
         `(${(sinSop.info.filamento / 1000).toFixed(2)} m → ${(conSop.info.filamento / 1000).toFixed(2)} m)`);
 
@@ -164,6 +198,12 @@ try {
         } catch (err) {
             problemas.push(`${imp.nombre}: ERROR ${err.message.slice(0, 120)}`);
         }
+    }
+    // Pausa en impresoras con otros marcadores de capa / extrusión absoluta.
+    for (const id of ['kiri-prusa-i3-mk3s', 'kiri-creality-ender-5', 'kiri-anycubic-kobra-2']) {
+        const r = await pagina.evaluate(o => window.probar(o), { caso: 'cubo', impresoraId: id, calidad: 'rapido' });
+        const p = probarPausa(r.gcode, 20);
+        revisar(`pausa en ${id}`, p.ok, p.detalle);
     }
     revisar(`las ${lista.filter(i => i.estado === 'importado').length} impresoras importadas laminan bien`, problemas.length === 0,
         problemas.length ? '\n      ' + problemas.join('\n      ') : '');

@@ -2,9 +2,10 @@
 
 import { laminar, leerParaVista, leerRecorridos } from './motor/motor.js';
 import { TIPOS } from './motor/tipos-linea.js';
+import { insertarPausas } from './motor/pausas.js';
 import {
     listaImpresoras, buscarImpresora, existeImpresora, ponerImpresorasPropias, IMPRESORA_INICIAL,
-    materiales, opciones, armarConfiguracion, valoresDeCalidad,
+    materiales, opciones, armarConfiguracion, valoresDeCalidad, lineasPausa,
 } from './perfiles/perfiles.js';
 import { PLANTILLAS_GCODE } from './perfiles/generico.js';
 import { iconoRelleno } from './ui/iconos-relleno.js';
@@ -26,7 +27,8 @@ const estado = {
     material: 'pla',
     soportes: false,
     personal: {},        // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
-    resultado: null,     // { gcode, info, archivo }
+    resultado: null,     // { gcode, info, archivo, impresoraId }
+    pausas: new Map(),   // capa -> { capa, offset, z }: pausas para cambiar filamento
     cancelar: null,      // AbortController del laminado en curso
 };
 
@@ -384,7 +386,7 @@ function abrirFormulario(datos, titulo) {
         }
     }
     form.dataset.id = datos.id;
-    form.elements.inicio.dataset.tocado = form.elements.fin.dataset.tocado = datos.inicio ? '1' : '';
+    for (const c of ['inicio', 'fin', 'pausa']) form.elements[c].dataset.tocado = datos.inicio ? '1' : '';
     $('tituloMiImpresora').textContent = titulo;
     $('borrarImpresora').hidden = !estado.propias.some(p => p.id === datos.id);
     $('errorImpresora').hidden = true;
@@ -398,7 +400,7 @@ function datosNuevos() {
         id: 'propia-' + Date.now().toString(36), nombre: '', ancho: 220, profundidad: 220, alto: 250,
         origenCentro: false, boquilla: 0.4, filamento: 1.75, extrusor: 'directo', retraccion: 0.8,
         hotendMax: 260, camaMax: 100, velocidad: 60, firmware: 'marlin', inicio: undefined, fin: undefined,
-        _inicio: p.inicio, _fin: p.fin,
+        _inicio: p.inicio, _fin: p.fin, _pausa: p.pausa,
     };
 }
 
@@ -414,14 +416,14 @@ function datosDesde(imp) {
         extrusor: retraccion > 2 ? 'bowden' : 'directo', retraccion,
         hotendMax: imp.limites?.hotendMax ?? 260, camaMax: imp.limites?.camaMax ?? 100,
         velocidad: normal.outputFeedrate ?? 60, firmware: imp.firmware || 'marlin',
-        inicio: d.gcodePre, fin: d.gcodePost,
+        inicio: d.gcodePre, fin: d.gcodePost, pausa: lineasPausa(imp),
     };
 }
 
 $('nuevaImpresora').onclick = () => {
     const datos = datosNuevos();
-    abrirFormulario({ ...datos, inicio: datos._inicio, fin: datos._fin }, 'Agregar mi impresora');
-    form.elements.inicio.dataset.tocado = form.elements.fin.dataset.tocado = '';
+    abrirFormulario({ ...datos, inicio: datos._inicio, fin: datos._fin, pausa: datos._pausa }, 'Agregar mi impresora');
+    for (const c of ['inicio', 'fin', 'pausa']) form.elements[c].dataset.tocado = '';
 };
 $('impresoraElegida').onclick = e => {
     if (e.target.id === 'editarImpresora') {
@@ -432,12 +434,14 @@ $('impresoraElegida').onclick = e => {
 };
 
 // Si no editó el G-code a mano, al cambiar de firmware se pone la plantilla que corresponde.
-form.elements.inicio.addEventListener('input', e => { e.target.dataset.tocado = '1'; });
-form.elements.fin.addEventListener('input', e => { e.target.dataset.tocado = '1'; });
+for (const c of ['inicio', 'fin', 'pausa']) {
+    form.elements[c].addEventListener('input', e => { e.target.dataset.tocado = '1'; });
+}
 form.elements.firmware.addEventListener('change', e => {
     const p = PLANTILLAS_GCODE[e.target.value];
-    if (!form.elements.inicio.dataset.tocado) form.elements.inicio.value = p.inicio.join('\n');
-    if (!form.elements.fin.dataset.tocado) form.elements.fin.value = p.fin.join('\n');
+    for (const c of ['inicio', 'fin', 'pausa']) {
+        if (!form.elements[c].dataset.tocado) form.elements[c].value = p[c].join('\n');
+    }
 });
 // Retracción típica según el extrusor.
 form.elements.extrusor.addEventListener('change', e => {
@@ -461,7 +465,7 @@ form.addEventListener('submit', async e => {
         ancho: num('ancho'), profundidad: num('profundidad'), alto: num('alto'), origenCentro: f.origenCentro.checked,
         boquilla: num('boquilla'), filamento: num('filamento'), extrusor: f.extrusor.value, retraccion: num('retraccion'),
         hotendMax: num('hotendMax'), camaMax: num('camaMax'), velocidad: num('velocidad'), firmware: f.firmware.value,
-        inicio: lineas(f.inicio.value), fin: lineas(f.fin.value),
+        inicio: lineas(f.inicio.value), fin: lineas(f.fin.value), pausa: lineas(f.pausa.value),
     };
     estado.propias = [...estado.propias.filter(p => p.id !== datos.id), datos];
     await guardarPropias();
@@ -564,7 +568,7 @@ async function empezarLaminado() {
             signal: estado.cancelar.signal,
         });
         const base = estado.nombre.replace(/\.stl$/i, '').replace(/[^\w.-]+/g, '_');
-        estado.resultado = { ...r, avisos, archivo: `${base}_${estado.calidad}.gcode` };
+        estado.resultado = { ...r, avisos, archivo: `${base}_${estado.calidad}.gcode`, impresoraId: estado.impresoraId };
         mostrarResultado();
         irA(4, { reemplazar: true }); // así "atrás" desde el resultado vuelve a la configuración
     } catch (err) {
@@ -628,6 +632,8 @@ let reproduccion = null;
 async function armarVistaPrevia() {
     const resultado = estado.resultado;
     capas = null;
+    estado.pausas = new Map();
+    dibujarPausas();
     pararReproduccion();
     visorCapas?.quitarRecorridos(); // liberar la memoria de la vista anterior
     $('controlCapas').hidden = true;
@@ -639,11 +645,11 @@ async function armarVistaPrevia() {
         const total = r.inicioCapa.length - 1;
         if (!total) throw new Error('el G-code no tiene recorridos');
         if (!visorCapas) visorCapas = crearVisor($('visorCapas'));
-        const d = buscarImpresora(estado.impresoraId).dispositivo;
+        const d = buscarImpresora(resultado.impresoraId).dispositivo;
         visorCapas.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
         visorCapas.ponerRecorridos(r, { origenCentro: d.originCenter });
         visorCapas.pausar(estado.paso !== 4);
-        capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, total };
+        capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, pausaCapa: r.pausaCapa, total };
 
         $('capa').max = total - 1;
         $('leyenda').innerHTML = TIPOS.slice(0, -1).map(t =>
@@ -666,7 +672,49 @@ function irACapa(n) {
     $('capa').value = n;
     visorCapas.mostrarCapa(n, $('soloCapa').checked);
     const z = formato.numero(capas.zCapa[n], 2);
-    $('textoCapa').textContent = `Capa ${n + 1}/${capas.total} · Z ${z} mm`;
+    $('textoCapa').textContent = `Capa ${n + 1}/${capas.total} · Z ${z} mm${estado.pausas.has(n) ? ' · ⏸' : ''}`;
+    // botón de pausa según la capa
+    const b = $('pausarCapa');
+    b.disabled = n === 0;
+    b.textContent = n === 0 ? '⏸ No se puede pausar en la primera capa'
+        : estado.pausas.has(n) ? '✕ Quitar la pausa de esta capa'
+        : '⏸ Pausar en esta capa (cambio de filamento)';
+}
+
+// --- Pausas para cambiar filamento ---
+
+$('pausarCapa').onclick = () => {
+    const n = Number($('capa').value);
+    if (!capas || n === 0) return;
+    if (estado.pausas.has(n)) estado.pausas.delete(n);
+    else estado.pausas.set(n, { capa: n, offset: capas.pausaCapa[n], z: capas.zCapa[n] });
+    dibujarPausas();
+    irACapa(n);
+};
+
+$('listaPausas').onclick = e => {
+    const li = e.target.closest('[data-capa]');
+    if (!li) return;
+    const n = Number(li.dataset.capa);
+    if (e.target.closest('.quitar')) {
+        estado.pausas.delete(n);
+        dibujarPausas();
+    }
+    pararReproduccion();
+    irACapa(n);
+};
+
+function dibujarPausas() {
+    const lista = [...estado.pausas.values()].sort((a, b) => a.capa - b.capa);
+    $('listaPausas').innerHTML = lista.map(p => `<li data-capa="${p.capa}">
+        <button type="button" class="ir">⏸ Capa ${p.capa + 1} · Z ${formato.numero(p.z, 2)} mm</button>
+        <button type="button" class="quitar" aria-label="Quitar la pausa de la capa ${p.capa + 1}">×</button>
+    </li>`).join('') + (lista.length ? `<li class="nota">La impresora se va a detener al empezar
+        ${lista.length === 1 ? 'esa capa' : 'cada una de esas capas'} para que cambies el filamento
+        (usa <code>${escapar(lineasPausa(buscarImpresora(estado.resultado.impresoraId)).join(' · '))}</code>).</li>` : '');
+    // marcas sobre el deslizador
+    $('marcasPausa').innerHTML = capas && capas.total > 1 ? lista.map(p =>
+        `<i style="left: calc(${p.capa / (capas.total - 1)} * (100% - 24px) + 12px)"></i>`).join('') : '';
 }
 
 $('capa').addEventListener('input', e => { pararReproduccion(); irACapa(Number(e.target.value)); });
@@ -703,8 +751,9 @@ function pararReproduccion() {
 
 // Usamos text/plain: varios celus no dejan compartir tipos "raros" como text/x-gcode.
 function archivoGcode() {
-    const { gcode, archivo } = estado.resultado;
-    return new File([gcode], archivo, { type: 'text/plain' });
+    const { gcode, archivo, impresoraId } = estado.resultado;
+    const final = insertarPausas(gcode, [...estado.pausas.values()], lineasPausa(buscarImpresora(impresoraId)));
+    return new File([final], archivo, { type: 'text/plain' });
 }
 
 $('compartir').onclick = async () => {

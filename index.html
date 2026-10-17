@@ -140,7 +140,10 @@
             <div class="control-capas" id="controlCapas" hidden>
                 <div class="fila-capa">
                     <button type="button" class="boton-capa" id="capaMenos" aria-label="Capa anterior">−</button>
-                    <input type="range" id="capa" min="0" value="0" aria-label="Capa">
+                    <div class="riel">
+                        <input type="range" id="capa" min="0" value="0" aria-label="Capa">
+                        <div class="marcas-pausa" id="marcasPausa" aria-hidden="true"></div>
+                    </div>
                     <button type="button" class="boton-capa" id="capaMas" aria-label="Capa siguiente">+</button>
                 </div>
                 <div class="fila-capa">
@@ -148,6 +151,8 @@
                     <span class="texto-capa" id="textoCapa"></span>
                     <label class="tilde-capa"><input type="checkbox" id="soloCapa"> Sólo esta</label>
                 </div>
+                <button type="button" class="boton" id="pausarCapa">⏸ Pausar en esta capa (cambio de filamento)</button>
+                <ul class="pausas" id="listaPausas"></ul>
                 <ul class="leyenda" id="leyenda"></ul>
                 <p class="aviso" id="avisoVista" hidden></p>
             </div>
@@ -227,6 +232,7 @@
                 </label>
                 <label>G-code de inicio <textarea name="inicio" rows="7" spellcheck="false"></textarea></label>
                 <label>G-code de fin <textarea name="fin" rows="5" spellcheck="false"></textarea></label>
+                <label>G-code de pausa (cambio de filamento) <textarea name="pausa" rows="2" spellcheck="false"></textarea></label>
                 <p class="nota">Variables: {temp}, {bed_temp}, {layer}, {layers}, {top} (fondo de la cama).</p>
             </fieldset>
 

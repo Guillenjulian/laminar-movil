@@ -5,6 +5,8 @@
     "marca": "Creality",
     "estado": "revisado",
     "adhesion": "falda",
+    "_nota_pausa": "G-code que se inserta al pausar en una capa (cambio de filamento). M600 estaciona el cabezal, retrae y espera.",
+    "pausa": ["M600"],
     "limites": {
         "_nota": "Máximos del fabricante. La app no deja pasar estas temperaturas.",
         "hotendMax": 260,

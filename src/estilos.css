@@ -319,6 +319,25 @@ input[type=range] { width: 100%; height: 36px; accent-color: var(--acento); }
 .leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 2px 0 0; padding: 0; font-size: 0.8rem; color: var(--suave); }
 .leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 
+/* --- Pausas --- */
+.riel { position: relative; flex: 1; display: flex; }
+.riel input[type=range] { flex: 1; }
+.marcas-pausa { position: absolute; inset: 0; pointer-events: none; }
+.marcas-pausa i {
+    position: absolute; top: 4px; width: 4px; height: 8px; margin-left: -2px;
+    border-radius: 2px; background: var(--error-borde);
+}
+#pausarCapa { margin-top: 4px; }
+.pausas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.pausas li[data-capa] { display: flex; border: 1px solid var(--error-borde); border-radius: 999px; overflow: hidden; }
+.pausas button {
+    min-height: 40px; border: 0; background: var(--error); color: var(--texto);
+    font: inherit; font-size: 0.9rem; cursor: pointer;
+}
+.pausas .ir { padding: 0 6px 0 12px; }
+.pausas .quitar { width: 40px; font-size: 1.2rem; }
+.pausas .nota { width: 100%; margin: 2px 0 0; }
+
 /* --- Resumen --- */
 .resumen {
     display: grid; grid-template-columns: auto 1fr; gap: 10px 16px;

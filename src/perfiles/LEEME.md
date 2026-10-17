@@ -40,6 +40,7 @@ Después, las temperaturas se recortan a `limites.hotendMax` y `limites.camaMax`
 | `estado` | `revisado`, `importado` o `propio` (ver arriba). |
 | `aviso` | Opcional: texto que se muestra al elegirla (ej. un problema conocido). |
 | `adhesion` | Adhesión por defecto: `nada`, `falda`, `borde` o `balsa`. |
+| `pausa` | G-code para pausar en una capa (cambio de filamento). Por defecto `["M600"]`; en Klipper, `["PAUSE"]`. |
 | `limites.hotendMax`, `limites.camaMax` | Temperaturas máximas en °C. |
 | `dispositivo` | La máquina (claves de Kiri:Moto, ver abajo). |
 | `proceso` | Valores de laminado comunes a todas las calidades. |

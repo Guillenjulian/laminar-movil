@@ -170,6 +170,23 @@ try {
     });
     }));
     revisar('se dibujan los recorridos', pixeles > 50, `${pixeles} píxeles con color en el centro`);
+
+    // --- Pausa para cambiar filamento ---
+    await pagina.locator('#capa').fill('0');
+    revisar('no se puede pausar en la primera capa', await pagina.isDisabled('#pausarCapa'));
+    await pagina.locator('#capa').fill('10');
+    await pagina.tap('#pausarCapa');
+    await pagina.locator('#capa').fill('30');
+    await pagina.tap('#pausarCapa');
+    const chips = await pagina.$$eval('#listaPausas .ir', bs => bs.map(b => b.textContent.trim()));
+    revisar('dos pausas en la lista', chips.length === 2 && /Capa 11 · Z 3,08 mm/.test(chips[0]) && /Capa 31/.test(chips[1]), chips.join(' | '));
+    revisar('la capa muestra la pausa', (await pagina.textContent('#textoCapa')).endsWith('⏸'));
+    revisar('marcas sobre el deslizador', (await pagina.locator('#marcasPausa i').count()) === 2);
+    revisar('el botón ahora quita la pausa', /Quitar/.test(await pagina.textContent('#pausarCapa')));
+    await pagina.locator('#listaPausas').scrollIntoViewIfNeeded();
+    await captura('4-pausas');
+    await pagina.tap('#listaPausas li[data-capa="30"] .quitar');
+    revisar('quitar una pausa', (await pagina.locator('#listaPausas .ir').count()) === 1);
     const resumen = await pagina.textContent('#resumen');
     revisar('resumen con tiempo y filamento', /Tiempo estimado/.test(resumen) && /Filamento.*m \(≈/.test(resumen));
     await captura('4-listo');
@@ -178,6 +195,14 @@ try {
     const gcode = fs.readFileSync(await descarga.path(), 'utf8');
     revisar('descarga del G-code', descarga.suggestedFilename() === 'cubo-20mm_rapido.gcode', descarga.suggestedFilename());
     revisar('G-code con temperaturas', gcode.includes('M104 S200') && gcode.includes('M140 S60'));
+    {
+        // una sola pausa, entre la capa de Z 2,80 y la de Z 3,08
+        const l = gcode.split('\n'), i = l.indexOf('M600');
+        const zs = (a, b) => l.slice(a, b).map(x => x.match(/^G1 Z([\d.]+)/)).filter(Boolean).map(m => +m[1]);
+        const antes = zs(0, i).at(-1), despues = zs(i, l.length)[0];
+        revisar('el G-code descargado trae la pausa', gcode.split('\nM600\n').length === 2 && antes === 2.8 && despues === 3.08,
+            `Z ${antes} → M600 → Z ${despues}`);
+    }
 
     // "Atrás" desde el resultado vuelve a la configuración (no a la barra de progreso).
     await pagina.goBack();

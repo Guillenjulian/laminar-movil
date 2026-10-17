@@ -3,6 +3,8 @@
 // Recibe: { gcode: string, maxSegmentos }
 // Manda:  { tipo: 'listo', posiciones: Uint16Array (6 por segmento, ver CUANTIZADO), colores: Uint8Array (6 por segmento),
 //           inicioCapa: Uint32Array (índice del primer segmento de cada capa, + uno final),
+//           pausaCapa: Float64Array (posición en el texto del G-code donde insertar una pausa
+//                      antes de cada capa: justo antes de subir Z, con la capa anterior terminada),
 //           zCapa: Float32Array, caja: {min, max}, incompleta: bool }
 //
 // Sólo se guardan los movimientos que extruyen (los viajes no se dibujan).
@@ -53,11 +55,15 @@ export function leer(gcode, maxSegmentos) {
     let sx = 0, sy = 0, ux = 0, uy = 0, uz = NaN, utipo = -1, recto = true;
     const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
 
+    const pausaCapa = [];
+    let offCambioZ = -1, offUltimaExtrusion = -1; // posiciones en el texto (para las pausas)
+
     let inicio = 0;
     while (inicio < gcode.length) {
         let fin = gcode.indexOf('\n', inicio);
         if (fin < 0) fin = gcode.length;
         const linea = gcode.slice(inicio, fin);
+        const offLinea = inicio;
         inicio = fin + 1;
 
         const c0 = linea.charCodeAt(0);
@@ -100,6 +106,9 @@ export function leer(gcode, maxSegmentos) {
         if (extruye && enPieza && (nx !== x || ny !== y)) {
             // ¿Capa nueva? (cambió la altura a la que se extruye)
             if (nz !== capaZ) {
+                // La pausa va antes del movimiento que subió Z (si fue después de la última
+                // extrusión de la capa anterior); si no, antes de esta línea.
+                pausaCapa.push(offCambioZ > offUltimaExtrusion ? offCambioZ : offLinea);
                 capaZ = nz;
                 inicioCapa.push(segmentos);
                 zCapa.push(nz);
@@ -136,12 +145,14 @@ export function leer(gcode, maxSegmentos) {
                 utipo = tipo; sx = x; sy = y; recto = true;
             }
             ux = nx; uy = ny; uz = nz;
+            offUltimaExtrusion = offLinea;
             if (nx < min[0]) min[0] = nx; if (nx > max[0]) max[0] = nx;
             if (x < min[0]) min[0] = x; if (x > max[0]) max[0] = x;
             if (ny < min[1]) min[1] = ny; if (ny > max[1]) max[1] = ny;
             if (y < min[1]) min[1] = y; if (y > max[1]) max[1] = y;
             if (nz < min[2]) min[2] = nz; if (nz > max[2]) max[2] = nz;
         }
+        if (nz !== z) offCambioZ = offLinea;
         x = nx; y = ny; z = nz;
     }
     inicioCapa.push(segmentos);
@@ -149,6 +160,7 @@ export function leer(gcode, maxSegmentos) {
         posiciones: pos.final(),
         colores: col.final(),
         inicioCapa: Uint32Array.from(inicioCapa),
+        pausaCapa: Float64Array.from(pausaCapa),
         zCapa: Float32Array.from(zCapa),
         caja: { min, max },
         incompleta,
@@ -159,7 +171,7 @@ self.onmessage = e => {
     try {
         const r = leer(e.data.gcode, e.data.maxSegmentos || Infinity);
         self.postMessage({ tipo: 'listo', ...r },
-            [r.posiciones.buffer, r.colores.buffer, r.inicioCapa.buffer, r.zCapa.buffer]);
+            [r.posiciones.buffer, r.colores.buffer, r.inicioCapa.buffer, r.zCapa.buffer, r.pausaCapa.buffer]);
     } catch (err) {
         self.postMessage({ tipo: 'error', mensaje: err.message || String(err) });
     }
