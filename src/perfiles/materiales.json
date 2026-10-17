@@ -1,0 +1,14 @@
+{
+    "_nota": "Materiales disponibles para todas las impresoras. Las temperaturas se recortan a los límites de cada impresora.",
+    "pla": {
+        "nombre": "PLA",
+        "proceso": {
+            "outputTemp": 200,
+            "outputBedTemp": 60,
+            "firstLayerNozzleTemp": 0,
+            "firstLayerBedTemp": 0,
+            "outputFanSpeed": 255,
+            "firstLayerFanSpeed": 0
+        }
+    }
+}

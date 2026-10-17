@@ -2,7 +2,7 @@
 // cierra al terminar: así se libera toda la memoria (importante en celus
 // de gama baja).
 
-export function laminar({ stl, dispositivo, proceso, alProgresar = () => {} }) {
+export function laminar({ stl, dispositivo, proceso, maxTriangulos, alProgresar = () => {} }) {
     return new Promise((resolver, rechazar) => {
         const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
 
@@ -25,6 +25,6 @@ export function laminar({ stl, dispositivo, proceso, alProgresar = () => {} }) {
 
         // El STL se pasa "transferido" (sin copiar) para no duplicar memoria.
         // Ojo: después de esto, `stl` queda vacío en el hilo principal.
-        worker.postMessage({ tipo: 'laminar', stl, dispositivo, proceso }, [stl]);
+        worker.postMessage({ tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos }, [stl]);
     });
 }
