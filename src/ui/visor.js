@@ -25,6 +25,8 @@ export function crearVisor(contenedor) {
     controles.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
     let cama = null, modelo = null, tamanoCama = { x: 220, y: 220, z: 250 };
+    let tamano = null;  // tamaño del modelo ya transformado, en mm
+    let resaltado = null; // triángulo que marca la cara tocada en el modo "apoyar cara"
     let recorridos = null; // { grupo, abajo, actual, inicioCapa, esfera }
 
     // Cama: un plano con una grilla cada 10 mm, centrada en el origen.
@@ -63,16 +65,138 @@ export function crearVisor(contenedor) {
         geo.translate(-(c.min.x + c.max.x) / 2, -(c.min.y + c.max.y) / 2, -c.min.z);
         geo.computeVertexNormals();
         modelo = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xf08a24, roughness: 0.6, flatShading: true }));
+        // La posición la manejamos a mano con la matriz (ver ponerTransformacion).
+        modelo.matrixAutoUpdate = false;
         escena.add(modelo);
+        ponerTransformacion(null); // arranca sin girar ni escalar (y reencuadra)
+    }
+
+    // Gira/escala el modelo mostrado. `m` es una matriz 3×3 en un Array de 9 números,
+    // fila por fila, que lleva del modelo original a la impresora (Z arriba); null es
+    // la identidad. No tocamos los vértices: va todo en la matriz del objeto (así
+    // three.js también corrige las normales para la luz). Después, igual que al
+    // laminar, lo recentramos en X/Y y lo apoyamos en Z=0.
+    function ponerTransformacion(m) {
+        if (!modelo) return;
+        quitarResaltado();
+        const [a, b, c, d, e, f, g, h, i] = m || [1, 0, 0, 0, 1, 0, 0, 0, 1];
+        const matriz = new THREE.Matrix4().set(
+            a, b, c, 0,
+            d, e, f, 0,
+            g, h, i, 0,
+            0, 0, 0, 1,
+        );
+        // Caja de los vértices ya transformados. Transformar la caja original no
+        // alcanza: al girar, sus esquinas quedan afuera del modelo y la caja sale más grande.
+        const pos = modelo.geometry.attributes.position.array;
+        const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+        for (let k = 0; k < pos.length; k += 3) {
+            const x = pos[k], y = pos[k + 1], z = pos[k + 2];
+            const t = [a * x + b * y + c * z, d * x + e * y + f * z, g * x + h * y + i * z];
+            for (let j = 0; j < 3; j++) {
+                if (t[j] < min[j]) min[j] = t[j];
+                if (t[j] > max[j]) max[j] = t[j];
+            }
+        }
+        // Centrado en X/Y y apoyado en la cama.
+        matriz.setPosition(-(min[0] + max[0]) / 2, -(min[1] + max[1]) / 2, -min[2]);
+        modelo.matrix.copy(matriz);
+        modelo.matrixWorldNeedsUpdate = true;
+        modelo.updateMatrixWorld(true);
+        tamano = { x: max[0] - min[0], y: max[1] - min[1], z: max[2] - min[2] };
         vistaInicial();
+    }
+
+    // Tamaño del modelo como se va a imprimir ({x, y, z} en mm), o null si no hay.
+    function tamanoModelo() {
+        return modelo && tamano ? { ...tamano } : null;
     }
 
     function quitarModelo() {
         if (!modelo) return;
+        quitarResaltado();
         escena.remove(modelo);
         modelo.geometry.dispose();
         modelo.material.dispose();
         modelo = null;
+        tamano = null;
+        redibujar();
+    }
+
+    // Modo "apoyar cara": con un toque (no un arrastre) sobre el modelo, avisamos qué
+    // cara se tocó con su normal en coordenadas de la impresora, ya girada.
+    let alElegirCara = null;
+    function elegirCara(activo, alElegir) {
+        alElegirCara = activo ? alElegir : null;
+        if (!activo) quitarResaltado();
+    }
+
+    // Un "toque" es apoyar y levantar un solo dedo (o el mouse) casi sin moverse y
+    // rápido. Si se movió más de 8 px, tardó más de 400 ms o hubo dos dedos, era un
+    // gesto de OrbitControls (girar, mover, zoom) y no lo tomamos.
+    const toques = new Map(); // pointerId → { x, y, t }
+    let gestoMultiple = false;
+    renderer.domElement.addEventListener('pointerdown', ev => {
+        if (toques.size === 0) gestoMultiple = false;
+        toques.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, t: performance.now() });
+        if (toques.size > 1) gestoMultiple = true;
+    });
+    renderer.domElement.addEventListener('pointercancel', ev => toques.delete(ev.pointerId));
+    renderer.domElement.addEventListener('pointerup', ev => {
+        const inicio = toques.get(ev.pointerId);
+        toques.delete(ev.pointerId);
+        if (!inicio || gestoMultiple || !alElegirCara || !modelo) return;
+        if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+        const movio = Math.hypot(ev.clientX - inicio.x, ev.clientY - inicio.y);
+        if (movio >= 8 || performance.now() - inicio.t >= 400) return;
+        tocarModelo(ev.clientX, ev.clientY);
+    });
+
+    const rayo = new THREE.Raycaster();
+    function tocarModelo(cx, cy) {
+        const r = renderer.domElement.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const punto = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+        modelo.updateMatrixWorld(true);
+        rayo.setFromCamera(punto, camara);
+        const [toque] = rayo.intersectObject(modelo, false);
+        if (!toque || !toque.face) return;
+        // La normal del triángulo viene en coordenadas del modelo: la llevamos a las
+        // de la impresora con la "matriz de normales" (sirve aunque haya escala).
+        const normal = toque.face.normal.clone()
+            .applyMatrix3(new THREE.Matrix3().getNormalMatrix(modelo.matrixWorld))
+            .normalize();
+        resaltar(toque.face, normal);
+        alElegirCara?.([normal.x, normal.y, normal.z]);
+    }
+
+    // Pinta encima de la cara tocada un triángulo semitransparente, apenas despegado
+    // hacia afuera para que no se mezcle con la cara del modelo.
+    function resaltar(cara, normal) {
+        quitarResaltado();
+        const pos = modelo.geometry.attributes.position;
+        const despegue = normal.clone().multiplyScalar(0.05);
+        const puntos = new Float32Array(9);
+        [cara.a, cara.b, cara.c].forEach((v, j) => {
+            const p = new THREE.Vector3().fromBufferAttribute(pos, v).applyMatrix4(modelo.matrixWorld).add(despegue);
+            puntos.set([p.x, p.y, p.z], j * 3);
+        });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(puntos, 3));
+        resaltado = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+            color: 0x2a7fff, transparent: true, opacity: 0.6, side: THREE.DoubleSide,
+            depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+        }));
+        escena.add(resaltado);
+        redibujar();
+    }
+
+    function quitarResaltado() {
+        if (!resaltado) return;
+        escena.remove(resaltado);
+        resaltado.geometry.dispose();
+        resaltado.material.dispose();
+        resaltado = null;
         redibujar();
     }
 
@@ -160,8 +284,8 @@ export function crearVisor(contenedor) {
             radio = Math.max(recorridos.esfera.radio, 15);
         } else if (modelo) {
             modelo.geometry.computeBoundingSphere();
-            const s = modelo.geometry.boundingSphere;
-            centro = s.center.clone();
+            const s = modelo.geometry.boundingSphere.clone().applyMatrix4(modelo.matrix); // ya girado y apoyado
+            centro = s.center;
             radio = Math.max(s.radius, 15);
         } else {
             centro = new THREE.Vector3(0, 0, 0);
@@ -208,6 +332,9 @@ export function crearVisor(contenedor) {
         ponerCama,
         ponerModelo,
         quitarModelo,
+        ponerTransformacion,
+        tamanoModelo,
+        elegirCara,
         ponerRecorridos,
         mostrarCapa,
         pintarRecorridos,
