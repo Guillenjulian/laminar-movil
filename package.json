@@ -1,0 +1,27 @@
+{
+  "name": "laminar-movil",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Laminador STL → G-code 100% en el navegador, pensado para el celu. Motor: Kiri:Moto.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "vendor:kiri": "node scripts/vendor-kiri.mjs",
+    "test:motor": "node scripts/probar-motor.mjs"
+  },
+  "dependencies": {
+    "@tweenjs/tween.js": "^25.0.0",
+    "earcut": "^3.2.4",
+    "jszip": "^3.10.2",
+    "three": "^0.182.0",
+    "three-mesh-bvh": "^0.7.6"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.1",
+    "vite": "^8.3.4"
+  }
+}

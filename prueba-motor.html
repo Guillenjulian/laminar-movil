@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prueba del motor</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 16px; }
+        button { font-size: 1.2rem; padding: 12px 20px; }
+        pre { background: #eee; padding: 8px; max-height: 50vh; overflow: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <!-- Página de diagnóstico: lamina el cubo de ejemplo sin pasar por la UI. -->
+    <h1>Prueba del motor</h1>
+    <button id="probar">Laminar cubo de 20 mm</button>
+    <p id="estado">Listo para probar.</p>
+    <pre id="salida"></pre>
+    <script type="module">
+        import { laminar } from './src/motor/motor.js';
+
+        const estado = document.getElementById('estado');
+        const salida = document.getElementById('salida');
+
+        document.getElementById('probar').onclick = async () => {
+            try {
+                const stl = await (await fetch('ejemplos/cubo-20mm.stl')).arrayBuffer();
+                const inicio = performance.now();
+                const r = await laminar({
+                    stl,
+                    dispositivo: {
+                        bedWidth: 220, bedDepth: 220, maxHeight: 250,
+                        gcodePre: ['M140 S{bed_temp}', 'M104 S{temp}', 'G28'],
+                        gcodeLayer: [';LAYER:{layer}'],
+                    },
+                    proceso: { sliceHeight: 0.2, outputTemp: 200, outputBedTemp: 60 },
+                    alProgresar: (etapa, valor) => estado.textContent = `${etapa} ${Math.round(valor * 100)}%`,
+                });
+                const ms = Math.round(performance.now() - inicio);
+                estado.textContent = `OK en ${ms} ms — ${JSON.stringify(r.info)}`;
+                salida.textContent = r.gcode.split('\n').slice(0, 60).join('\n');
+                window.resultado = r; // para las pruebas automáticas
+            } catch (err) {
+                estado.textContent = 'Error: ' + err.message;
+                window.resultado = { error: err.message };
+            }
+        };
+    </script>
+</body>
+</html>
