@@ -1,6 +1,6 @@
-// Ganchos de soportes en Kiri con un puente de mentira (ADR 0004, tarea T0; riesgo R5).
+// Ganchos de soportes en Kiri (ADR 0004, tarea T0; riesgo R5; adaptado en T4 al puente real y al registro opcional).
 // Responsabilidad: laminar una "T" (voladizos de 20 mm) con sliceSupportType 'automatic' y dos copias en `track.pos`
-// distintos, con `bloqueos` en la pieza, y comprobar con lo que registra el puente (`info.ganchos`, ver
+// distintos, con `bloqueos` en la pieza, y comprobar con lo que registra el puente (`info.ganchos`, que sólo viaja con `diagnostico: true`; ver
 // src/motor/soportes-kiri.js) que los parches de scripts/vendor-kiri.mjs disparan donde creemos:
 //   b. `sinBloqueos` se llama una vez por capa de cada widget, con z de arriba hacia abajo, y `widget.anno.bloqueos`
 //      llega con el contenido exacto que se mandó;
@@ -21,7 +21,7 @@ const BLOQUEOS = [
     { id: 3, forma: 'esfera', centro: { x: 4.2, y: -1.5, z: 12 }, radio: 8 },
     { id: 4, forma: 'esfera', centro: { x: -20, y: 2, z: 19.5 }, radio: 3.5 },
 ];
-const SOPORTES = { soportes: true, personal: { adhesion: 'nada' } };
+const SOPORTES = { soportes: true, personal: { adhesion: 'nada' }, diagnostico: true };
 
 // El encabezado vuelca la configuración: con la opción prendida cambia la línea `; sliceSupportTree = ...`.
 const sinCabecera = g => sinFecha(g).replace(/^; sliceSupportTree = .*$/m, '');
@@ -79,10 +79,14 @@ function revisarLlamadas({ revisar }, r) {
     );
 }
 
-// El resto: sin soportes no hay llamadas; con sliceSupportTree llama `arbol` una vez por copia y, al devolver false,
-// Kiri sigue con 'automatic' y el G-code no cambia.
+// El resto: sin soportes no hay llamadas; con sliceSupportTree llama `arbol` una vez por copia y, como el árbol real
+// devuelve true, el bucle de Kiri no corre: `sinBloqueos` no se llama y el G-code ya no es el de 'automatic'.
 async function revisarCasosLimite({ laminar, revisar }, referencia) {
-    const sin = await laminar({ piezas: [{ caso: 'te', posiciones: POS, bloqueos: BLOQUEOS }], soportes: false });
+    const sin = await laminar({
+        piezas: [{ caso: 'te', posiciones: POS, bloqueos: BLOQUEOS }],
+        soportes: false,
+        diagnostico: true,
+    });
     revisar(
         'sin soportes no se llama a ningún gancho',
         sin.info.ganchos.sinBloqueos.llamadas === 0 && sin.info.ganchos.arbol.llamadas === 0,
@@ -95,15 +99,15 @@ async function revisarCasosLimite({ laminar, revisar }, referencia) {
     });
     const a = arbol.info.ganchos.arbol;
     revisar(
-        'con sliceSupportTree se llama a arbol una vez por copia (stack completo, mismos bloqueos) y devuelve false',
+        'con sliceSupportTree se llama a arbol una vez por copia (stack completo, mismos bloqueos) y sinBloqueos no se llama',
         a.llamadas === POS.length &&
             a.registro.every(e => e.capas === arbol.info.capas && e.n === BLOQUEOS.length) &&
-            arbol.info.ganchos.sinBloqueos.llamadas === POS.length * arbol.info.capas,
+            arbol.info.ganchos.sinBloqueos.llamadas === 0,
         `${a.llamadas} llamadas, capas ${a.registro.map(e => e.capas)}, opciones ${JSON.stringify(a.registro[0]?.opciones)}`,
     );
     revisar(
-        'c. con sliceSupportTree (arbol devuelve false) el G-code sigue idéntico a la corrida sin ganchos (salvo fecha y la línea `; sliceSupportTree`)',
-        sinCabecera(arbol.gcode) === sinCabecera(referencia.gcode),
+        'con sliceSupportTree el G-code es el del árbol, no el de la corrida sin ganchos',
+        sinCabecera(arbol.gcode) !== sinCabecera(referencia.gcode),
         `${arbol.gcode.length} caracteres`,
     );
     const viejo = await laminar({ caso: 'te', ...SOPORTES });
