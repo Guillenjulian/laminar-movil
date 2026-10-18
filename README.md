@@ -4,6 +4,8 @@ Laminador **STL → G-code 100 % en el navegador**, pensado para usar con el cel
 Sin servidor, sin cuentas y sin costos: el archivo nunca sale del teléfono.
 Funciona sin conexión y se puede instalar como app (PWA).
 
+Mapa del código (empezá por acá si algo falla): [`docs/MAPA.md`](docs/MAPA.md).
+
 El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (licencia MIT).
 
 <p>
@@ -17,12 +19,16 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
 
 ## Qué hace
 
-1. **Subir STL** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
+1. **Subir STL, OBJ o 3MF**, o generar una **litofanía o relieve desde una foto** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
    **Acomodar el modelo en la cama**: escala (%), rotar de a 90° en X/Y/Z, **apoyar cara** (tocás una
    cara y queda sobre la cama) y "Achicar para que entre" si es más grande que la cama.
 2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
    En **Personalizar**: patrón de relleno (panal, cuadrícula, giroide, cúbico, triángulos, líneas),
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
+   En **Avanzado**: modo jarrón (espiral), altura de capa variable, costura, retracción, z-hop,
+   coasting, wipe, compensación de agujeros y contorno, velocidad %, temperaturas y ventilador.
+   **Materiales**: PLA, PLA+, PETG, TPU, ABS y ASA, con avisos y **costo estimado** según el
+   precio del rollo.
 3. **Laminar** con barra de progreso, en un Web Worker (la pantalla no se congela). Se puede cancelar.
 4. **Vista previa capa por capa** (deslizador, ±, reproducir, "sólo esta capa", colores por tipo de
    línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores,

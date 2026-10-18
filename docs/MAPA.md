@@ -33,7 +33,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
 | `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor.js` |
 | `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen | `perfiles`, `almacen`, `formato` |
-| `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 *(se agrega al integrar el trabajo de Avanzado)* | `perfiles` |
+| `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
 | `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
 | `src/config.js` | Límites que dependen de la memoria del equipo (triángulos, tramos de la vista previa) | — |
 | `src/sw.js` | Service worker (offline). `vite.config.js` le inyecta la lista de archivos | — |
@@ -52,6 +52,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `transformar.js` | Matrices 3×3: identidad, multiplicar, rotacion90, escala, rotacionQueApoya, aplicar, medir |
 | `decimar.js` | Simplificación por agrupamiento en grilla |
 | `pausas.js` | Inserta las pausas (M600/PAUSE) en el G-code al descargar |
+| `espiral.js` | Modo jarrón: convierte cada vuelta en rampa de Z (Kiri lo hace en capas planas) |
 | `minions-locales.js` | Reemplaza el pool de sub-workers de Kiri (soportes) por cálculo local |
 | `tipos-linea.js` | Tipos de línea de Kiri, sus colores, paleta de filamentos, cuantizado |
 
@@ -62,7 +63,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `impresoras/*.json` | Perfiles armados a mano (`estado: revisado`) |
 | `impresoras/kiri/*.json` | 50 importadas de Kiri (`estado: importado`). **Generados**: no editar a mano |
 | `materiales.json` · `opciones.json` | Materiales (temperaturas, densidad, avisos) · patrones, densidades, adhesiones |
-| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas |
+| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `valoresDeAvanzado()`, `avanzadoAProceso()`, `COSTURAS` |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
 | `LEEME.md` | Referencia de todas las claves |
 
@@ -75,7 +76,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 |---|---|---|
 | `nombre`, `stl`, `vista` | Modelo cargado (ArrayBuffer original y tamaño) | sí, en recientes |
 | `rotacion`, `escala` | Transformación del modelo | no |
-| `impresoraId`, `calidad`, `material`, `soportes`, `personal` | Elecciones del paso 2 | sí, en `preferencias` |
+| `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
 | `resultado` | `{ gcode, info, archivo, impresoraId }` del último laminado | no |
 | `pausas`, `coloresFilamento`, `modoColor` | Pausas y colores de la vista previa | no |
@@ -100,6 +101,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Macros `{...}` sin reemplazar | `dispositivo.gcodePre/Post` del perfil y el shim de QuickJS en `vendor-kiri.mjs` |
 | No abre offline | `src/sw.js` (lista de archivos, `ignoreVary`), `vite.config.js` |
 | La vista previa no coincide con las capas | `recorridos.worker.js` (detección de capa por cambio de Z en extrusión) |
+| Modo jarrón sin espiral o capas raras | `espiral.js` y el comentario `; capa en espiral` que lee `recorridos.worker.js` |
+| Altura variable sin subir Z | parche de `slice.js` en `vendor-kiri.mjs` |
 | La pausa cae en un lugar raro | `recorridos.worker.js` (`pausaCapa`) y `pausas.js` |
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `laminador.worker.js` (`centrar`) |
 | Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
