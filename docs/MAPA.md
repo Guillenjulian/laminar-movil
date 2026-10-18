@@ -91,6 +91,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `materiales.json` · `opciones.json` | Materiales (temperaturas, densidad, avisos) · patrones, densidades, adhesiones |
 | `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `valoresDeAvanzado()`, `avanzadoAProceso()`, `COSTURAS` |
 | `cambios.js` | Cambios por altura (ADR 0002), funciones puras sin imports: `validarCambios`, `cambiosARangos` (mm → `process.ranges` de Kiri), `resumenCambios`, `avisosPostLaminado` |
+| `torres.js` | Configuración de las torres de calibración (ADR 0002): `valoresSugeridos` (según `hotendMax` y Bowden), `armarTorre`, `configuracionDeTorre` (bloque 0 en Avanzado, el resto como `cambios`). Importa `motor/torres`, `cambios` y `perfiles` |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
 | `LEEME.md` | Referencia de todas las claves |
 

@@ -3,6 +3,7 @@
 // Uso: npm run test:cambios
 
 import { probarConfiguracionCambios } from './cambios/configuracion.mjs';
+import { probarConfiguracionTorres } from './cambios/torres.mjs';
 import { validarCambios, cambiosARangos, resumenCambios, avisosPostLaminado } from '../src/perfiles/cambios.js';
 
 let fallas = 0;
@@ -262,6 +263,7 @@ revisar(
 );
 
 await probarConfiguracionCambios(revisar);
+await probarConfiguracionTorres(revisar);
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
 process.exit(fallas ? 1 : 0);
