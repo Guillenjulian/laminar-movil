@@ -162,7 +162,7 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
     visor.ponerModelo(vertices);
 
-    // La pieza se crea al final de lo que puede fallar (el visor): si algo lanza, queda el modelo anterior.
+    // La pieza se crea después del visor: si ponerModelo lanza, estado no apunta a una pieza sin malla.
     const pieza = crearPieza({
         nombre,
         stl: buffer,
