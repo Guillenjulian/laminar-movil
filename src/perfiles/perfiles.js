@@ -1,10 +1,11 @@
 // Materiales y opciones, y la configuración final que recibe el motor. El catálogo de
-// impresoras (JSON, propias, búsqueda) vive en catalogo.js y se re-exporta desde acá,
+// impresoras vive en catalogo.js y lo que se lee de un perfil en valores.js; se re-exportan desde acá,
 // así que los demás módulos siguen importando todo de perfiles.js.
 
 import materiales from './materiales.json';
 import opciones from './opciones.json';
-import { buscarImpresora, esBowden } from './catalogo.js';
+import { buscarImpresora } from './catalogo.js';
+import { esBowden } from './valores.js';
 import { validarCambios, cambiosARangos } from './cambios.js';
 
 export {
@@ -14,11 +15,8 @@ export {
     idVigente,
     existeImpresora,
     buscarImpresora,
-    lineasPausa,
-    valoresDeCalidad,
-    esBowden,
-    valoresDeAvanzado,
 } from './catalogo.js';
+export { lineasPausa, valoresDeCalidad, esBowden, valoresDeAvanzado } from './valores.js';
 export { materiales, opciones };
 
 // Saca las claves que empiezan con "_" (son comentarios dentro del JSON).

@@ -121,8 +121,9 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `impresoras/*.json` | Perfiles armados a mano (`estado: revisado`) |
 | `impresoras/kiri/*.json` | 50 importadas de Kiri (`estado: importado`; la K1 y la Kobra 2 las tapa su perfil revisado, así que la app lista 48). **Generados**: no editar a mano |
 | `materiales.json` · `opciones.json` | Materiales (temperaturas, densidad, avisos) · patrones, densidades, adhesiones |
-| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `avanzadoAProceso()`, `COSTURAS`. Re-exporta todo lo de `catalogo.js` (los demás módulos siguen importando de acá) |
-| `catalogo.js` | Catálogo de impresoras: glob de los JSON, `reemplaza`/`idVigente`, `listaImpresoras`, `ponerImpresorasPropias`, `existeImpresora`, `buscarImpresora`, `IMPRESORA_INICIAL`; y lo que se lee de un perfil: `lineasPausa`, `valoresDeCalidad`, `valoresDeAvanzado`, `esBowden`. Importa sólo `generico` y `materiales.json` (no `perfiles`) |
+| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `avanzadoAProceso()`, `COSTURAS`. Re-exporta todo lo de `catalogo.js` y `valores.js` (los demás módulos siguen importando de acá) |
+| `catalogo.js` | Catálogo de impresoras: glob de los JSON, `reemplaza`/`idVigente`, `listaImpresoras`, `ponerImpresorasPropias`, `existeImpresora`, `buscarImpresora`, `IMPRESORA_INICIAL`. Importa sólo `generico` (no `perfiles`) |
+| `valores.js` | Lo que se lee de un perfil: `lineasPausa`, `procesoDeCalidad`, `valoresDeCalidad`, `valoresDeAvanzado`, `esBowden`. Importa `catalogo` y `materiales.json` |
 | `cambios.js` | Cambios por altura (ADR 0002), funciones puras sin imports: `validarCambios`, `cambiosARangos` (mm → `process.ranges` de Kiri), `resumenCambios`, `avisosPostLaminado` |
 | `torres.js` | Configuración de las torres de calibración (ADR 0002): `valoresSugeridos` (según `hotendMax` y Bowden), `armarTorre`, `configuracionDeTorre` (bloque 0 en Avanzado, el resto como `cambios`). Importa `motor/torres`, `cambios` y `perfiles` |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
