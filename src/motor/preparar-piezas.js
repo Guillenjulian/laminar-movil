@@ -54,7 +54,8 @@ function validarSola(t, d) {
 function validarCopia(t, pos, d) {
     const sobraX = Math.abs(pos.x) + t.x / 2 - d.bedWidth / 2;
     const sobraY = Math.abs(pos.y) + t.y / 2 - d.bedDepth / 2;
-    if (sobraX > TOLERANCIA_COPIA_MM || sobraY > TOLERANCIA_COPIA_MM) {
+    // Comparación invertida: una posición NaN o undefined no pasa.
+    if (!(sobraX <= TOLERANCIA_COPIA_MM && sobraY <= TOLERANCIA_COPIA_MM)) {
         throw new Error('Las piezas no entran en la cama. Probá con menos copias o más chicas.');
     }
 }
@@ -66,26 +67,25 @@ function leerPieza(p) {
     return vertices;
 }
 
-// Decima cada pieza una sola vez con su tope repartido. Devuelve las mallas finales y el resumen (o null).
+// Decima cada pieza una sola vez con su tope repartido, reemplazando `mallas[i]` (así el original se puede
+// soltar enseguida: sólo se guardan los conteos). Devuelve el resumen del conjunto o null si no se decimó nada.
 function decimarTodas(mallas, copias, maxTriangulos, alReducir) {
-    const topes = repartirTriangulos(
-        mallas.map(v => v.length / 9),
-        copias,
-        maxTriangulos,
-    );
+    const originales = mallas.map(v => v.length / 9);
+    const topes = repartirTriangulos(originales, copias, maxTriangulos);
     let hubo = false;
     let precisionMm = 0;
-    const salida = mallas.map((v, i) => {
+    mallas.forEach((v, i) => {
         const tope = topes === Infinity ? Infinity : Math.floor(topes[i]);
         const r = decimar(v, tope, val => alReducir?.((i + val) / mallas.length));
-        if (!r) return v;
+        if (!r) return;
         hubo = true;
         precisionMm = Math.max(precisionMm, r.celda);
-        return r.vertices;
+        mallas[i] = r.vertices;
     });
-    if (!hubo) return { mallas: salida, decimado: null };
-    const suma = ms => ms.reduce((s, v, i) => s + (v.length / 9) * copias[i], 0);
-    return { mallas: salida, decimado: { original: suma(mallas), final: suma(salida), precisionMm } };
+    if (!hubo) return null;
+    alReducir?.(1); // una pieza que no se decima no avisa: cerramos el avance en 1
+    const suma = cuentas => cuentas.reduce((s, n, i) => s + n * copias[i], 0);
+    return { original: suma(originales), final: suma(mallas.map(v => v.length / 9)), precisionMm };
 }
 
 // Caja que abarca todas las copias (`cajas[k]` centrada en `centros[k]`); z = la más alta.
@@ -99,50 +99,40 @@ function cajaDelConjunto(cajas, centros) {
     };
 }
 
-// Traslada los vértices (plan B del ADR): la copia queda en `pos` y el widget va en 0.
-function desplazarVertices(v, pos) {
-    for (let i = 0; i < v.length; i += 3) {
-        v[i] += pos.x;
-        v[i + 1] += pos.y;
-    }
-}
-
 /**
  * Lee, transforma, decima y centra cada pieza y la replica por copia.
- * Cada pieza se decima una sola vez; cada copia lleva su propio `Float32Array` (`slice`), nunca compartido.
+ * Cada pieza se decima una sola vez; cada copia lleva su propio `Float32Array`, nunca compartido (la última
+ * copia usa la malla de la pieza y las anteriores un `slice`). Quien llama suelta los `stl` (por ejemplo
+ * `piezas.forEach(p => (p.stl = null))`) al volver o antes, para no retener el archivo y la malla a la vez.
  * @param {{stl:ArrayBuffer, transformacion?:number[], posiciones:{x:number,y:number}[]}[]} piezas
  * @param {object} dispositivo perfil (bedWidth, bedDepth, maxHeight)
  * @param {number} maxTriangulos tope del conjunto, copias incluidas
  * @param {(valor:number)=>void} [alReducir] avance de la decimación (0..1)
- * @param {{desplazar?: boolean}} [opciones] `desplazar: true` traslada los vértices y deja `pos` en 0 (plan B)
  * @returns {{widgets: {vertices:Float32Array, pos:{x:number,y:number,z:number}, tamano:{x:number,y:number,z:number}}[],
  *           triangulos:number, tamano:{x:number,y:number,z:number}, decimado:object|null}}
  *   `tamano`: x e y de la caja que abarca todo (con posiciones), z la altura de la más alta.
  *   `decimado`: `{original, final, precisionMm}` del conjunto (con copias) o `null` si no se decimó nada.
  * @throws {Error} en español si una pieza no entra sola o una copia se sale de la cama
  */
-export function prepararPiezas(piezas, dispositivo, maxTriangulos, alReducir, opciones = {}) {
+export function prepararPiezas(piezas, dispositivo, maxTriangulos, alReducir) {
     const copias = piezas.map(p => p.posiciones.length);
-    const { mallas, decimado } = decimarTodas(piezas.map(leerPieza), copias, maxTriangulos, alReducir);
+    const mallas = piezas.map(leerPieza);
+    const decimado = decimarTodas(mallas, copias, maxTriangulos, alReducir);
     const widgets = [];
     const cajas = [];
     const centros = [];
     mallas.forEach((v, i) => {
         const tamano = centrar(v);
         validarSola(tamano, dispositivo);
-        for (const p of piezas[i].posiciones) {
+        const posiciones = piezas[i].posiciones;
+        posiciones.forEach((p, c) => {
             validarCopia(tamano, p, dispositivo);
-            const vertices = v.slice();
-            const pos = { x: p.x, y: p.y, z: 0 };
-            if (opciones.desplazar) {
-                desplazarVertices(vertices, pos);
-                pos.x = 0;
-                pos.y = 0;
-            }
-            widgets.push({ vertices, pos, tamano: { ...tamano } });
+            const vertices = c === posiciones.length - 1 ? v : v.slice();
+            widgets.push({ vertices, pos: { x: p.x, y: p.y, z: 0 }, tamano: { ...tamano } });
             cajas.push(tamano);
             centros.push(p);
-        }
+        });
+        mallas[i] = null;
     });
     const triangulos = widgets.reduce((s, w) => s + w.vertices.length / 9, 0);
     return { widgets, triangulos, tamano: cajaDelConjunto(cajas, centros), decimado };
