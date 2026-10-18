@@ -17,6 +17,7 @@
         "test:torres": "node scripts/probar-torres.mjs",
         "test:cambios": "node scripts/probar-cambios.mjs",
         "test:piezas": "node scripts/probar-piezas.mjs",
+        "test:soportes": "node scripts/probar-soportes.mjs",
         "test:recorridos": "node scripts/probar-recorridos.mjs",
         "test:visor-carga": "node scripts/probar-visor-carga.mjs",
         "test:chunks": "node scripts/verificar-chunks.mjs",

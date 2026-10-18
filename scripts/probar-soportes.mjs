@@ -1,0 +1,38 @@
+// Pruebas de los soportes: árbol (src/motor/soportes-arbol.js), bloqueos y tipo. Corren en Node, sin navegador.
+// Recorre scripts/soportes/*.mjs; cada archivo exporta por defecto `async function ({ revisar, igual })`.
+//
+// Uso: npm run test:soportes
+
+import assert from 'node:assert/strict';
+import { readdirSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+let fallas = 0;
+let aciertos = 0;
+function revisar(nombre, condicion, detalle = '') {
+    console.log(`${condicion ? '  ✔' : '  ✘'} ${nombre} ${condicion ? '' : detalle}`);
+    if (condicion) aciertos++;
+    else fallas++;
+}
+// Comparación estricta (distingue -0 de 0 y no esconde NaN).
+function igual(real, esperado) {
+    try {
+        assert.deepStrictEqual(real, esperado);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+const carpeta = fileURLToPath(new URL('./soportes/', import.meta.url));
+const archivos = readdirSync(carpeta)
+    .filter(f => f.endsWith('.mjs'))
+    .sort();
+for (const archivo of archivos) {
+    console.log(`\n== ${archivo}`);
+    const modulo = await import(pathToFileURL(carpeta + archivo).href);
+    await modulo.default({ revisar, igual });
+}
+
+console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
+process.exit(fallas ? 1 : 0);
