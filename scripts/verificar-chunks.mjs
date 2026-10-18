@@ -5,16 +5,17 @@
 //
 // Mirá el chunk principal de index.html y todo lo que se carga con él (imports
 // estáticos, sin los import() dinámicos). Falla si el principal o esa clausura pesan
-// demasiado, si three.js (WebGLRenderer) está en la clausura, o si hay un chunk del
-// visor que el service worker no guarda para usar sin conexión.
+// demasiado, si three.js (WebGLRenderer) o jszip (generateAsync) están en la clausura, o si hay un
+// chunk dinámico del visor o de jszip que el service worker no guarda para usar sin conexión.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
-const TOPE_PRINCIPAL = 250000;
+const TOPE_PRINCIPAL = 100000;
 const TOPE_CLAUSURA = 400000;
 const MARCA_VISOR = 'WebGLRenderer';
+const MARCA_JSZIP = 'generateAsync'; // API de jszip; no aparece en el código propio de la app
 
 const carpeta = path.resolve(process.argv[2] ?? 'dist');
 const relativa = ruta => path.relative(carpeta, ruta).split(path.sep).join('/');
@@ -22,6 +23,8 @@ const relativa = ruta => path.relative(carpeta, ruta).split(path.sep).join('/');
 // Mismo criterio que vite.config.js: las páginas de diagnóstico no van en el service worker.
 const esDeDiagnostico = nombre =>
     nombre.startsWith('prueba-motor') || nombre.includes('pruebaMotor') || nombre.includes('prueba-piezas');
+
+const esWorker = nombre => /\.worker-/.test(nombre);
 
 // "/x" es relativo a dist/; "./x" y "../x" son relativos al archivo que importa.
 const rutaDe = (desde, especificador) =>
@@ -83,6 +86,7 @@ const medir = (ruta, enClausura) => {
         gzip: zlib.gzipSync(buf).length,
         clausura: enClausura.has(ruta),
         visor: buf.includes(MARCA_VISOR),
+        jszip: buf.includes(MARCA_JSZIP),
         diagnostico: esDeDiagnostico(nombre),
     };
 };
@@ -112,8 +116,17 @@ const evaluar = (principal, filas, archivos) => {
             `[visor-en-clausura] ${f.nombre} se carga con la app y contiene ${MARCA_VISOR}; el visor debe ir en import() dinámico`,
         );
     }
-    for (const f of filas.filter(f => f.visor && !f.diagnostico && !archivos.includes(f.nombre))) {
-        fallas.push(`[visor-fuera-sw] ${f.nombre} contiene ${MARCA_VISOR} y no está en ARCHIVOS de sw.js`);
+    for (const f of enClausura.filter(f => f.jszip)) {
+        fallas.push(
+            `[jszip-en-clausura] ${f.nombre} se carga con la app y contiene ${MARCA_JSZIP}; jszip debe ir en import() dinámico`,
+        );
+    }
+    // Todo chunk con visor o jszip se pide recién cuando hace falta (import() dinámico), así que sin conexión
+    // sólo anda si el service worker lo guardó. Los workers se cachean aparte y no entran en esta regla.
+    for (const f of filas.filter(f => (f.visor || f.jszip) && !f.diagnostico && !esWorker(f.nombre))) {
+        if (archivos.includes(f.nombre)) continue;
+        const que = f.visor ? MARCA_VISOR : MARCA_JSZIP;
+        fallas.push(`[dinamico-fuera-sw] ${f.nombre} contiene ${que} y no está en ARCHIVOS de sw.js`);
     }
     return fallas;
 };

@@ -452,6 +452,8 @@ Medido con `npm run build` sobre `int-rend` (`43d2058`); `npm run test:chunks` p
 | Carga inicial (principal + `motor`) | ~800 kB | ~268 kB |
 | Chunk del visor (`visor-*.js`) | dentro del principal | 535 kB (gzip 136 kB), dinámico y en la lista de `sw.js` |
 
+- jszip y el armado del `.gcode.3mf` (`bambu-3mf-*.js`, 104 kB) salieron del principal: `ui/entrega` los importa con `import()` sólo al entregar un `gcode.3mf` (el principal bajó de 168,8 a 65,2 kB). Está en `sw.js`; `test:chunks` lo exige.
+
 - Niveles calibrados: `DESVIO` 0,02 / 0,08 / 0,15 / 0,30 mm; `REDUCCION` [1, 0.88, 0.70, 0.52].
 - El nivel 0 es idéntico a la base: la prueba fija compara la cantidad de tramos, los tipos y un hash de las posiciones.
 - Un nivel mayor nunca da más tramos que el anterior. Es el respaldo del criterio del nivel 0 (las uniones que el nivel 0

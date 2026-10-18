@@ -14,6 +14,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
+- jszip y el armado del `.gcode.3mf` se cargan sólo al entregar un archivo Bambu (y quedan guardados para usar sin conexión): el chunk principal baja de 169 a 65 kB. El G-code plano no los baja nunca.
 - El importador de Kiri sigue salteando `Bambu.A1` y `Bambu.P1S`, con el motivo de que el perfil revisado a mano es el que se usa.
 - La app arranca más liviana: three.js se carga aparte, cuando hace falta (y se precarga en segundo plano). El chunk principal pasa de 594 a 62 kB.
 - La vista previa de G-codes enormes se simplifica si no entra en la memoria del equipo, y avisa. Antes se cortaba: ahora se ven todas las capas.

@@ -3,10 +3,20 @@
 // .gcode.3mf (Bambu), con el nombre y el MIME que corresponden.
 // Flujo: paso4 arma `salida` e `infoBambu` y llama a `armarEntrega`; acá no se lee `estado` ni `perfiles`.
 // No toca el DOM ni nada global al importarse: se puede probar en Node.
-// Aristas permitidas: motor/pausas y motor/bambu-3mf.
+// Aristas permitidas: motor/pausas y motor/bambu-3mf (esta última con import() dinámico, ADR 0006).
 
 import { insertarPausas } from '../motor/pausas.js';
-import { armarGcode3mf } from '../motor/bambu-3mf.js';
+
+// jszip pesa ~110 kB: se baja recién al armar un .gcode.3mf (ADR 0006). La promesa se cachea; si falla
+// (sin red y sin caché) se descarta para que el próximo intento vuelva a probar.
+let modulo3mf = null;
+const cargar3mf = () => {
+    modulo3mf ??= import('../motor/bambu-3mf.js').catch(err => {
+        modulo3mf = null;
+        throw err;
+    });
+    return modulo3mf;
+};
 
 /**
  * @typedef {object} Salida
@@ -61,6 +71,7 @@ export async function armarEntrega(resultado, pausas, salida, infoBambu, alProgr
     const final = insertarPausas(resultado.gcode, pausas, salida.pausa);
     if (salida.formato !== 'gcode.3mf') return new File([final], nombre, { type });
     const info = { ...infoBambu, modelo: salida.modelo };
+    const { armarGcode3mf } = await cargar3mf();
     const zip = await armarGcode3mf(final, info, { alProgreso });
     return new File([zip], nombre, { type });
 }
