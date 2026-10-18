@@ -17,8 +17,11 @@ const ALTO_MM = 6;
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarTorres(ctx) {
     const { page: pagina, ok: revisar, visible, elegirArchivo, esperarResultado } = ctx;
-    await pagina.goBack();
-    if (await visible('#otroModelo')) await pagina.tap('#otroModelo');
+    // Llegar al paso 1 sin modelo: el botón de la torre está en la pantalla "sin modelo".
+    if (!(await visible('section[data-paso="1"]'))) await pagina.goBack();
+    await pagina.waitForSelector('section[data-paso="1"]:not([hidden])');
+    if (!(await visible('#sinModelo'))) await pagina.tap('#otroModelo');
+    await pagina.waitForSelector('#botonTorre', { state: 'visible' });
     await pagina.tap('#botonTorre');
     revisar('torre: se abre la hoja desde el paso 1', await visible('#hojaTorre'));
     const valores = await crearTorre(ctx);
