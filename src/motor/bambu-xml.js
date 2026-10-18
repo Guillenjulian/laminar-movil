@@ -56,6 +56,7 @@ export function armarContentTypes(conMiniatura) {
     );
 }
 
+/** Línea `<Relationship>` de _rels/.rels. @param {string} destino @param {string} id @param {string} tipo @returns {string} */
 const relacion = (destino, id, tipo) => ` <Relationship Target="${destino}" Id="${id}" Type="${tipo}"/>\n`;
 
 /**
@@ -86,6 +87,7 @@ export function armarModelo(nombre) {
     );
 }
 
+/** Línea `<metadata key value/>` con la sangría dada (el valor ya viene escapado). @param {string} clave @param {string} valor @param {string} sangria @returns {string} */
 const meta = (clave, valor, sangria) => `${sangria}<metadata key="${clave}" value="${valor}"/>\n`;
 
 /**
