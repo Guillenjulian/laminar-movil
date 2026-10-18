@@ -163,6 +163,25 @@ h2:first-child {
     height: 100%;
     display: block;
 }
+/* Aviso mientras carga three.js (ADR 0006); con error se puede tocar para reintentar. */
+.visor-estado {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    text-align: center;
+    color: var(--suave);
+    background: var(--tarjeta);
+}
+.visor-estado[hidden] {
+    display: none;
+}
+.visor[data-visor='error'] .visor-estado {
+    color: var(--texto);
+    background: var(--error);
+    cursor: pointer;
+}
 .ayuda-gestos {
     position: absolute;
     left: 0;

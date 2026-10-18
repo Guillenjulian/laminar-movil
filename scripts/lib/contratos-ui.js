@@ -2,7 +2,7 @@
 /** Base común (estado, navegación y util-dom). NO la usa paso2-config: el ADR no le permite navegacion. */
 const conBase = (...otros) => ['ui/estado', 'ui/navegacion', 'ui/util-dom', ...otros];
 const PERFILES = 'perfiles/perfiles';
-const VISOR = 'ui/visor';
+const VISOR = 'ui/visor-carga';
 const FORMATO = 'ui/formato';
 const MOTOR = 'motor/motor';
 
@@ -148,5 +148,7 @@ export const CONTRATOS = {
     'ui/visor-recorridos': { exports: { crearRecorridos: 1 }, importa: ['motor/tipos-linea'] },
     'ui/visor-cama': { exports: { reemplazarCama: 3 }, importa: [] },
     'ui/visor': { exports: { crearVisor: 1 }, importa: ['ui/visor-cara', 'ui/visor-recorridos', 'ui/visor-cama'] },
+    // Único que importa ui/visor, con import() dinámico (three.js sale del chunk principal, ADR 0006).
+    'ui/visor-carga': { exports: { crearVisor: 2, precargarVisor: 0, armarVisorCarga: 1 }, importa: ['ui/visor'] },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

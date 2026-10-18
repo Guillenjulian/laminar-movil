@@ -150,6 +150,30 @@ async function probarAlListo() {
     revisar('el módulo se pidió una sola vez', c.pedidos === 1);
 }
 
+// Si alListo tira, el visor ya está listo: no pasa a 'error' y la excepción se informa en la consola.
+async function probarAlListoQueTira() {
+    console.log('alListo que tira');
+    const c2 = cargadorManual();
+    const cont = contenedorFalso();
+    const consola = console.error;
+    const informados = [];
+    console.error = e => informados.push(e);
+    try {
+        const v = armarVisorCarga(c2.cargar)(cont, {
+            alListo: () => {
+                throw new Error('alListo roto');
+            },
+        });
+        v.ponerCama({ x: 3 });
+        await c2.llegar();
+        await new Promise(r => setTimeout(r, 5));
+    } finally {
+        console.error = consola;
+    }
+    revisar('alListo que tira no marca error', cont.dataset.visor === 'listo', `visor=${cont.dataset.visor}`);
+    revisar('la excepción se informa', informados.length === 1 && /alListo roto/.test(informados[0]?.message));
+}
+
 async function probarFallo() {
     console.log('Fallo del cargador');
     const c = cargadorManual();
@@ -274,6 +298,7 @@ await probarCola();
 await probarUltimaOrden();
 await probarConsulta();
 await probarAlListo();
+await probarAlListoQueTira();
 await probarFallo();
 await probarYaCargado();
 await probarExcepciones();

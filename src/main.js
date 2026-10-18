@@ -5,7 +5,8 @@
 //    respondan aunque la lectura de preferencias tarde.
 // 2. Preferencias y precios: un solo await. Todo lo que depende de ellos (incluido el costo) se dibuja después.
 // 3. Primer dibujo: opciones, pantalla 1 y modelos recientes.
-// 4. Tareas de fondo: pedir almacenamiento persistente y registrar el service worker (sólo en el build).
+// 4. Tareas de fondo: pedir almacenamiento persistente, registrar el service worker (sólo en el build) y
+//    precargar el chunk del visor 3D (three.js) cuando el navegador está libre (ADR 0006).
 
 import * as almacen from './almacen.js';
 import * as materialesUI from './ui/materiales.js';
@@ -19,6 +20,7 @@ import { iniciarPaso4, mostrarResultado } from './ui/paso4-resultado.js';
 import { iniciarVistaCapas } from './ui/vista-capas.js';
 import { programarPrecarga } from './ui/entrega-ui.js';
 import { registrarServiceWorker } from './ui/actualizacion.js';
+import { precargarVisor } from './ui/visor-carga.js';
 
 // 1. Listeners.
 iniciarNavegacion();
@@ -48,3 +50,4 @@ mostrarRecientes();
 // 4. Tareas de fondo.
 almacen.pedirAlmacenamientoPersistente();
 registrarServiceWorker();
+(window.requestIdleCallback ?? (f => setTimeout(f, 1)))(precargarVisor);

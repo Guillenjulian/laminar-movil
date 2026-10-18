@@ -57,6 +57,8 @@ export default defineConfig({
     },
     build: {
         target: 'es2022',
+        // El chunk del visor (three.js) pasa de 500 kB a propósito; el guardián real es scripts/verificar-chunks.mjs.
+        chunkSizeWarningLimit: 600,
         rollupOptions: {
             input: {
                 main: 'index.html',

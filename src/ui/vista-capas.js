@@ -8,7 +8,7 @@
 import { estado } from './estado.js';
 import { alMostrarPaso } from './navegacion.js';
 import { $ } from './util-dom.js';
-import { crearVisor } from './visor.js';
+import { crearVisor } from './visor-carga.js';
 import * as formato from './formato.js';
 import { leerRecorridos } from '../motor/motor.js';
 import { TIPOS } from '../motor/tipos-linea.js';

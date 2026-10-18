@@ -11,7 +11,7 @@
 import { leerParaVista, convertirAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import * as almacen from '../almacen.js';
-import { crearVisor } from './visor.js';
+import { crearVisor } from './visor-carga.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
 import { $ } from './util-dom.js';
@@ -185,7 +185,15 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     $('ajustesModelo').hidden = !!torre;
 
     $('conModelo').hidden = false;
-    if (!visor) visor = crearVisor($('visor'));
+    if (!visor) {
+        // Mientras three.js carga, la medida real no existe: al quedar listo se rehace con ella (ADR 0006).
+        visor = crearVisor($('visor'), {
+            alListo: () => {
+                ajuste.aplicar();
+                piezas.reacomodar();
+            },
+        });
+    }
     const imp = buscarImpresora(estado.impresoraId).dispositivo;
     visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
 

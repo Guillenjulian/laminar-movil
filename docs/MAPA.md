@@ -39,11 +39,11 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | Archivo | Responsabilidad | Depende de |
 |---|---|---|
 | `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
-| `src/main.js` | Punto de entrada: inicializa los módulos de `src/ui/` en orden (ver ADR 0001) | `almacen` y los módulos de `src/ui/` que inicializa (ver grafo abajo) |
+| `src/main.js` | Punto de entrada: inicializa los módulos de `src/ui/` en orden (ver ADR 0001) | `almacen` y los módulos de `src/ui/` que inicializa (ver grafo abajo); al final del arranque llama `precargarVisor()` (en `requestIdleCallback`) |
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único (con `piezas`, ADR 0003), `crearPieza`, `piezaActiva`, `matrizPieza`, `matrizModelo`, `copiasTotales`, `piezasParaMotor`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso; `irAPaso1` vuelve al paso 1 por el historial (cuenta las hojas, espera si hay un recorrido en curso y enfoca el paso 1) | `ui/estado`, `ui/util-dom` |
-| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` y las piezas extra `piezas-ui` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `ajuste-modelo`, `piezas-ui`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
+| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` y las piezas extra `piezas-ui` | `estado`, `navegacion`, `util-dom`, `visor-carga`, `litofania`, `torres`, `ajuste-modelo`, `piezas-ui`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
 | `src/ui/ajuste-modelo.js` | Ajuste de la pieza activa (ADR 0003): escala, rotaciones de 90°, apoyar cara, ajustar a la cama, restablecer y avisos (no entra, modelo pesado); en cada `aplicar` guarda en la pieza su medida real (`p.tamano`, desde `visor.tamanoModelo`); `crearAjuste` | `estado`, `util-dom`, `formato`, `motor/transformar`, `perfiles/perfiles`, `config` |
 | `src/ui/piezas-ui.js` | Varias piezas en el paso 1 (ADR 0003, T8 y T10): chips de `#listaPiezas` (desde 2 piezas, con `×copias`), "Agregar pieza" (archivo o cubo de ejemplo; no con torre ni litofanía; tope de piezas y de copias; las agregadas van a recientes con `ctx.guardar`), quitar y elegir la pieza activa (chip o toque en el visor). `reacomodar()`: `acomodarPiezas()`, `visor.ponerCopias` por pieza (las que no entran, en rojo), aviso `#avisoEntran` "No entran todas en la cama" y "Siguiente" deshabilitado (con una pieza y una copia no cambia nada: sigue el aviso de `ajuste-modelo`); expone `data-copias` en `#listaPiezas`; `crearPiezas` | `estado`, `util-dom`, `config`, `motor/piezas`, `acomodo`, `copias-ui` |
 | `src/ui/copias-ui.js` | Stepper de copias de la pieza activa (ADR 0003, T10): `#copiasPieza` con − / + y el número; mínimo 1, máximo según `validarCantidad` (`MAX_PIEZAS`, `maxCopias()`), con texto que explica el tope; oculto con torre o litofanía; `crearCopias` | `estado`, `util-dom`, `config`, `motor/piezas` |
@@ -56,9 +56,10 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/paso4-resultado.js` | Resumen del resultado (con "N piezas" si hay copias), avisos (incluye los de cambios por altura fuera de la pieza, `avisosPostLaminado`) y botones Compartir / Descargar / Elegir otro modelo. `#nombreArchivo` y `a.download` salen de `nombreEntrega`; en las Bambu la fila "Archivo" se llama "G-code". Compartir y Descargar piden el archivo a `entrega-ui`; el aviso "Listo el archivo. Tocá Compartir otra vez" va a `#estadoEntrega` (`role=status`), y el botón dice "Compartir archivo" con .gcode.3mf | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `entrega`, `entrega-ui`, `perfiles/perfiles`, `perfiles/cambios` |
 | `src/ui/entrega-ui.js` | Qué archivo se entrega y cuándo se arma (ADR 0005, 3.5): `archivoEntrega()` (async; el cache guarda sólo el `File` del .gcode.3mf, por impresora + offsets de pausas, y lo suelta `mostrarResultado`; el .gcode plano se arma en cada pedido y no se guarda; arma `Salida` e `InfoBambu` desde `estado` y el perfil), `precargar`/`programarPrecarga` (sólo con `gcode.3mf`; `main.js` la cablea como `alCambiarPausas` de `iniciarVistaCapas`, que `pausas-ui` llama tras agregar o quitar una pausa), `esperarArchivo(boton)` ("Armando el archivo… N %" con los dos botones deshabilitados, sólo en `gcode.3mf`), `puedeCompartir` (`canShare` con un File vacío del nombre y MIME finales: octet-stream, zip, model/3mf), `paraCompartir`, `soltarEntrega`. Salió de `paso4-resultado` para dejarlo corto | `estado`, `util-dom`, `materiales`, `entrega`, `perfiles/perfiles` |
 | `src/ui/entrega.js` | Sin DOM ni `estado` (ADR 0005, 3.4): `nombreEntrega` (`.gcode` o `.gcode.3mf`), `mimeEntrega` y `armarEntrega` (inserta las pausas y deja el `File`, plano o dentro de un `.gcode.3mf`) | `motor/pausas`, `motor/bambu-3mf` |
-| `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor, las capas y el callback `alCambiarPausas` que recibe de `main.js` | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
+| `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor, las capas y el callback `alCambiarPausas` que recibe de `main.js` | `estado`, `navegacion`, `util-dom`, `visor-carga`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
 | `src/ui/pausas-ui.js` | Pausas de filamento de la vista previa: avisa cada cambio con `alCambiarPausas`; lista de filamentos, marcas sobre el deslizador, modo y colores de los recorridos | `estado`, `util-dom`, `formato`, `motor/tipos-linea`, `perfiles/perfiles` |
 | `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
+| `src/ui/visor-carga.js` | Fachada sincrónica del visor (ADR 0006): `crearVisor(contenedor, { alListo })` con la misma API que `visor.js`; es el único que lo importa, con `import('./visor.js')`, así three.js queda en un chunk aparte (`visor-*.js`). Encola las órdenes hasta que el chunk llega y las reproduce en orden; `tamanoModelo` da `null` hasta entonces y `alListo` (una vez, después de la cola) hace que `paso1-modelo` rehaga `ajuste.aplicar()` y `piezas.reacomodar()`. `data-visor="cargando"\|"listo"\|"error"` en el contenedor y aviso `.visor-estado` (con error, un toque reintenta). `precargarVisor()` baja el chunk antes de necesitarlo | `ui/visor` (dinámico) |
 | `src/ui/visor.js` | Visor three.js: cama, una malla por pieza (por `id`, 0 si no se dice: `ponerModelo`, `ponerTransformacion`, `ponerCopias`, `tamanoModelo`, `quitarModelo`, `resaltarPieza`), ciclo de dibujo (sólo cuando algo cambia). Delega en `visor-cara` y `visor-recorridos` (ADR 0003, T5) | three, `visor-cara`, `visor-recorridos`, `visor-cama` |
 | `src/ui/visor-cara.js` | Elegir cara con un toque ("apoyar cara"): detección del toque, triángulo resaltado, avisa normal e `id` de la pieza (`elegirCara`, `alTocarPieza`) | three |
 | `src/ui/visor-cama.js` | La cama del visor: plano, grilla cada 10 mm y marca del origen; `reemplazarCama` libera la anterior | three |
@@ -93,6 +94,7 @@ Nivel 2   formulario-impresora   vista-capas   paso3-laminar   ──► navegac
 Nivel 1   pausas-ui ──► estado, util-dom
 Nivel 1   copias-ui ──► estado, util-dom, config, motor/piezas
 Nivel 1   ajuste-modelo ──► estado, util-dom, formato, motor/transformar, perfiles, config
+Nivel 1   visor-carga ──► visor (import() dinámico: chunk aparte)
 Nivel 1   visor ──► visor-cara, visor-recorridos, visor-cama (hojas, nivel 0)
 Nivel 1   navegacion ──► estado
           pausas-ui ──► estado, util-dom
@@ -171,6 +173,8 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y posiciones inválidas | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:recorridos` | Lector de G-code de la vista previa (Node, G-codes sintéticos): cuantizado exacto, tipos y colores de Kiri, unión de tramos, `pausaCapa` (con y sin subida de Z), modo espiral, detección de capa (altura variable), tope e `incompleta`, crecimiento de arrays con más de 65536 tramos | `scripts/probar-recorridos.mjs` + `scripts/recorridos/*.mjs` |
 | `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
+| `npm run test:visor-carga` | Fachada del visor (Node, cargador falso): cola en orden, última orden de `ponerCama`/`pausar`, `tamanoModelo` null y luego real, `alListo` una vez (y si tira no marca error), fallo del cargador y reintento, módulo ya cargado, nombres iguales a los de `visor.js` | `scripts/probar-visor-carga.mjs` |
+| `npm run test:chunks` | Guardián del tamaño de los chunks (después de `npm run build`): principal < 250 kB, carga inicial < 400 kB, sin `WebGLRenderer` en ella y chunk del visor en el service worker | `scripts/verificar-chunks.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige. También corre las pruebas de los accesores de `estado.piezas` (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` + `scripts/probar-estado.mjs` |
 | `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, todas las impresoras importadas, malla pesada, cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa), torres de calibración (casos 10-11: M104 y retracción por bloque), los 8 perfiles revisados (tabla fija de datos de fábrica, macros sin reemplazar, temperaturas, X/Y dentro de la cama, retracción esperada, orden de arranque, G29 sólo donde corresponde, `reemplaza` e `idVigente`) y varias piezas con `track.pos` (ADR 0003: T0 con falda, borde, balsa y soportes; T6 con equivalencia con una pieza, 4 copias, alturas distintas, cambio por altura, fuera de la cama) | `scripts/probar-motor.mjs` (orquestador) + `prueba-motor.html` + `scripts/motor/{cubo,materiales,transformaciones,personalizar,impresoras,avanzado,malla-pesada,ayudas}.mjs` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` + `scripts/motor/perfiles-revisados.mjs` + `scripts/motor/bambu-perfiles.mjs` (los 4 perfiles Bambu: cama, `{` sin reemplazar, temperaturas, pausa `M400 U1`, `salidaDe`) + `scripts/motor/piezas-kiri.mjs` + `scripts/motor/piezas.mjs` + `scripts/motor/piezas-extra.mjs` (cama centrada con `originCenter` y `bedRound` falso, progreso con 1 y 3 copias y `AbortError` con 3 copias sin worker vivo; `prueba-motor.html` expone `window.progreso` y `cancelarEn`) + `scripts/lib/gcode.mjs` (`puntosDeCapa`, compartido con `test:app`). Helpers de G-code en `scripts/motor/gcode-capas.mjs` |
 | `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` (orquestador) + `scripts/app/*.mjs` + `scripts/lib/` |
@@ -183,7 +187,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 
 | Área | Archivo |
 |---|---|
-| Paso 1: modelo pesado, cubo, gesto en el visor | `scripts/app/paso1-modelo.mjs` |
+| Paso 1: modelo pesado, cubo, gesto en el visor (las áreas que leen el canvas esperan al visor con `esperarVisor`, `scripts/lib/visor.mjs`) | `scripts/app/paso1-modelo.mjs` |
 | Paso 1: OBJ, 3MF, litofanía | `scripts/app/paso1-formatos.mjs` |
 | Paso 1: varias piezas (agregar, activar, escalar, quitar, laminar dos cubos, tope, torre) | `scripts/app/piezas.mjs` |
 | Paso 1: copias (stepper, acomodo, aviso "no entran", recientes) | `scripts/app/copias.mjs` |
@@ -203,13 +207,13 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Escala, rotar, apoyar cara | `scripts/app/transformar.mjs` |
 | Torres de calibración (hoja, paso 2, M104 por bloque) | `scripts/app/torres.mjs` |
 | Precio del rollo tras recargar (precio y costo) | `scripts/app/piezas-extra.mjs` |
-| PWA y sin conexión | `scripts/app/offline.mjs` |
+| PWA y sin conexión (incluye que el visor 3D cargue sin red) | `scripts/app/offline.mjs` |
 
 Antes de cualquier commit: `npm run build` y las suites que toquen el área cambiada. Antes de integrar, todas.
 
 ### CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, `test:visor-carga`, `test:chunks`, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
 
 ## 5. Dónde buscar si algo falla
 
@@ -247,7 +251,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | El aviso "Hay una versión nueva" no aparece | `src/ui/actualizacion.js` |
 
 ## 6. Deuda técnica conocida
-- El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
+- El chunk `motor` (~205 kB: perfiles y lógica compartida con `prueba-motor.html`) sigue en el arranque; el principal ya no lleva three.js (ADR 0006, T3) y `test:chunks` lo vigila.
 - `npm run lint`: 0 errores y 0 warnings.
 - Piezas y copias (ADR 0003):
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).

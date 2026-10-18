@@ -120,16 +120,21 @@ function armar(cargar) {
         const cola = crearCola();
         let visorReal = null;
         let creado = null;
-        // Cualquier excepción (sin WebGL, una orden que tira, alListo) deja el visor en 'error' con el aviso.
+        // Cualquier excepción (sin WebGL, una orden que tira) deja el visor en 'error' con el aviso.
+        // alListo va aparte: si tira, el visor ya está listo y no se marca 'error' (se informa en la consola).
         const quedarListo = modulo => {
             try {
                 creado ??= modulo.crearVisor(contenedor);
                 cola.reproducir(creado);
                 visorReal = creado;
                 aviso.listo();
-                opciones.alListo?.();
             } catch {
-                aviso.error();
+                return aviso.error();
+            }
+            try {
+                opciones.alListo?.();
+            } catch (error) {
+                console.error(error);
             }
         };
         const empezar = () => {
