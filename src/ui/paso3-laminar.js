@@ -65,16 +65,19 @@ function configuracionActual() {
     // Si hay una torre de calibración, lo que ella fija (Avanzado, relleno, cambios) pisa lo del usuario.
     const t = estado.torre ? configuracionDeTorre(estado.torre) : null;
     const usados = t ? t.cambios : estado.cambios;
+    const avanzado = { ...estado.avanzado, ...t?.avanzado };
     const config = armarConfiguracion({
         impresoraId: estado.impresoraId,
         calidad: estado.calidad,
         material: estado.material,
         soportes: t ? t.soportes : estado.soportes,
-        personal: { ...estado.personal, ...t?.personal, avanzado: { ...estado.avanzado, ...t?.avanzado } },
+        personal: { ...estado.personal, ...t?.personal, avanzado },
         cambios: usados,
     });
     // `cambios`: los efectivos (los de la torre si hay una) y ya validados; el paso 4 avisa sólo de esos.
-    return { ...config, cambios: validarCambios(usados).cambios };
+    // Con altura variable (sin jarrón) armarConfiguracion los ignora: no hay nada que avisar.
+    const ignorados = avanzado.alturaVariable && !avanzado.jarron;
+    return { ...config, cambios: ignorados ? [] : validarCambios(usados).cambios };
 }
 
 /**

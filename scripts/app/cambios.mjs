@@ -1,5 +1,5 @@
 // Cambios por altura (paso 2, ADR 0002): agregar, quitar y deshabilitar con altura variable.
-// La prueba que lamina con un cambio y revisa el M104 la hace T9.
+// El M104 en el G-code lo revisa scripts/app/cambios-gcode.mjs.
 //
 // Flujo: vuelve al paso 2, agrega 2 cambios, quita 1, prende Altura variable (la sección queda
 // deshabilitada), la apaga, quita el cambio que queda, lamina el cubo con uno desde 100 mm (el paso 4
