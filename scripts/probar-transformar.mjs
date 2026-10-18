@@ -158,6 +158,16 @@ const guardado = normalizarTransformacion({ rotacion: girada, escala: 2.5 });
 revisar('reciente con transformación', guardado.escala === 2.5 && guardado.rotacion.join() === girada.join());
 const roto = normalizarTransformacion({ rotacion: [1, 2], escala: -3 });
 revisar('registro dañado: defaults', roto.escala === 1 && roto.rotacion.join() === idN.join());
+const fuera = normalizarTransformacion({ rotacion: girada, escala: 500 });
+revisar('escala acotada a 20', fuera.escala === 20 && normalizarTransformacion({ escala: 0.001 }).escala === 0.01);
+revisar(
+    'matriz que no es rotación: identidad',
+    normalizarTransformacion({ rotacion: escala(2) }).rotacion.join() === idN.join(),
+);
+revisar(
+    'rotación con espejo (det -1) se acepta',
+    normalizarTransformacion({ rotacion: espejo }).rotacion.join() === espejo.join(),
+);
 revisar('sin registro: defaults', normalizarTransformacion().escala === 1);
 
 console.log(fallas ? `\n${fallas} PRUEBA(S) FALLARON` : '\nTODAS LAS PRUEBAS OK');

@@ -3,7 +3,7 @@
 // Responsabilidad: dibujar #listaRecientes, abrir un reciente con su transformación guardada y
 // guardar la transformación del modelo actual. El guardado espera 500 ms desde el último cambio
 // (sin escribir en IndexedDB en cada toque) y, si queda uno pendiente, se hace de inmediato al
-// salir del paso 1 o al ocultar la página (`pagehide`). Importarlo no toca el DOM.
+// salir del paso 1, al cambiar de modelo o al ocultar la página (`pagehide`, `visibilitychange`). Importarlo no toca el DOM.
 
 import * as almacen from '../almacen.js';
 import * as formato from './formato.js';
@@ -24,6 +24,7 @@ let pendiente = null; // { nombre, bytes, transformacion } captado al programar
 export function iniciarRecientes(abrir) {
     alMostrarPaso(paso => paso !== 1 && guardarPendiente());
     addEventListener('pagehide', guardarPendiente);
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && guardarPendiente());
     $('listaRecientes').onclick = async e => {
         const boton = e.target.closest('button');
         if (!boton) return;
@@ -66,7 +67,9 @@ export async function mostrarRecientes() {
  */
 export function programarGuardado() {
     const { nombre, stl, rotacion, escala } = estado;
-    pendiente = { nombre, bytes: stl.byteLength, transformacion: { rotacion, escala } };
+    const bytes = stl.byteLength;
+    if (pendiente && (pendiente.nombre !== nombre || pendiente.bytes !== bytes)) guardarPendiente(); // otro modelo
+    pendiente = { nombre, bytes, transformacion: { rotacion, escala } };
     clearTimeout(temporizador);
     temporizador = setTimeout(guardarPendiente, ESPERA_MS);
 }

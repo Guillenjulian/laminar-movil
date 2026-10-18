@@ -7,6 +7,8 @@
 //   archivos -> el STL de cada modelo (id -> ArrayBuffer), aparte para no
 //               cargar todos los archivos sólo para mostrar la lista.
 
+import { identidad, determinante } from './motor/transformar.js';
+
 const MAX_RECIENTES = 6;
 let conexion;
 
@@ -99,16 +101,20 @@ export async function guardarModelo(nombre, stl) {
 
 /**
  * Rotación y escala de un registro de reciente. Los recientes viejos no tienen esos campos (o
- * están dañados): abren con la identidad y escala 1.
+ * están dañados o no son una rotación, det ≈ ±1): abren con la identidad y escala 1. La escala se acota a [0,01; 20].
  * @param {{rotacion?: number[], escala?: number}} [registro]
  * @returns {{rotacion: number[], escala: number}}
  */
 export function normalizarTransformacion(registro) {
     const { rotacion, escala } = registro ?? {};
-    const valida = Array.isArray(rotacion) && rotacion.length === 9 && rotacion.every(Number.isFinite);
+    const valida =
+        Array.isArray(rotacion) &&
+        rotacion.length === 9 &&
+        rotacion.every(Number.isFinite) &&
+        Math.abs(Math.abs(determinante(rotacion)) - 1) < 1e-3;
     return {
-        rotacion: valida ? [...rotacion] : [1, 0, 0, 0, 1, 0, 0, 0, 1],
-        escala: Number.isFinite(escala) && escala > 0 ? escala : 1,
+        rotacion: valida ? [...rotacion] : identidad(),
+        escala: Number.isFinite(escala) && escala > 0 ? Math.min(20, Math.max(0.01, escala)) : 1,
     };
 }
 

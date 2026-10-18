@@ -18,7 +18,7 @@ import { tipoArchivo, prepararLitofania } from './litofania.js';
 import * as formato from './formato.js';
 import { $ } from './util-dom.js';
 import { estado, matrizModelo } from './estado.js';
-import { iniciarRecientes, mostrarRecientes, programarGuardado } from './recientes.js';
+import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
 
 export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
@@ -63,6 +63,7 @@ export function alCambiarImpresora() {
  * @returns {void}
  */
 export function elegirOtroModelo() {
+    guardarPendiente();
     estado.stl = null;
     estado.vista = null;
     visor?.quitarModelo();

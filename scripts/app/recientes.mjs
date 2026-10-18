@@ -17,7 +17,7 @@ export async function probarRecientes(ctx) {
     const { page: pagina, ok: revisar } = ctx;
     await pagina.goBack();
     await pagina.tap('#otroModelo');
-    await pagina.tap('[data-borrar]:near(.reciente:has-text("esfera-pesada.stl"))');
+    await pagina.tap('li:has(.reciente:has-text("esfera-pesada.stl")) .borrar');
     await pagina.waitForFunction(
         () => ![...document.querySelectorAll('.reciente b')].some(b => b.textContent === 'esfera-pesada.stl'),
     );
@@ -63,7 +63,7 @@ async function recordarTransformacion({ page: pagina, ok: revisar, elegirArchivo
         `${antes} -> ${despues}`,
     );
     await pagina.tap('#otroModelo');
-    await pagina.tap('[data-borrar]:near(.reciente:has-text("te.stl"))');
+    await pagina.tap('li:has(.reciente:has-text("te.stl")) .borrar');
     await pagina.waitForFunction(
         () => ![...document.querySelectorAll('.reciente b')].some(b => b.textContent === 'te.stl'),
     );
