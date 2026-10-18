@@ -109,7 +109,7 @@ if (process.sliceSupportTree) {
 // ->
 // PARCHE laminar-movil: soportes árbol (ADR 0004)
 const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
-    lineWidth, sliceHeight, angulo: process.sliceSupportAngle,
+    lineWidth, sliceHeight, angulo: process.sliceSupportAngle, cama: widget.anno?.cama,
 });
 
 // B. Cabecera del bucle de acumulación
@@ -240,6 +240,8 @@ interruptor), `paso1-modelo.js` (cablear `bloqueos-ui`), `estado.js`, `perfiles.
  * @property {number} [radioMax=2.5]  mm
  * @property {number} [maxNodos=150]  tope de nodos activos
  * @property {Bloqueo[]} [bloqueos=[]]
+ * @property {{x0:number, y0:number, x1:number, y1:number}} [cama]  rectángulo de la cama en el marco local del widget
+ *   (T4: `anno.cama`); ningún círculo sale de él
  */
 ```
 
@@ -307,6 +309,9 @@ export function areaPoligono(poligono) {}
 export function instalarGanchosSoportes() {}
 // globalThis.laminarMovil.arbol(stack, bloqueos, op) -> boolean
 //   stack: slices de Kiri de abajo hacia arriba; usa slice.z, slice.shadow y slice.topPolys().
+//   op: { lineWidth, sliceHeight, angulo, cama }. `cama` = widget.anno.cama, el rectángulo de la cama en el marco
+//   local del widget: x0 = −bedWidth/2 − pos.x, x1 = bedWidth/2 − pos.x, ídem y (el worker la arma en subirWidgets;
+//   cama redonda: su caja).
 //   Escribe slice.supports en cada una y devuelve true; si no hay voladizos devuelve true igual
 //   (todas las capas con supports = []). Devuelve false sólo si falló, y entonces Kiri sigue con 'automatic'.
 //   Cuando devuelve true, el bucle de Kiri no corre y `sinBloqueos` NO se llama: el árbol respeta las zonas por su
@@ -390,7 +395,7 @@ Mensaje al worker (extiende el de ADR 0003; el campo es opcional y su ausencia s
 ```
 
 `prepararPiezas` devuelve `widgets[i].bloqueos` (copia por widget, `validarBloqueos`) y `subirWidgets` lo manda como
-`anno: { bloqueos }`. Preferencia guardada: `{ …, "soportes": "arbol" }` (antes `true`/`false`).
+`anno: { bloqueos, cama }` (T4: `cama` en marco local del widget). Preferencia guardada: `{ …, "soportes": "arbol" }` (antes `true`/`false`).
 
 ## Tareas
 
@@ -470,12 +475,12 @@ la tabla de módulos (ningún módulo de `src/motor/` importa `ui/`; los puros n
 
 | # | Riesgo | Cómo se cubre |
 |---|---|---|
-| R1 | El árbol propio es demasiado rústico: marcas feas, troncos que no llegan, voladizos mal apoyados | La meta es medible (prueba 2 y 3). Si no se alcanza en T1/T4, plan B (c): `planificarArbol` con `separacion` grande es de hecho "postes ralos", sin cambiar contrato. Plan de reversa: la opción `'arbol'` se oculta del selector (una línea) y `normalizarSoportes('arbol')` devuelve `'normal'`; el resto queda inerte. |
+| R1 | El árbol propio es demasiado rústico: marcas feas, troncos que no llegan, voladizos mal apoyados | Límite conocido de v1 (T4, medido por el revisor): cuando dos troncos se funden el radio del fusionado está acotado y el absorbido puede quedar tangente al de abajo (~0,5 % de los círculos), un puente corto de 4 a 5 mm; no se mitiga en v1 (decisión del CTO). La meta es medible (prueba 2 y 3). Si no se alcanza en T1/T4, plan B (c): `planificarArbol` con `separacion` grande es de hecho "postes ralos", sin cambiar contrato. Plan de reversa: la opción `'arbol'` se oculta del selector (una línea) y `normalizarSoportes('arbol')` devuelve `'normal'`; el resto queda inerte. |
 | R2 | Menos material pero más tiempo de impresión (muchos troncos finos, muchas retracciones) | Se mide el tiempo en la prueba 8 y se muestra en el resumen del paso 4; `separacion` y `radioMax` son parámetros ajustables. |
 | R3 | Los parches se rompen con una actualización de Kiri (anclas de texto) | `parchar` falla fuerte si no encuentra el texto; T0 los prueba; el puente, si no está instalado o devuelve `false`, deja a Kiri con `'automatic'` (degradación suave). |
 | R4 | Memoria en celu de gama baja con modelos altos | Tope `maxNodos`, círculos de 8 lados y sin unión de polígonos; salida estimada < 25 MB. El tope de triángulos (ADR 0003) sigue mandando. Se mide en T7 (pico del worker con la malla pesada). |
 | R5 | `widget.anno` no llega a `processSupports` en el flujo `sync` → `slice`, o `slice.z` no es local | T0 lo comprueba en la prueba (b) y (d) antes de construir. Plan B: pasar los bloqueos por `settings.process.laminarBloqueos` por widget (`process` sí llega), con el mismo contrato de datos. |
-| R6 | Un voladizo dentro de una zona sin soporte se imprime en el aire y falla | T4: con 'normal' el voladizo queda sin soporte dentro de la esfera (probado por coordenadas); con 'arbol' los troncos sin camino se podan. Aviso en la UI cuando la esfera toca el cuerpo: "Si el voladizo queda dentro, esa parte se imprime sin apoyo." (la UI conoce el centro y el radio; no calcula contra la malla). |
+| R6 | Un voladizo dentro de una zona sin soporte se imprime en el aire y falla | T4: con 'normal' el voladizo queda sin soporte dentro de la esfera (probado por coordenadas); con 'arbol' los troncos sin camino se podan (el límite de los troncos absorbidos tangentes de R1 aplica igual: ~0,5 % de los círculos, puente de 4 a 5 mm, no se mitiga en v1). Aviso en la UI cuando la esfera toca el cuerpo: "Si el voladizo queda dentro, esa parte se imprime sin apoyo." (la UI conoce el centro y el radio; no calcula contra la malla). |
 | R7 | (T4: el motor aplica las zonas en el marco local de cada copia; probado con dos copias, en coordenadas absolutas = centro + posición + local.) El punto tocado no está en el marco de la pieza que esperamos (la malla del visor no está centrada como `centrar()`) | T3 lo prueba con una pieza girada y copias en dos posiciones; si difiere, `alTocarPunto` corrige restando el centro de la caja de la malla. |
 | R8 | `soportes` quedó como boolean en algún consumidor no listado (`'no'` es verdadero en JS) | T6 recorre `grep -rn soportes src scripts`; la prueba de `tipo.mjs` y la de estado cubren los consumidores conocidos (`paso2-config`, `paso3`, `paso4`, `estado`, `perfiles`, tarjeta del material). |
 | R9 | Cancelar durante `planificarArbol` | Es sincrónico y corto (< 1 s con los topes); el cancelar del laminado ya corta entre capas de Kiri. Si midiéramos más, se parte el trabajo y se cede al worker cada N capas. |
