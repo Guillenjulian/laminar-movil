@@ -60,7 +60,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
 | `src/ui/torres.js` | Hoja "Torre de calibración" del paso 1 (ADR 0002): tipo, cantidad de bloques, valor de cada uno (sugeridos según impresora y material), avisos y carga como modelo con `estado.torre`. Con torre se ocultan escala y rotación y no entra en recientes | `perfiles/torres`, `perfiles/perfiles`, `motor/motor`, `util-dom`, `formato` |
 | `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor`, `motor/litofania`, `formato` |
-| `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen. `iniciarMateriales()` registra el listener de "Poné el precio" (lo llama `main.js`) | `perfiles`, `almacen`, `formato` |
+| `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen. `iniciarMateriales()` registra el listener de "Poné el precio" y devuelve la promesa de carga de precios (la llama `main.js`, que la espera antes del primer dibujo) | `perfiles`, `almacen`, `formato` |
 | `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
 | `src/ui/cambios.js` | Sección "Cambios por altura" del paso 2 (ADR 0002): agregar, editar y quitar cambios (relleno, temperatura, velocidad, ventilador desde cierta altura en mm), errores de `validarCambios`, ayuda de Velocidad, aviso "sin valor: se ignora" y resumen en el `<summary>`. Deshabilitada con altura variable | `perfiles/cambios`, `util-dom` |
 | `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
@@ -226,8 +226,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - ESLint 9.x está deprecado: migrar a ESLint 10.
-- `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
-- Warnings de `npm run lint` (12, 0 errores; no bloquean). Funciones: `crearAvanzado` (`src/ui/avanzado.js`), `prepararLitofania` (`src/ui/litofania.js`), `generarLitofania` (`src/motor/litofania.js`), `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`), `agrupar` (`src/motor/decimar.js`), `leerOBJ` y `leerXML3MF` (`src/motor/formatos.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
+- Warnings de `npm run lint` (10, 0 errores; no bloquean). Funciones: `generarLitofania` (`src/motor/litofania.js`), `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`), `agrupar` (`src/motor/decimar.js`), `leerOBJ` y `leerXML3MF` (`src/motor/formatos.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
 - `src/perfiles/perfiles.js` tiene 310 líneas físicas (el lint no lo marca porque no cuenta blancos ni comentarios): dividir antes de agregarle algo (por ejemplo, sacar `idVigente`, `reemplaza` y la búsqueda de impresoras a `impresoras-catalogo.js`).
 - Piezas y copias (ADR 0003):
   - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).

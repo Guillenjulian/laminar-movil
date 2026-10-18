@@ -3,8 +3,7 @@
 // Flujo de arranque, en este orden:
 // 1. Listeners: cada iniciarX() engancha sus controles. Van ANTES del await para que los botones
 //    respondan aunque la lectura de preferencias tarde.
-// 2. Preferencias: await cargarPreferencias(). Es el único await, y todo lo que depende de las
-//    preferencias se dibuja después.
+// 2. Preferencias y precios: un solo await. Todo lo que depende de ellos (incluido el costo) se dibuja después.
 // 3. Primer dibujo: opciones, pantalla 1 y modelos recientes.
 // 4. Tareas de fondo: pedir almacenamiento persistente y registrar el service worker (sólo en el build).
 
@@ -23,7 +22,7 @@ import { registrarServiceWorker } from './ui/actualizacion.js';
 // 1. Listeners.
 iniciarNavegacion();
 iniciarPaso1();
-materialesUI.iniciarMateriales();
+const preciosListos = materialesUI.iniciarMateriales();
 iniciarImpresoras({
     alElegir: () => {
         dibujarOpciones();
@@ -38,7 +37,7 @@ iniciarPaso4({ alOtroModelo: elegirOtroModelo });
 iniciarVistaCapas();
 
 // 2. Preferencias.
-await cargarPreferencias();
+await Promise.all([cargarPreferencias(), preciosListos]);
 
 // 3. Primer dibujo.
 dibujarOpciones();
