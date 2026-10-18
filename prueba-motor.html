@@ -58,6 +58,7 @@
             // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
             window.ponerImpresorasPropias = ponerImpresorasPropias;
             import { maxTriangulos } from './src/config.js';
+            import { laminarPiezas } from './prueba-piezas.js';
             import { esfera, te, tubo } from './src/prueba/mallas.js';
 
             const estado = document.getElementById('estado');
@@ -131,11 +132,9 @@
                 }
             };
 
-            // ADR 0003 (T0): varios widgets con `track.pos` distintos en el Kiri real. Se usa el worker original de
-            // Kiri con su propio protocolo ({ task, data, seq }) y se arma el mismo flujo que laminador.worker.js:
-            // clear, sync por widget, rotate, slicePre, slice por id, slicePost, prepare, export.
-            // `piezas`: [{ caso | stlBase64, pos: { x, y } }]. Devuelve el G-code.
-            window.probarPiezas = async ({
+            // ADR 0003 (T0): varios widgets con `track.pos` distintos en el Kiri real (ver prueba-piezas.js).
+            // `piezas`: [{ caso | stlBase64, pos: { x, y } }]. Devuelve { gcode, dispositivo }.
+            window.probarPiezas = ({
                 piezas,
                 impresoraId = 'creality-ender-3-v3-se',
                 calidad = 'normal',
@@ -143,28 +142,6 @@
                 soportes = false,
                 personal = {},
             }) => {
-                const { leerSTL } = await import('./src/motor/stl.js');
-                await import('./vendor/kiri/src/add/array.js');
-                await import('./vendor/kiri/src/add/class.js');
-                const { conf } = await import('./vendor/kiri/src/kiri/app/conf/defaults.js');
-                const worker = new Worker(new URL('./prueba-piezas.worker.js', import.meta.url), {
-                    type: 'module',
-                });
-                let seq = 0;
-                const call = (task, data, alAvanzar = () => {}) =>
-                    new Promise((ok, mal) => {
-                        const mi = ++seq;
-                        worker.onerror = e => mal(new Error(e.message));
-                        const prev = worker.onmessage;
-                        worker.onmessage = e => {
-                            const m = e.data;
-                            if (m.seq !== mi) return;
-                            if (m.data && m.data.error) return mal(new Error(m.data.error));
-                            if (m.done) ok(m.data);
-                            else alAvanzar(m.data);
-                        };
-                        worker.postMessage({ task, data, seq: mi, time: performance.now() });
-                    });
                 const { dispositivo, proceso } = armarConfiguracion({
                     impresoraId,
                     calidad,
@@ -172,67 +149,7 @@
                     soportes,
                     personal,
                 });
-                const base = conf.template;
-                const settings = {
-                    mode: 'FDM',
-                    controller: { ...JSON.parse(JSON.stringify(base.controller)), threaded: false },
-                    render: false,
-                    filter: { FDM: 'internal' },
-                    device: { ...JSON.parse(JSON.stringify(conf.defaults.fdm.d)), ...dispositivo },
-                    process: { ...JSON.parse(JSON.stringify(conf.defaults.fdm.p)), ...proceso },
-                    widget: {},
-                    time: Date.now(),
-                };
-                try {
-                    await call('clear', {});
-                    const ids = [];
-                    for (const [i, p] of piezas.entries()) {
-                        const buf = p.stlBase64
-                            ? Uint8Array.from(atob(p.stlBase64), c => c.charCodeAt(0)).buffer
-                            : await obtenerSTL(p.caso);
-                        const v = leerSTL(buf);
-                        // Igual que centrar() del worker: centro de la caja en X/Y = 0, base en Z = 0.
-                        const mn = [Infinity, Infinity, Infinity],
-                            mx = [-Infinity, -Infinity, -Infinity];
-                        for (let k = 0; k < v.length; k += 3)
-                            for (let a = 0; a < 3; a++) {
-                                mn[a] = Math.min(mn[a], v[k + a]);
-                                mx[a] = Math.max(mx[a], v[k + a]);
-                            }
-                        const c = [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, mn[2]];
-                        for (let k = 0; k < v.length; k += 3) for (let a = 0; a < 3; a++) v[k + a] -= c[a];
-                        const t = { x: mx[0] - mn[0], y: mx[1] - mn[1], z: mx[2] - mn[2] };
-                        const id = 'pieza' + (i + 1);
-                        ids.push(id);
-                        settings.widget[id] = {};
-                        await call('sync', {
-                            id,
-                            group: id,
-                            vertices: v,
-                            meta: {},
-                            anno: {},
-                            track: {
-                                box: { w: t.x, h: t.y, d: t.z },
-                                pos: { x: p.pos.x, y: p.pos.y, z: 0 },
-                                scale: { x: 1, y: 1, z: 1 },
-                                rot: { x: 0, y: 0, z: 0 },
-                                top: t.z,
-                            },
-                        });
-                    }
-                    await call('rotate', { settings });
-                    await call('slicePre', { settings });
-                    for (const id of ids) await call('slice', { id, settings });
-                    await call('slicePost', { settings });
-                    await call('prepare', { settings });
-                    const lineas = [];
-                    await call('export', { settings }, d => {
-                        if (d && d.line) lineas.push(d.line);
-                    });
-                    return { gcode: lineas.join('\n'), dispositivo };
-                } finally {
-                    worker.terminate();
-                }
+                return laminarPiezas({ piezas, dispositivo, proceso, obtenerSTL });
             };
 
             document.querySelectorAll('[data-caso]').forEach(

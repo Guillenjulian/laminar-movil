@@ -3,8 +3,14 @@
 // pruebas: `window.probarPiezas`) y revisar sobre el G-code que cada pieza y sus extras (falda, borde, balsa, soportes)
 // caen en su posición. Si algo falla con `track.pos`, el plan B del ADR es desplazar los vértices en `prepararPiezas`.
 // Lo llama scripts/probar-motor.mjs dentro de su `try`.
+// Supuestos del G-code de Kiri para este perfil: extrusión relativa (M83: cada `E` es lo extruido en ese tramo) y
+// retracción escrita como `G1 E-<mm>` (o `G10`). Si el perfil cambia a E absoluta o a otro firmware, hay que ajustar.
 
-const POS = [-40, 40]; // X de cada copia, relativa al centro de la cama
+// Copias en X e Y distintos (relativos al centro de la cama): así se prueba también el eje Y.
+const POS = [
+    { x: -40, y: -30 },
+    { x: 40, y: 30 },
+];
 const LADO = 20; // cubo de 20 mm
 const TOL = 0.5; // la pared sale a media línea (0,2 mm) hacia adentro; 0,5 mm de holgura
 
@@ -52,7 +58,7 @@ const copiaDe = (px, cxs) => (Math.abs(px - cxs[0]) <= Math.abs(px - cxs[1]) ? 0
 
 const lamina = (pagina, o) => pagina.evaluate(x => window.probarPiezas(x), o);
 const dosCubos = (pagina, adhesion) =>
-    lamina(pagina, { piezas: POS.map(x => ({ caso: 'cubo', pos: { x, y: 0 } })), personal: { adhesion } });
+    lamina(pagina, { piezas: POS.map(pos => ({ caso: 'cubo', pos })), personal: { adhesion } });
 const contiene = (r, c) => r && r.x0 <= c.x0 && r.x1 >= c.x1 && r.y0 <= c.y0 && r.y1 >= c.y1;
 const bbs = r => (r ? bb(r) : 'vacía');
 // bbox de los puntos de cada copia (null si una copia no tiene).
@@ -67,20 +73,25 @@ function geometria(d) {
     const centro = d.originCenter || d.bedRound;
     const cx0 = centro ? 0 : d.bedWidth / 2;
     const cy0 = centro ? 0 : d.bedDepth / 2;
-    const cxs = POS.map(x => x + cx0);
-    const caja = cx => ({ x0: cx - LADO / 2, x1: cx + LADO / 2, y0: cy0 - LADO / 2, y1: cy0 + LADO / 2 });
-    return { cx0, cy0, cxs, caja };
+    const cxs = POS.map(p => p.x + cx0);
+    const cys = POS.map(p => p.y + cy0);
+    const caja = k => ({ x0: cxs[k] - LADO / 2, x1: cxs[k] + LADO / 2, y0: cys[k] - LADO / 2, y1: cys[k] + LADO / 2 });
+    return { cx0, cy0, cxs, cys, caja };
 }
 
 // 1. Sin extras: la capa 2 (;LAYER:1) son dos cuadrados exactos y nada entre ellos.
-function sinExtras({ revisar }, A, { cy0, cxs }) {
+function sinExtras({ revisar }, A, { cys, cxs }) {
     const m = LADO / 2;
     const grupos = cxs.map(() => []);
     A.ext.filter(e => e.capa === 1).forEach(e => grupos[copiaDe(e.x1, cxs)].push(e));
     const rg = grupos.map(g => (g.length ? rango(puntos(g)) : null));
     const dentro = rg.every(
         (r, k) =>
-            r && r.x0 >= cxs[k] - m - TOL && r.x1 <= cxs[k] + m + TOL && r.y0 >= cy0 - m - TOL && r.y1 <= cy0 + m + TOL,
+            r &&
+            r.x0 >= cxs[k] - m - TOL &&
+            r.x1 <= cxs[k] + m + TOL &&
+            r.y0 >= cys[k] - m - TOL &&
+            r.y1 <= cys[k] + m + TOL,
     );
     const det = rg.map((r, k) => `copia ${k + 1} (cx ${cxs[k]}): ${bbs(r)} ${grupos[k].length} extrusiones`);
     revisar(
@@ -91,27 +102,26 @@ function sinExtras({ revisar }, A, { cy0, cxs }) {
 }
 
 // 2. Falda: rodea a cada cubo (sus extrusiones de la capa 1 contienen ambos cubos).
-async function falda({ revisar, pagina }, { cy0, cxs, caja }) {
+async function falda({ revisar, pagina }, { cxs, caja }) {
     const m = LADO / 2;
     const ext = extrusiones((await dosCubos(pagina, 'falda')).gcode).ext;
     const pts = puntos(ext.filter(e => e.capa === 0 && e.feature === 'brim'));
     const rf = pts.length ? rango(pts) : null;
     const vueltas = porCopia(pts, cxs);
-    const todo = { x0: cxs[0] - m, x1: cxs[1] + m, y0: cy0 - m, y1: cy0 + m };
-    const rodea = vueltas.every((r, k) => contiene(r, caja(cxs[k])) && cxs[k] - m - r.x0 < 8 && r.x1 - cxs[k] - m < 8);
+    const rodea = vueltas.every((r, k) => contiene(r, caja(k)) && cxs[k] - m - r.x0 < 8 && r.x1 - cxs[k] - m < 8);
     revisar(
         '2. falda: bbox de la falda (capa 1) contiene los dos cubos, con vueltas a cada lado de cada uno (3 a 8 mm)',
-        contiene(rf, todo) && rodea,
+        contiene(rf, caja(0)) && contiene(rf, caja(1)) && rodea,
         `falda ${bbs(rf)}; por copia: ${vueltas.map(bbs).join(' | ')}`,
     );
 }
 
 // 3. Borde (brim): un anillo de < 6 mm alrededor de cada cubo y nada en el centro.
-async function borde({ revisar, pagina }, { cy0, cxs }) {
+async function borde({ revisar, pagina }, { cys, cxs }) {
     const ext = extrusiones((await dosCubos(pagina, 'borde')).gcode).ext;
     const pb = puntos(ext.filter(e => e.capa === 0 && e.feature === 'brim'));
     // Distancia (Chebyshev) de un punto al borde de su cubo; > 0 = afuera.
-    const afuera = (p, k) => Math.max(Math.abs(p[0] - cxs[k]), Math.abs(p[1] - cy0)) - LADO / 2;
+    const afuera = (p, k) => Math.max(Math.abs(p[0] - cxs[k]), Math.abs(p[1] - cys[k])) - LADO / 2;
     const dist = cxs.map((_, k) => pb.filter(p => copiaDe(p[0], cxs) === k).map(p => afuera(p, k)));
     const maxDist = dist.map(a => (a.length ? Math.max(...a) : NaN));
     revisar(
@@ -132,7 +142,7 @@ async function balsa({ revisar, pagina }, A, { cxs, caja }) {
         const pts = puntos(R.ext.filter(e => e.capa === n));
         const rr = porCopia(pts, cxs);
         const centro = pts.some(p => p[0] > cxs[0] + LADO / 2 + 8 && p[0] < cxs[1] - LADO / 2 - 8);
-        if (!rr.every((r, k) => contiene(r, caja(cxs[k]))) || centro)
+        if (!rr.every((r, k) => contiene(r, caja(k))) || centro)
             malas.push(`capa ${n + 1}: ${rr.map(bbs).join(' | ')}${centro ? ' (hay algo en el centro)' : ''}`);
     }
     const r0 = rango(puntos(R.ext.filter(e => e.capa === 0)));
@@ -144,21 +154,38 @@ async function balsa({ revisar, pagina }, A, { cxs, caja }) {
 }
 
 // 5. Soportes: una "T" por copia; los de cada una caen bajo ella (su huella ±5 mm), nada entre las dos.
-async function soportes({ revisar, pagina }, { cy0, cxs }) {
+async function soportes({ revisar, pagina }, { cys, cxs }) {
     const S = await lamina(pagina, {
-        piezas: POS.map(x => ({ caso: 'te', pos: { x, y: 0 } })),
+        piezas: POS.map(pos => ({ caso: 'te', pos })),
         soportes: true,
         personal: { adhesion: 'nada' },
     });
     const BARRA = 25; // la barra de la T mide 50 × 10 mm (src/prueba/mallas.js)
-    const rs = porCopia(puntos(extrusiones(S.gcode).ext.filter(e => e.feature === 'support')), cxs);
+    const sop = extrusiones(S.gcode).ext.filter(e => e.feature === 'support');
+    const cuantos = cxs.map((_, k) => sop.filter(e => copiaDe(e.x1, cxs) === k).length);
+    const rs = porCopia(puntos(sop), cxs);
+    // Bajo su pieza (huella ±5 mm) y con soporte de verdad: >= 50 líneas y un bbox de al menos 30 × 5 mm cada una.
     const bajo = rs.every(
-        (r, k) => r && r.x0 >= cxs[k] - BARRA - 5 && r.x1 <= cxs[k] + BARRA + 5 && r.y0 >= cy0 - 10 && r.y1 <= cy0 + 10,
+        (r, k) =>
+            r &&
+            r.x0 >= cxs[k] - BARRA - 5 &&
+            r.x1 <= cxs[k] + BARRA + 5 &&
+            r.y0 >= cys[k] - 10 &&
+            r.y1 <= cys[k] + 10 &&
+            cuantos[k] >= 50 &&
+            r.x1 - r.x0 >= 30 &&
+            r.y1 - r.y0 >= 5,
     );
     const det = rs.map(
-        (r, k) => `copia ${k + 1} (huella X ${cxs[k] - BARRA}..${cxs[k] + BARRA}): ${r ? bb(r) : 'sin soportes'}`,
+        (r, k) =>
+            `copia ${k + 1} (huella X ${cxs[k] - BARRA}..${cxs[k] + BARRA}, Y ${cys[k] - 5}..${cys[k] + 5}): ` +
+            `${r ? bb(r) : 'sin soportes'}, ${cuantos[k]} líneas`,
     );
-    revisar('5. soportes: los de cada copia caen bajo su pieza (huella ±5 mm)', bajo, det.join(' | '));
+    revisar(
+        '5. soportes: los de cada copia caen bajo su pieza (huella ±5 mm), con >= 50 líneas y >= 30 × 5 mm',
+        bajo,
+        det.join(' | '),
+    );
 }
 
 // 6. Retracción entre piezas: cada vez que una capa pasa de un cubo al otro hay retracción en el medio.
@@ -176,7 +203,7 @@ function retraccion({ revisar }, A, { cxs }) {
     const capasConSalto = new Set(saltos.map(([a]) => a.capa)).size;
     revisar(
         '6. retracción entre piezas: cada salto de un cubo al otro en una misma capa retrae',
-        saltos.length > 0 && sin.length === 0 && capasConSalto >= capasN - 1,
+        saltos.length > 0 && sin.length === 0 && capasConSalto === capasN,
         `${saltos.length} saltos en ${capasConSalto} de ${capasN} capas, ${sin.length} sin retracción${sin.length ? ` (capa ${sin[0][0].capa + 1})` : ''}`,
     );
 }
@@ -191,7 +218,7 @@ export async function probarPiezasKiri(ctx) {
     const nada = await dosCubos(ctx.pagina, 'nada');
     const A = extrusiones(nada.gcode);
     const g = geometria(nada.dispositivo);
-    console.log(`  centro de cama (${g.cx0}, ${g.cy0}); copias en X ${g.cxs}`);
+    console.log(`  centro de cama (${g.cx0}, ${g.cy0}); copias en X ${g.cxs}, Y ${g.cys}`);
     sinExtras(ctx, A, g);
     await falda(ctx, g);
     await borde(ctx, g);
