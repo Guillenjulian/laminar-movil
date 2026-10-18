@@ -8,6 +8,7 @@ import { probarTramos } from './recorridos/tramos.mjs';
 import { probarCapas } from './recorridos/capas.mjs';
 import { probarLimites } from './recorridos/limites.mjs';
 import { probarNiveles } from './recorridos/niveles.mjs';
+import { probarAuto } from './recorridos/auto.mjs';
 
 let fallas = 0;
 let aciertos = 0;
@@ -31,6 +32,7 @@ probarTramos(ctx);
 probarCapas(ctx);
 probarLimites(ctx);
 probarNiveles(ctx);
+probarAuto(ctx);
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
 process.exit(fallas ? 1 : 0);
