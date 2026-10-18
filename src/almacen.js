@@ -2,7 +2,8 @@
 //
 // Stores:
 //   ajustes  -> clave/valor (ej. 'preferencias' -> { impresoraId, calidad, material, soportes })
-//   modelos  -> datos de cada modelo reciente { id, nombre, bytes, fecha }
+//   modelos  -> datos de cada modelo reciente { id, nombre, bytes, fecha, rotacion?, escala? }
+//               (rotacion: matriz 3×3 de 9 números; los registros viejos no los tienen)
 //   archivos -> el STL de cada modelo (id -> ArrayBuffer), aparte para no
 //               cargar todos los archivos sólo para mostrar la lista.
 
@@ -92,6 +93,37 @@ export async function guardarModelo(nombre, stl) {
         s.archivos.put(stl, id);
     });
     for (const viejo of lista.slice(MAX_RECIENTES - 1)) await borrarModelo(viejo.id);
+}
+
+/**
+ * Rotación y escala de un registro de reciente. Los recientes viejos no tienen esos campos (o
+ * están dañados): abren con la identidad y escala 1.
+ * @param {{rotacion?: number[], escala?: number}} [registro]
+ * @returns {{rotacion: number[], escala: number}}
+ */
+export function normalizarTransformacion(registro) {
+    const { rotacion, escala } = registro ?? {};
+    const valida = Array.isArray(rotacion) && rotacion.length === 9 && rotacion.every(Number.isFinite);
+    return {
+        rotacion: valida ? [...rotacion] : [1, 0, 0, 0, 1, 0, 0, 0, 1],
+        escala: Number.isFinite(escala) && escala > 0 ? escala : 1,
+    };
+}
+
+/**
+ * Guarda la transformación del reciente que coincide por nombre y tamaño. Si no está (todavía no
+ * se guardó o se borró) no hace nada.
+ * @param {string} nombre
+ * @param {number} bytes tamaño del STL guardado
+ * @param {{rotacion: number[], escala: number}} transformacion
+ * @returns {Promise<void>}
+ */
+export async function guardarTransformacion(nombre, bytes, { rotacion, escala }) {
+    const modelo = (await listarModelos()).find(m => m.nombre === nombre && m.bytes === bytes);
+    if (!modelo) return;
+    await transaccion(['modelos'], 'readwrite', s => {
+        s.modelos.put({ ...modelo, rotacion: [...rotacion], escala });
+    });
 }
 
 // Pide al navegador que no borre estos datos si falta espacio (no siempre lo concede).

@@ -3,6 +3,7 @@
 // Uso: npm run test:transformar
 
 import fs from 'node:fs';
+import { normalizarTransformacion } from '../src/almacen.js';
 import {
     identidad,
     multiplicar,
@@ -147,6 +148,17 @@ revisar(
     vol0 > 0 && casi(volumen(espejado), vol0, 1e-2),
     `${vol0.toFixed(1)} → ${volumen(espejado).toFixed(1)}`,
 );
+
+// --- Recientes: normalizarTransformacion (src/almacen.js) ---
+const idN = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+const girada = [1, 0, 0, 0, 0, -1, 0, 1, 0];
+const viejo = normalizarTransformacion({ id: 1, nombre: 'a.stl' });
+revisar('reciente viejo: identidad y escala 1', viejo.escala === 1 && viejo.rotacion.join() === idN.join());
+const guardado = normalizarTransformacion({ rotacion: girada, escala: 2.5 });
+revisar('reciente con transformación', guardado.escala === 2.5 && guardado.rotacion.join() === girada.join());
+const roto = normalizarTransformacion({ rotacion: [1, 2], escala: -3 });
+revisar('registro dañado: defaults', roto.escala === 1 && roto.rotacion.join() === idN.join());
+revisar('sin registro: defaults', normalizarTransformacion().escala === 1);
 
 console.log(fallas ? `\n${fallas} PRUEBA(S) FALLARON` : '\nTODAS LAS PRUEBAS OK');
 process.exit(fallas ? 1 : 0);

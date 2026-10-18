@@ -110,7 +110,12 @@ function conectarSubida() {
         const id = Number(boton.dataset.id);
         const modelo = (await almacen.listarModelos()).find(m => m.id === id);
         const stl = await almacen.leerModelo(id);
-        if (modelo && stl) await cargarArchivo(modelo.nombre, stl, { esStl: true });
+        if (modelo && stl) {
+            await cargarArchivo(modelo.nombre, stl, {
+                esStl: true,
+                transformacion: almacen.normalizarTransformacion(modelo),
+            });
+        }
     };
 }
 
@@ -126,8 +131,13 @@ async function alElegirArchivo(e) {
  * litofanía.
  * `esStl`: el buffer ya es STL aunque el nombre diga .obj/.3mf (los recientes guardan el STL
  * convertido con el nombre original). `generar`: función que devuelve una promesa con el STL.
+ * `transformacion`: `{ rotacion, escala }` guardada de un reciente (si falta, identidad y 100 %).
  */
-async function cargarArchivo(nombre, buffer, { guardar = true, esStl = false, generar = null } = {}) {
+async function cargarArchivo(
+    nombre,
+    buffer,
+    { guardar = true, esStl = false, generar = null, transformacion = null } = {},
+) {
     const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
     if (tipo === 'imagen') return litofania.abrirFoto(nombre, buffer);
     if (!tipo) {
@@ -138,7 +148,7 @@ async function cargarArchivo(nombre, buffer, { guardar = true, esStl = false, ge
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
-        montarModelo(nombre, datos);
+        montarModelo(nombre, datos, transformacion);
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
         if (guardar)
             await almacen.guardarModelo(nombre, datos.buffer).catch(err => console.warn('No se guardó el modelo', err));
@@ -164,13 +174,12 @@ async function leerModelo(nombre, buffer, tipo, generar) {
 }
 
 /** Llena `estado`, crea el visor si falta, pone cama y modelo y actualiza los textos del paso. */
-function montarModelo(nombre, { buffer, vertices, triangulos, tamano }) {
+function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion) {
     estado.nombre = nombre;
     estado.stl = buffer;
     estado.vista = { triangulos, tamano };
     estado.resultado = null;
-    estado.rotacion = transformar.identidad();
-    estado.escala = 1;
+    ({ rotacion: estado.rotacion, escala: estado.escala } = transformacion ?? almacen.normalizarTransformacion());
 
     $('conModelo').hidden = false;
     if (!visor) visor = crearVisor($('visor'));
@@ -228,6 +237,21 @@ function aplicarTransformacion() {
         `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
     $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
     actualizarAvisoModelo();
+    programarGuardadoTransformacion();
+}
+
+let temporizador = null;
+
+/**
+ * Guarda rotación y escala en el reciente 500 ms después del último cambio (sin escribir en
+ * IndexedDB en cada toque). Captura los valores al programar, así un cambio de modelo no mezcla.
+ */
+function programarGuardadoTransformacion() {
+    const { nombre, stl, rotacion, escala } = estado;
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => {
+        almacen.guardarTransformacion(nombre, stl.byteLength, { rotacion, escala }).catch(() => {});
+    }, 500);
 }
 
 /** Cambia la escala (entre 0,01 y 20) y reaplica la transformación; ignora valores no positivos. */

@@ -14,6 +14,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Prueba de contratos de los módulos de `src/ui/` (`npm run test:contratos`).
 - `armarConfiguracion` acepta `cambios` por altura y los convierte en `proceso.ranges` de Kiri (ADR 0002, T2).
 - ADR 0001 (`docs/decisiones/0001-dividir-main.md`): división de `main.js`.
+- Los modelos recientes recuerdan su escala y rotación: al abrirlos vuelven con la misma transformación (se guarda 500 ms después del último cambio; los recientes viejos abren sin transformar).
 
 ### Cambiado
 

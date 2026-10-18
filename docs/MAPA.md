@@ -105,7 +105,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Clave | Qué guarda | Se persiste |
 |---|---|---|
 | `nombre`, `stl`, `vista` | Modelo cargado (ArrayBuffer original y tamaño) | sí, en recientes |
-| `rotacion`, `escala` | Transformación del modelo | no |
+| `rotacion`, `escala` | Transformación del modelo | sí, en recientes (debounce 500 ms) |
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
 | `resultado` | `{ gcode, info, archivo, impresoraId }` del último laminado | no |

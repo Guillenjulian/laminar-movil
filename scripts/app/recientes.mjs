@@ -11,6 +11,7 @@
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarRecientes(ctx) {
     await abrirReciente(ctx);
+    await recordarTransformacion(ctx);
     await recordarAjustes(ctx);
     await restablecerAjustes(ctx);
     const { page: pagina, ok: revisar } = ctx;
@@ -36,6 +37,30 @@ async function abrirReciente({ page: pagina, ok: revisar, captura }) {
     await pagina.tap('.reciente:has-text("cubo-20mm.stl")');
     await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'cubo-20mm.stl');
     revisar('abrir un reciente', true);
+}
+
+// Rota y escala el cubo, lo vuelve a abrir desde recientes y espera la misma escala y medidas.
+// Al final restablece (y espera el guardado) para dejar el cubo sin transformar.
+async function recordarTransformacion({ page: pagina, ok: revisar }) {
+    const leer = async () => [await pagina.inputValue('#escala'), await pagina.textContent('#datosModelo')];
+    const esperarGuardado = () => pagina.waitForTimeout(900); // el guardado espera 500 ms
+    await pagina.tap('[data-rotar="x"]');
+    await pagina.fill('#escala', '150');
+    await pagina.locator('#escala').blur();
+    const antes = await leer();
+    await esperarGuardado();
+    await pagina.reload();
+    await pagina.waitForSelector('#recientes:not([hidden])');
+    await pagina.tap('.reciente:has-text("cubo-20mm.stl")');
+    await pagina.waitForFunction(() => document.getElementById('datosModelo').textContent.includes('mm'));
+    const despues = await leer();
+    revisar(
+        'el reciente vuelve con su escala y medidas',
+        antes[0] === '150' && despues.join() === antes.join() && !(await pagina.isHidden('#restablecerModelo')),
+        `${antes} -> ${despues}`,
+    );
+    await pagina.tap('#restablecerModelo');
+    await esperarGuardado();
 }
 
 async function recordarAjustes({ page: pagina, ok: revisar }) {
