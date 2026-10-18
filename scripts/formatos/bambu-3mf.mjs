@@ -38,8 +38,26 @@ async function probarEntradasYBytes({ revisar }) {
     const zip = await abrir(await armarGcode3mf(gcode, info));
     const sinMini = Object.values(ENTRADAS).filter(n => !n.endsWith('.png'));
     revisar('bambu-3mf: entradas exactas sin miniatura', mismos(Object.keys(zip.files), sinMini));
-    const conMini = await abrir(await armarGcode3mf(gcode, { ...info, miniatura: PNG, miniaturaChica: PNG }));
+    const chico = new Uint8Array([137, 80, 78, 71, 9, 8, 7]);
+    const conMini = await abrir(await armarGcode3mf(gcode, { ...info, miniatura: PNG, miniaturaChica: chico }));
     revisar('bambu-3mf: entradas exactas con miniatura', mismos(Object.keys(conMini.files), Object.values(ENTRADAS)));
+    revisar(
+        'bambu-3mf: los PNG del zip son los pasados, byte a byte',
+        iguales(await bytesDe(conMini, ENTRADAS.miniatura), PNG) &&
+            iguales(await bytesDe(conMini, ENTRADAS.miniaturaChica), chico),
+    );
+    const soloGrande = await abrir(await armarGcode3mf(gcode, { ...info, miniatura: PNG }));
+    revisar(
+        'bambu-3mf: sin miniaturaChica, la chica es la grande byte a byte',
+        iguales(await bytesDe(soloGrande, ENTRADAS.miniaturaChica), PNG),
+    );
+    const sinNombre = await abrir(await armarGcode3mf(gcode, { ...info, nombre: undefined }));
+    const textos = [ENTRADAS.modelo, ENTRADAS.modelSettings, ENTRADAS.sliceInfo];
+    const todos = (await Promise.all(textos.map(t => textoDe(sinNombre, t)))).join('');
+    revisar(
+        'bambu-3mf: sin info.nombre el título es "pieza", no "undefined"',
+        todos.includes('pieza') && !todos.includes('undefined'),
+    );
     const adentro = await bytesDe(zip, ENTRADAS.gcode);
     revisar('bambu-3mf: plate_1.gcode idéntico byte a byte (ñ, tildes, línea de 10 KB)', iguales(adentro, entrada));
     const md5 = await textoDe(zip, ENTRADAS.md5);
@@ -117,15 +135,22 @@ async function probarGrande({ revisar }) {
         `    40 MB: ${seg} s, zip ${mb(blob.size)} MB, ${progreso.length} avisos, rss ${mb(process.memoryUsage().rss)} MB`,
     );
     revisar(
-        'bambu-3mf: 40 MB, md5 correcto y alProgreso creciente en 0..1',
+        'bambu-3mf: 40 MB, md5 correcto, alProgreso creciente que termina en 1, zip < 1/4',
         (await textoDe(zip, ENTRADAS.md5)) === md5De(bytes) &&
             bytes.length >= 40 * 1048576 &&
             progreso.length > 1 &&
-            crece,
+            crece &&
+            progreso.at(-1) === 1 &&
+            blob.size < bytes.length / 4,
     );
 }
 
+/**
+ * Corre todas las pruebas del .gcode.3mf de Bambu (ADR 0005, T4).
+ * @param {{revisar: (nombre:string, condicion:boolean, detalle?:string) => void}} ayudas
+ */
 export async function probarBambu3mf({ revisar }) {
+    console.log('\n▶ .gcode.3mf de Bambu');
     const zip = await probarEntradasYBytes({ revisar });
     await probarXml({ revisar }, zip);
     await probarPausas({ revisar });

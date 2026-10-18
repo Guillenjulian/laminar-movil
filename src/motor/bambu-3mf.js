@@ -24,6 +24,8 @@ export const ENTRADAS = {
     miniaturaChica: 'Metadata/plate_1_small.png',
 };
 
+// Nombre del objeto cuando `info.nombre` viene vacío o falta
+const NOMBRE_POR_DEFECTO = 'pieza';
 const TROZO_MD5 = 4 * 1024 * 1024; // bytes que se le dan al MD5 por vuelta
 // JSZip crea entradas de carpeta ("Metadata/") salvo que se le diga que no; un 3MF de Bambu no las lleva
 const SIN_CARPETAS = { createFolders: false };
@@ -49,6 +51,7 @@ async function md5Mayusculas(bytes) {
  * Arma un .gcode.3mf de Bambu con una sola placa (ver la tabla de la sección 1.1 del ADR 0005).
  * El G-code se codifica una sola vez en UTF-8; ese mismo arreglo alimenta al MD5 y al ZIP.
  * Si hay `info.miniatura` se agregan las dos miniaturas; sin `miniaturaChica`, la chica repite la grande.
+ * Si `info.nombre` falta o está vacío, el objeto se llama 'pieza'.
  * @param {string} gcode G-code final, con las pausas ya insertadas
  * @param {import('./bambu-xml.js').InfoBambu} info
  * @param {{alProgreso?: (fraccion:number) => void}} [opciones] `alProgreso` recibe 0..1, creciente
@@ -60,15 +63,16 @@ export async function armarGcode3mf(gcode, info, opciones = {}) {
     if (!info?.modelo?.id) throw new Error('Falta el modelo de impresora Bambu.');
     const bytes = new TextEncoder().encode(gcode);
     const conMiniatura = Boolean(info.miniatura);
+    const nombre = info.nombre || NOMBRE_POR_DEFECTO;
 
     const zip = new JSZip();
     zip.file(ENTRADAS.contentTypes, armarContentTypes(conMiniatura), SIN_CARPETAS);
     zip.file(ENTRADAS.rels, armarRels(conMiniatura), SIN_CARPETAS);
-    zip.file(ENTRADAS.modelo, armarModelo(info.nombre), SIN_CARPETAS);
+    zip.file(ENTRADAS.modelo, armarModelo(nombre), SIN_CARPETAS);
     zip.file(ENTRADAS.gcode, bytes, SIN_CARPETAS);
     zip.file(ENTRADAS.md5, await md5Mayusculas(bytes), SIN_CARPETAS);
-    zip.file(ENTRADAS.sliceInfo, armarSliceInfo(info), SIN_CARPETAS);
-    zip.file(ENTRADAS.modelSettings, armarModelSettings(info.nombre), SIN_CARPETAS);
+    zip.file(ENTRADAS.sliceInfo, armarSliceInfo({ ...info, nombre }), SIN_CARPETAS);
+    zip.file(ENTRADAS.modelSettings, armarModelSettings(nombre), SIN_CARPETAS);
     if (conMiniatura) {
         zip.file(ENTRADAS.miniatura, info.miniatura, SIN_CARPETAS);
         zip.file(ENTRADAS.miniaturaChica, info.miniaturaChica ?? info.miniatura, SIN_CARPETAS);
