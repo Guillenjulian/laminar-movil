@@ -193,7 +193,7 @@ parchar(
         }`,
     `        // PARCHE laminar-movil: soportes árbol (ADR 0004)
         const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
-            lineWidth, sliceHeight, angulo: process.sliceSupportAngle,
+            lineWidth, sliceHeight, angulo: process.sliceSupportAngle, cama: widget.anno?.cama,
         });`,
     'soportes árbol: stub de sliceSupportTree',
 );

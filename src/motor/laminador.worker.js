@@ -10,7 +10,8 @@
 //   o, con varias piezas (ADR 0003; se ignoran `stl` y `transformacion`):
 //   { tipo: 'laminar', dispositivo, proceso, maxTriangulos,
 //     piezas: [{ stl, transformacion?, posiciones: [{x, y}], bloqueos?: [...] }] }   (una posición por copia, relativa al
-//   centro; `bloqueos` = zonas sin soporte en el marco de la pieza, ADR 0004: van a `widget.anno.bloqueos` de cada copia)
+//   centro; `bloqueos` = zonas sin soporte en el marco de la pieza, ADR 0004: van a `widget.anno.bloqueos` de cada copia, y la cama en
+//   marco local a `widget.anno.cama`)
 // Mensajes que manda:
 //   { tipo: 'progreso', etapa: 'leyendo'|'reduciendo'|'laminando'|'preparando'|'exportando', valor: 0..1 }
 //   { tipo: 'listo', gcode: string, info: { tiempo, filamento, capas, triangulos, tamano, decimado, copias, ganchos } }
@@ -83,6 +84,18 @@ function conBloqueos(piezas, widgets) {
     }
 }
 
+// La cama como rectángulo en el marco local del widget (el de sus cortes: centro de la pieza en 0, 0). `pos` es el
+// centro de la copia relativo al centro de la cama, y vale igual con origen en la esquina o en el centro. El árbol de
+// soportes (ADR 0004) la usa para no salirse (cama redonda: se usa su caja).
+function camaLocal(d, pos) {
+    return {
+        x0: -d.bedWidth / 2 - pos.x,
+        x1: d.bedWidth / 2 - pos.x,
+        y0: -d.bedDepth / 2 - pos.y,
+        y1: d.bedDepth / 2 - pos.y,
+    };
+}
+
 // Un widget de Kiri por copia, cada uno en su grupo y con su posición en la cama.
 async function subirWidgets(widgets, settings) {
     await kiri('clear', {});
@@ -95,7 +108,7 @@ async function subirWidgets(widgets, settings) {
             group: id,
             vertices: w.vertices,
             meta: {},
-            anno: { bloqueos: w.bloqueos ?? [] },
+            anno: { bloqueos: w.bloqueos ?? [], cama: camaLocal(settings.device, w.pos) },
             track: {
                 box: { w: x, h: y, d: z },
                 pos: w.pos,

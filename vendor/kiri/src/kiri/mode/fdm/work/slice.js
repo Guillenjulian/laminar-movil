@@ -590,7 +590,7 @@ export function sliceOne(settings, widget, onupdate, ondone) {
         // convert shadows to trees, when specified
         // PARCHE laminar-movil: soportes árbol (ADR 0004)
         const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
-            lineWidth, sliceHeight, angulo: process.sliceSupportAngle,
+            lineWidth, sliceHeight, angulo: process.sliceSupportAngle, cama: widget.anno?.cama,
         });
 
         // perform accumulation top down

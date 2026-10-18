@@ -67,15 +67,16 @@ function aPolygon(poligono, z) {
  * `sliceSupportGap` de Kiri corre igual. Si algo falla devuelve `false` y Kiri sigue con 'automatic'.
  * @param {object[]} stack slices de Kiri de abajo hacia arriba (con una capa vacía de más arriba, de `z` = índice)
  * @param {object[]|undefined} bloqueos zonas sin soporte de la pieza (`widget.anno.bloqueos`)
- * @param {{lineWidth:number, sliceHeight:number, angulo:number}} opciones ancho de línea, alto de capa y ángulo
+ * @param {{lineWidth:number, sliceHeight:number, angulo:number, cama?:{x0:number,y0:number,x1:number,y1:number}}} opciones
+ *   ancho de línea, alto de capa, ángulo y cama en el marco local del widget (`widget.anno.cama`): ningún círculo sale de ella
  * @returns {boolean}
  */
-function arbol(stack, bloqueos, { lineWidth, sliceHeight, angulo }) {
+function arbol(stack, bloqueos, { lineWidth, sliceHeight, angulo, cama }) {
     if (datos)
         anotar('arbol', {
             capas: stack.length,
             n: bloqueos?.length ?? 0,
-            opciones: { lineWidth, sliceHeight, angulo },
+            opciones: { lineWidth, sliceHeight, angulo, cama },
         });
     try {
         const capas = stack.map(s => ({ z: s.z, voladizos: aPoligonos(s.shadow), cuerpo: aPoligonos(s.topPolys()) }));
@@ -84,6 +85,7 @@ function arbol(stack, bloqueos, { lineWidth, sliceHeight, angulo }) {
             altoCapa: sliceHeight,
             angulo,
             bloqueos: zonas(bloqueos),
+            cama,
         });
         stack.forEach((s, i) => (s.supports = salida[i].map(p => aPolygon(p, s.z))));
         return true;
