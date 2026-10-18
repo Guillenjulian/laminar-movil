@@ -1,0 +1,9 @@
+node_modules/
+dist/
+vendor/
+public/
+capturas/
+package-lock.json
+*.md
+src/perfiles/impresoras/
+src/perfiles/*.json
