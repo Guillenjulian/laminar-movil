@@ -101,7 +101,8 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `laminador.worker.js` | `prepararPiezas` → un widget de Kiri por copia (cada uno con su `track.pos`) → slice por widget, un solo prepare y export → G-code. `info.copias` y `info.tamano` del conjunto |
 | `vista.worker.js` | Lee el STL para mostrarlo (cuenta, mide y simplifica sólo para dibujar) |
 | `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración → STL binario |
-| `recorridos.worker.js` | G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa |
+| `recorridos.worker.js` | Worker de la vista previa: recibe el G-code, llama a `leer` y devuelve los recorridos (re-exporta `leer`, que usan las pruebas en Node) |
+| `recorridos-lector.js` | `leer`: G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa. Puro (sin `self`); la clase `Lector` guarda el estado y no arma objetos por línea (G-codes de millones de líneas) |
 | `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
 | `formatos-3mf.js` | Lector de 3MF (`leer3MF`, `leerXML3MF`); `formatos.js` lo re-exporta |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |
@@ -110,7 +111,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `transformar.js` | Matrices 3×3: identidad, multiplicar, rotacion90, escala, rotacionQueApoya, aplicar, medir |
 | `decimar.js` | Simplificación por agrupamiento en grilla |
 | `pausas.js` | Inserta las pausas (M600/PAUSE) en el G-code al descargar |
-| `espiral.js` | Modo jarrón: convierte cada vuelta en rampa de Z (Kiri lo hace en capas planas) |
+| `espiral.js` | Modo jarrón: `espiralar` convierte cada vuelta en rampa de Z (Kiri lo hace en capas planas); `vueltaDesde` decide si una capa es una sola vuelta; exporta `MARCA` |
 | `minions-locales.js` | Reemplaza el pool de sub-workers de Kiri (soportes) por cálculo local |
 | `tipos-linea.js` | Tipos de línea de Kiri, sus colores, paleta de filamentos, cuantizado |
 
@@ -203,12 +204,12 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | G-code con temperatura, ventilador o velocidad mal | `perfiles.js` → `armarConfiguracion` y el orden de combinación; `materiales.json` |
 | Macros `{...}` sin reemplazar | `dispositivo.gcodePre/Post` del perfil y el shim de QuickJS en `vendor-kiri.mjs` |
 | No abre offline | `src/sw.js` (lista de archivos, `ignoreVary`), `vite.config.js` |
-| La vista previa no coincide con las capas | `recorridos.worker.js` (detección de capa por cambio de Z en extrusión) |
-| Modo jarrón sin espiral o capas raras | `espiral.js` y el comentario `; capa en espiral` que lee `recorridos.worker.js` |
+| La vista previa no coincide con las capas | `recorridos-lector.js` (detección de capa por cambio de Z en extrusión) |
+| Modo jarrón sin espiral o capas raras | `espiral.js` y el comentario `; capa en espiral` que lee `recorridos-lector.js` |
 | La sección "Cambios por altura" no responde o no marca errores | `crearCambios()` en `src/ui/cambios.js` |
 | Un cambio por altura no se aplicó y no hay aviso en el paso 4 | `avisosDeCambios()` en `src/ui/paso4-resultado.js` y `avisosPostLaminado` en `src/perfiles/cambios.js` |
 | Altura variable sin subir Z | parche de `slice.js` en `vendor-kiri.mjs` |
-| La pausa cae en un lugar raro | `recorridos.worker.js` (`pausaCapa`) y `pausas.js` |
+| La pausa cae en un lugar raro | `recorridos-lector.js` (`pausaCapa`) y `pausas.js` |
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `preparar-piezas.js` (`centrar`) |
 | Un archivo no abre | `formatos.js` y `formatos-3mf.js` (mensajes de error) y `convertir.worker.js` |
 | Un botón del paso 1 no responde | `iniciarPaso1()` en `src/ui/paso1-modelo.js` |
@@ -231,7 +232,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - ESLint 9.x está deprecado: migrar a ESLint 10.
-- Warnings de `npm run lint` (3, 0 errores; no bloquean). Funciones: `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`).
+- `npm run lint`: 0 errores y 0 warnings.
 - Piezas y copias (ADR 0003):
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
   - No hay prueba de piezas con cama de cinta (R1 del ADR 0003 lo deja pendiente).
