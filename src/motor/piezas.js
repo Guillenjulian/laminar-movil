@@ -64,17 +64,30 @@ function variante(huellas, cama, sep, girar) {
  * @param {number} separacion mm libres entre huellas y entre el bloque y el borde
  * @returns {{posiciones: {x:number,y:number}[], entra: boolean, fuera: number[]}}
  *   `posiciones[i]` es el centro de `huellas[i]` en mm, relativo al centro de la cama; `fuera` son los índices
- *   (de la entrada) de las huellas que se pasan de la cama, vacío si `entra`.
+ *   (de la entrada) de las huellas que se pasan de la cama, vacío si `entra`. Una huella con medidas no finitas
+ *   (NaN, Infinity) cuenta como `fuera`; si la cama o la separación no son finitas, todas.
  */
 export function acomodar(huellas, cama, separacion) {
+    const camaOk = [cama.x, cama.y, separacion].every(Number.isFinite);
+    const mala = huellas.map(h => !camaOk || !Number.isFinite(h.x) || !Number.isFinite(h.y));
+    const sanas = huellas.map((h, i) => (mala[i] ? { x: 0, y: 0 } : h));
+    const malas = mala.flatMap((m, i) => (m ? [i] : []));
+    const r = camaOk
+        ? acomodarSanas(sanas, cama, separacion)
+        : { posiciones: sanas.map(() => ({ x: 0, y: 0 })), fuera: [] };
+    const fuera = [...new Set([...r.fuera, ...malas])].sort((p, q) => p - q);
+    return { posiciones: r.posiciones, entra: fuera.length === 0, fuera };
+}
+
+// `acomodar` con medidas finitas: una huella sola o las dos variantes de estantes.
+function acomodarSanas(huellas, cama, separacion) {
     if (huellas.length === 1) {
-        const entra = huellas[0].x <= cama.x && huellas[0].y <= cama.y;
-        return { posiciones: [{ x: 0, y: 0 }], entra, fuera: entra ? [] : [0] };
+        const dentro = huellas[0].x <= cama.x && huellas[0].y <= cama.y;
+        return { posiciones: [{ x: 0, y: 0 }], fuera: dentro ? [] : [0] };
     }
     const a = variante(huellas, cama, separacion, false);
     const b = variante(huellas, cama, separacion, true);
-    const gana = b.fuera.length < a.fuera.length || (b.fuera.length === a.fuera.length && b.alto < a.alto) ? b : a;
-    return { posiciones: gana.posiciones, entra: gana.fuera.length === 0, fuera: gana.fuera };
+    return b.fuera.length < a.fuera.length || (b.fuera.length === a.fuera.length && b.alto < a.alto) ? b : a;
 }
 
 /**
@@ -84,7 +97,8 @@ export function acomodar(huellas, cama, separacion) {
  * @param {number[]} triangulos triángulos de cada pieza
  * @param {number[]} copias copias de cada pieza
  * @param {number} maximo tope del conjunto
- * @returns {number[]} tope por pieza, o `Infinity` si el total ya entra
+ * @returns {number[]|number} tope por pieza (puede no ser entero: quien lo usa aplica `Math.floor`), o `Infinity`
+ *   si el total ya entra
  */
 export function repartirTriangulos(triangulos, copias, maximo) {
     const total = triangulos.reduce((s, t, i) => s + t * copias[i], 0);
