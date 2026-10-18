@@ -58,6 +58,37 @@ async function probarUltimaOrden() {
     revisar('ponerModelo no se descarta', antes === 6 && c.registro.some(([n]) => n === 'ponerModelo'));
 }
 
+async function probarZonas() {
+    console.log('alTocarPunto y marcasBloqueo (ADR 0004)');
+    const c = cargadorManual();
+    const visor = armarVisorCarga(c.cargar)(contenedorFalso());
+    const toque = () => {};
+    const zonas = [{ id: 1 }];
+    visor.alTocarPunto(toque);
+    visor.marcasBloqueo.poner(zonas, [{ x: 0, y: 0 }]);
+    visor.alTocarPunto(null);
+    visor.marcasBloqueo.quitar();
+    visor.marcasBloqueo.poner(zonas, [{ x: 5, y: 0 }]);
+    await c.llegar();
+    const esperado = [
+        ['alTocarPunto', null],
+        ['marcasBloqueo.poner', zonas, [{ x: 5, y: 0 }]],
+    ];
+    revisar(
+        'antes de estar listo sólo cuenta la última de alTocarPunto y de las marcas',
+        json(c.registro) === json(esperado),
+        json(c.registro),
+    );
+    revisar('las marcas llegan por referencia', c.registro[1][1] === zonas);
+    visor.marcasBloqueo.quitar();
+    visor.alTocarPunto(toque);
+    revisar(
+        'ya listo reenvía directo',
+        json(c.registro.slice(2).map(r => r[0])) === json(['marcasBloqueo.quitar', 'alTocarPunto']) &&
+            c.registro[3][1] === toque,
+    );
+}
+
 async function probarConsulta() {
     console.log('tamanoModelo');
     const c = cargadorManual();
@@ -194,6 +225,7 @@ function probarNombres() {
 
 await probarCola();
 await probarUltimaOrden();
+await probarZonas();
 await probarConsulta();
 await probarAlListo();
 await probarAlListoQueTira();

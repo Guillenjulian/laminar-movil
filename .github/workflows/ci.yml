@@ -77,6 +77,12 @@ jobs:
             - name: Test recorridos
               run: npm run test:recorridos
 
+            - name: Test soportes
+              run: npm run test:soportes
+
+            - name: Test visor
+              run: npm run test:visor
+
             - name: Test motor
               run: npm run test:motor
 

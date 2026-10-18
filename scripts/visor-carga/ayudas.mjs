@@ -44,13 +44,25 @@ export function visorFalso(registro, tira = new Set()) {
     return new Proxy(
         {},
         {
-            get: (_, nombre) =>
-                nombre === 'tamanoModelo'
-                    ? () => ({ x: 1, y: 2, z: 3 })
-                    : (...a) => {
-                          if (tira.has(nombre)) throw new Error('orden rota');
-                          registro.push([nombre, ...a]);
-                      },
+            get: (_, nombre) => {
+                if (nombre === 'tamanoModelo') return () => ({ x: 1, y: 2, z: 3 });
+                // `marcasBloqueo.poner/quitar` (ADR 0004): se anotan como `marcasBloqueo.poner`.
+                if (nombre === 'marcasBloqueo') {
+                    return new Proxy(
+                        {},
+                        {
+                            get:
+                                (_o, m) =>
+                                (...a) =>
+                                    registro.push([`marcasBloqueo.${String(m)}`, ...a]),
+                        },
+                    );
+                }
+                return (...a) => {
+                    if (tira.has(nombre)) throw new Error('orden rota');
+                    registro.push([nombre, ...a]);
+                };
+            },
         },
     );
 }

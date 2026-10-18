@@ -17,6 +17,7 @@ const ORDENES = [
     'resaltarPieza',
     'elegirCara',
     'alTocarPieza',
+    'alTocarPunto',
     'ponerRecorridos',
     'mostrarCapa',
     'pintarRecorridos',
@@ -26,11 +27,25 @@ const ORDENES = [
     'pausar',
 ];
 
+/** Grupos de órdenes anidadas (`visor.marcasBloqueo.poner(...)`): en la cola se llaman `marcasBloqueo.poner`. */
+const ANIDADAS = { marcasBloqueo: ['poner', 'quitar'] };
+
 /** Consultas: devuelven un valor, así que antes de estar listo contestan `null`. */
 const CONSULTAS = ['tamanoModelo'];
 
 /** De estas sólo cuenta la última orden: las anteriores no cambian el resultado final. */
-const SOLO_LA_ULTIMA = new Set(['ponerCama', 'pausar', 'mostrarCapa', 'atenuarAbajo', 'vistaInicial']);
+const SOLO_LA_ULTIMA = new Set([
+    'ponerCama',
+    'pausar',
+    'mostrarCapa',
+    'atenuarAbajo',
+    'vistaInicial',
+    'alTocarPunto',
+    'marcasBloqueo',
+]);
+
+// El grupo al que cuenta una orden para "sólo la última": `marcasBloqueo.poner` y `.quitar` son el mismo estado.
+const grupoDe = nombre => nombre.split('.')[0];
 
 const DEMORA_AVISO_MS = 200;
 const TEXTO_CARGANDO = 'Cargando el visor 3D…';
@@ -42,14 +57,16 @@ function crearCola() {
     let ordenes = [];
     return {
         agregar(nombre, args) {
-            if (SOLO_LA_ULTIMA.has(nombre)) ordenes = ordenes.filter(([n]) => n !== nombre);
+            if (SOLO_LA_ULTIMA.has(grupoDe(nombre))) ordenes = ordenes.filter(([n]) => grupoDe(n) !== grupoDe(nombre));
             ordenes.push([nombre, args]);
         },
         reproducir(visor) {
             // Una por vez: si una tira, las que siguen quedan para el reintento (la que tiró se descarta).
             while (ordenes.length) {
                 const [nombre, args] = ordenes.shift();
-                visor[nombre](...args);
+                const [grupo, metodo] = nombre.split('.');
+                if (metodo) visor[grupo][metodo](...args);
+                else visor[nombre](...args);
             }
         },
     };
@@ -109,6 +126,12 @@ function armarFachada(real, cola) {
         visor[nombre] = (...args) => (real() ? real()[nombre](...args) : cola.agregar(nombre, args));
     }
     for (const nombre of CONSULTAS) visor[nombre] = (...args) => (real() ? real()[nombre](...args) : null);
+    for (const [grupo, metodos] of Object.entries(ANIDADAS)) {
+        visor[grupo] = {};
+        for (const m of metodos) {
+            visor[grupo][m] = (...args) => (real() ? real()[grupo][m](...args) : cola.agregar(`${grupo}.${m}`, args));
+        }
+    }
     return visor;
 }
 
