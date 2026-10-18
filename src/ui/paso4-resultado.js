@@ -1,6 +1,7 @@
 // Paso 4 (resultado): resumen de la laminación, avisos y entrega del G-code.
 // Responsabilidad: mostrar qué salió (tiempo, filamento, capas, calidad, tamaño), armar la vista previa
-// capa por capa y ofrecer Compartir / Descargar / Elegir otro modelo.
+// capa por capa y ofrecer Compartir / Descargar / Elegir otro modelo. Qué archivo se baja (.gcode o .gcode.3mf
+// de Bambu) lo decide `entrega-ui.js`.
 // Flujo: `mostrarResultado()` (lo llama el paso 3 al terminar) llena la pantalla con `estado.resultado`
 // y arma la vista previa; `iniciarPaso4()` cablea los tres botones una vez, desde `main.js`.
 // No toca el DOM al importarse: todo el cableado ocurre dentro de `iniciarPaso4`.
@@ -12,18 +13,18 @@ import { armarVistaPrevia } from './vista-capas.js';
 import { resumenPersonal } from './paso2-config.js';
 import * as formato from './formato.js';
 import * as materialesUI from './materiales.js';
-import { insertarPausas } from '../motor/pausas.js';
-import { buscarImpresora, materiales, lineasPausa } from '../perfiles/perfiles.js';
+import { nombreEntrega } from './entrega.js';
+import {
+    entregaDe,
+    esperarArchivo,
+    paraCompartir,
+    precargar,
+    programarPrecarga,
+    puedeCompartir,
+    soltarEntrega,
+} from './entrega-ui.js';
+import { buscarImpresora, materiales } from '../perfiles/perfiles.js';
 import { avisosPostLaminado } from '../perfiles/cambios.js';
-
-/** Arma el archivo .gcode con las pausas de filamento insertadas, listo para compartir o descargar.
- *  Usa text/plain: varios celus no dejan compartir tipos "raros" como text/x-gcode.
- *  @returns {File} */
-function archivoGcode() {
-    const { gcode, archivo, impresoraId } = estado.resultado;
-    const final = insertarPausas(gcode, [...estado.pausas.values()], lineasPausa(buscarImpresora(impresoraId)));
-    return new File([final], archivo, { type: 'text/plain' });
-}
 
 /** Avisos de los cambios por altura que cayeron por encima de la pieza (ADR 0002).
  *  Usa lo guardado al laminar: la altura sale de `info.tamano.z`; capas y cambios, de `estado.resultado`.
@@ -34,32 +35,55 @@ function avisosDeCambios() {
     return avisosPostLaminado(cambios, info.tamano?.z, capas);
 }
 
+/** Comparte el archivo con la hoja del sistema. Si el gesto venció mientras se armaba el .gcode.3mf
+ *  (`NotAllowedError`), avisa en el mismo botón: el archivo ya quedó en el cache.
+ *  @param {string} etiqueta texto original del botón @returns {Promise<void>} */
+async function compartir(etiqueta) {
+    $('compartir').textContent = etiqueta;
+    let archivo;
+    try {
+        archivo = await esperarArchivo($('compartir'));
+        await navigator.share({ files: [paraCompartir(archivo)], title: archivo.name });
+    } catch (err) {
+        if (err.name === 'NotAllowedError' && archivo) {
+            $('compartir').textContent = 'Listo el archivo. Tocá Compartir otra vez';
+        } else if (err.name !== 'AbortError') alert('No se pudo compartir: ' + err.message);
+    }
+}
+
+/** Baja el archivo (con `a.download` = su nombre final). @returns {Promise<void>} */
+async function descargar() {
+    let archivo;
+    try {
+        archivo = await esperarArchivo($('descargar'));
+    } catch (err) {
+        return alert('No se pudo armar el archivo: ' + err.message);
+    }
+    const url = URL.createObjectURL(archivo);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = archivo.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 /** Cablea #compartir, #descargar y #otro.
  *  `alOtroModelo`: vuelve al inicio del paso 1 (main: elegirOtroModelo). #otro hace
  *  `estado.resultado = null`, llama a `alOtroModelo()` y después `irA(1)`.
  *  @param {{alOtroModelo: () => void}} callbacks
  *  @returns {void} */
 export function iniciarPaso4({ alOtroModelo }) {
-    $('compartir').onclick = async () => {
-        try {
-            await navigator.share({ files: [archivoGcode()], title: estado.resultado.archivo });
-        } catch (err) {
-            if (err.name !== 'AbortError') alert('No se pudo compartir: ' + err.message);
-        }
-    };
-
-    $('descargar').onclick = () => {
-        const url = URL.createObjectURL(archivoGcode());
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = estado.resultado.archivo;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    };
+    const etiqueta = $('compartir').textContent;
+    $('compartir').onclick = () => compartir(etiqueta);
+    $('descargar').onclick = descargar;
+    // Con pausas nuevas el archivo cambia: se vuelve a armar por adelantado, sin tocar pausas-ui.
+    $('pausarCapa').addEventListener('click', programarPrecarga);
+    $('listaPausas').addEventListener('click', programarPrecarga);
 
     $('otro').onclick = () => {
+        soltarEntrega();
         estado.resultado = null;
         alOtroModelo();
         irA(1);
@@ -70,6 +94,7 @@ export function iniciarPaso4({ alOtroModelo }) {
  *  vista previa (armarVistaPrevia). @returns {void} */
 export function mostrarResultado() {
     const { info, gcode, avisos, archivo } = estado.resultado;
+    const { formato: salida } = entregaDe();
     const imp = buscarImpresora(estado.impresoraId);
     const cal = imp.calidades[estado.calidad];
     const filas = [
@@ -80,10 +105,10 @@ export function mostrarResultado() {
         ['Relleno y adhesión', resumenPersonal(valoresActuales())],
         ...(info.copias > 1 ? [['Piezas', `${info.copias} piezas`]] : []),
         ['Tamaño', formato.milimetros(info.tamano)],
-        ['Archivo', formato.bytes(gcode.length)],
+        [salida === 'gcode.3mf' ? 'G-code' : 'Archivo', formato.bytes(gcode.length)],
     ];
     $('resumen').innerHTML = filas.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-    $('nombreArchivo').textContent = archivo;
+    $('nombreArchivo').textContent = nombreEntrega(archivo, salida);
 
     const notas = [...avisos, ...avisosDeCambios()];
     if (info.decimado) {
@@ -97,8 +122,9 @@ export function mostrarResultado() {
     $('avisoResultado').hidden = notas.length === 0;
 
     // "Compartir" sólo si el navegador puede compartir archivos (Android/iOS sí; la mayoría de las PCs no).
-    $('compartir').hidden = !navigator.canShare?.({ files: [archivoGcode()] });
+    $('compartir').hidden = !puedeCompartir(archivo);
     $('descargar').classList.toggle('primario', $('compartir').hidden);
+    precargar();
 
     armarVistaPrevia();
 }

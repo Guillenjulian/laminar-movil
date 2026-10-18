@@ -7,6 +7,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Agregado
+
+- Las impresoras Bambu Lab (A1, A1 mini, P1S y X1C) entregan un `.gcode.3mf` en el paso 4: el mismo G-code con las pausas (`M400 U1`) dentro de un ZIP con el MD5 y los metadatos que espera Bambu (ADR 0005). Compartir lo arma por adelantado y avisa "Armando el archivo…"; las demás impresoras siguen bajando el `.gcode` de siempre. Los cuatro perfiles Bambu salen con aviso de "sin validar con la impresora".
+
 ## [0.3.0] - 2026-10-18
 
 Sprint de deuda técnica.

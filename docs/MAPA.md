@@ -25,6 +25,11 @@ acomoda en la cama con `motor/piezas.js`, y el visor muestra en rojo las copias 
 acomodar y lamina `piezasParaMotor()`; el worker arma un widget de Kiri por copia (`preparar-piezas.js`). Con una
 sola pieza y una copia, el flujo es el de antes.
 
+Entrega (ADR 0005): el G-code sale del laminador sin pausas; se arman al descargar o compartir. `entrega-ui.js` lee
+`salidaDe(impresora)` y llama a `entrega.js` (`armarEntrega`): `gcode` baja el `.gcode` de texto de siempre y `gcode.3mf`
+(las Bambu) lo deja dentro de un ZIP (`motor/bambu-3mf.js`, con MD5). El archivo se arma una vez por combinación de
+pausas, se precarga para que Compartir lo tenga listo y el cache guarda sólo el `File`.
+
 Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al terminar (`motor.js`).
 
 ## 2. Módulos
@@ -48,7 +53,9 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/formulario-impresora.js` | Formulario de "Mi impresora": crear, copiar un perfil como propio, editar y borrar (`iniciarFormularioImpresora`); avisa con el callback `elegir(id)` | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
 | `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2({ irAPaso1 })`, `dibujarOpciones`); aviso `#avisoEntranPaso2` (role=status, siempre en el DOM; sólo cambia su texto) y botón aparte "Ir al paso 1" y Laminar deshabilitado si con la impresora elegida no entran las piezas | `estado`, `acomodo`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
 | `src/ui/paso3-laminar.js` | Acomoda las piezas (`acomodarPiezas`; si no entran muestra el error y no lamina), lanza el laminado de `piezasParaMotor()` (con la configuración de la torre si hay una), muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `perfiles/torres`, `config`, `acomodo` |
-| `src/ui/paso4-resultado.js` | Resumen del resultado (con "N piezas" si hay copias), avisos (incluye los de cambios por altura fuera de la pieza, `avisosPostLaminado`) y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles`, `perfiles/cambios` |
+| `src/ui/paso4-resultado.js` | Resumen del resultado (con "N piezas" si hay copias), avisos (incluye los de cambios por altura fuera de la pieza, `avisosPostLaminado`) y botones Compartir / Descargar / Elegir otro modelo. `#nombreArchivo` y `a.download` salen de `nombreEntrega`; en las Bambu la fila "Archivo" se llama "G-code". Compartir y Descargar piden el archivo a `entrega-ui` | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `entrega`, `entrega-ui`, `perfiles/perfiles`, `perfiles/cambios` |
+| `src/ui/entrega-ui.js` | Qué archivo se entrega y cuándo se arma (ADR 0005, 3.5): `archivoEntrega()` (async, cache del último `File` por impresora + material + offsets de pausas; arma `Salida` e `InfoBambu` desde `estado` y el perfil), `precargar`/`programarPrecarga` (sólo con `gcode.3mf`; las pausas nuevas se detectan por clic en `#pausarCapa` y `#listaPausas`, sin tocar `pausas-ui`), `esperarArchivo(boton)` ("Armando el archivo… N %" con los dos botones deshabilitados, sólo en `gcode.3mf`), `puedeCompartir` (`canShare` con un File vacío del nombre y MIME finales: octet-stream, zip, model/3mf), `paraCompartir`, `soltarEntrega`. Salió de `paso4-resultado` para dejarlo corto | `estado`, `util-dom`, `materiales`, `entrega`, `perfiles/perfiles` |
+| `src/ui/entrega.js` | Sin DOM ni `estado` (ADR 0005, 3.4): `nombreEntrega` (`.gcode` o `.gcode.3mf`), `mimeEntrega` y `armarEntrega` (inserta las pausas y deja el `File`, plano o dentro de un `.gcode.3mf`) | `motor/pausas`, `motor/bambu-3mf` |
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor y las capas | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
 | `src/ui/pausas-ui.js` | Pausas de filamento de la vista previa: lista de filamentos, marcas sobre el deslizador, modo y colores de los recorridos | `estado`, `util-dom`, `formato`, `motor/tipos-linea`, `perfiles/perfiles` |
 | `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
@@ -60,7 +67,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
 | `src/ui/torres.js` | Hoja "Torre de calibración" del paso 1 (ADR 0002): tipo, cantidad de bloques, valor de cada uno (sugeridos según impresora y material), avisos y carga como modelo con `estado.torre`. Con torre se ocultan escala y rotación y no entra en recientes | `perfiles/torres`, `perfiles/perfiles`, `motor/motor`, `util-dom`, `formato` |
 | `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor`, `motor/litofania`, `formato` |
-| `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen. `iniciarMateriales()` registra el listener de "Poné el precio" y devuelve la promesa de carga de precios (la llama `main.js`, que la espera antes del primer dibujo) | `perfiles`, `almacen`, `formato` |
+| `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen (`gramosDe` calcula los gramos; también lo usa `entrega-ui`). `iniciarMateriales()` registra el listener de "Poné el precio" y devuelve la promesa de carga de precios (la llama `main.js`, que la espera antes del primer dibujo) | `perfiles`, `almacen`, `formato` |
 | `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
 | `src/ui/cambios.js` | Sección "Cambios por altura" del paso 2 (ADR 0002): agregar, editar y quitar cambios (relleno, temperatura, velocidad, ventilador desde cierta altura en mm), errores de `validarCambios`, ayuda de Velocidad, aviso "sin valor: se ignora" y resumen en el `<summary>`. Deshabilitada con altura variable | `perfiles/cambios`, `util-dom` |
 | `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
@@ -72,7 +79,9 @@ Grafo de dependencias de `src/ui/` (ADR 0001, sección 2; `A → B` = A importa 
 
 ```
 Nivel 6   main.js ──► (todos los de abajo)
-Nivel 5   paso4-resultado ──► vista-capas, paso2-config
+Nivel 5   paso4-resultado ──► vista-capas, paso2-config, entrega-ui, entrega
+Nivel 2   entrega-ui ──► entrega, materiales, estado, util-dom, perfiles
+Nivel 1   entrega ──► motor/pausas, motor/bambu-3mf
 Nivel 4   paso2-config ──► impresoras, acomodo
 Nivel 3   impresoras ──► formulario-impresora
 Nivel 3   paso1-modelo ──► ajuste-modelo, piezas-ui, recientes, navegacion
@@ -225,6 +234,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Un botón del paso 2 no responde o una opción no se redibuja | `iniciarPaso2()` y `dibujarOpciones()` en `src/ui/paso2-config.js` |
 | Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
 | Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |
+| El archivo descargado no tiene las pausas nuevas, o tarda en armarse el `.gcode.3mf` | `archivoEntrega()` (clave del cache) y `precargar()` en `src/ui/entrega-ui.js`; el armado, en `src/ui/entrega.js` y `src/motor/bambu-3mf.js` |
 | La vista previa por capas no responde | `iniciarVistaCapas()` en `src/ui/vista-capas.js` |
 | La lista de filamentos, las marcas de pausa o los colores de la vista previa fallan | `dibujarPausas()` y `conectarPausas()` en `src/ui/pausas-ui.js` |
 | No se puede elegir una impresora | `iniciarImpresoras()` en `src/ui/impresoras.js` |
