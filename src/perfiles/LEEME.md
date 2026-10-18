@@ -3,6 +3,9 @@
 - `impresoras/*.json`: perfiles **armados a mano** (`"estado": "revisado"`). **Se detectan
   solos**: para sumar una impresora, copiá `creality-ender-3-v3-se.json`, cambiale `id` y
   `nombre`, ajustá los valores y listo (no hay que tocar código).
+  Revisados hasta ahora: Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE y K1; Elegoo Neptune 4;
+  Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06. Si el revisado es el mismo modelo que uno
+  importado, `"reemplaza": ["id-del-importado"]` lo saca de la lista (K1 y Kobra 2).
 - `impresoras/kiri/*.json`: 50 perfiles **importados de Kiri:Moto** (`"estado": "importado"`),
   generados por `npm run importar:impresoras`. No los edites a mano (el importador los
   regenera): si querés mejorar uno, copialo a `impresoras/` con otro `id` y revisalo ahí.

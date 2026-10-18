@@ -14,7 +14,10 @@ import { validarCambios, cambiosARangos } from './cambios.js';
 
 // Vite junta todos los JSON de las carpetas en tiempo de build.
 const archivos = import.meta.glob('./impresoras/**/*.json', { eager: true, import: 'default' });
-const incluidas = Object.values(archivos).map(i => ({ estado: 'revisado', ...i }));
+const todas = Object.values(archivos).map(i => ({ estado: 'revisado', ...i }));
+// Un revisado puede tapar a su equivalente importado (`reemplaza: [ids]`) para que el modelo no salga dos veces.
+const tapadas = new Set(todas.flatMap(i => (i.estado === 'revisado' && i.reemplaza) || []));
+const incluidas = todas.filter(i => !tapadas.has(i.id));
 
 export const IMPRESORA_INICIAL = 'creality-ender-3-v3-se';
 const ORDEN = { propio: 0, revisado: 1, importado: 2 };

@@ -14,6 +14,7 @@ import { insertarPausas } from '../src/motor/pausas.js';
 import { probarCambios } from './motor/cambios.mjs';
 import { probarTorres } from './motor/torres.mjs';
 import { probarPiezasKiri } from './motor/piezas-kiri.mjs';
+import { probarPerfilesRevisados } from './motor/perfiles-revisados.mjs';
 
 // El lector de la vista previa es un worker: lo cargamos en Node simulando `self`.
 globalThis.self ??= {};
@@ -423,7 +424,7 @@ try {
         }
     }
     // Pausa en impresoras con otros marcadores de capa / extrusión absoluta.
-    for (const id of ['kiri-prusa-i3-mk3s', 'kiri-creality-ender-5', 'kiri-anycubic-kobra-2']) {
+    for (const id of ['kiri-prusa-i3-mk3s', 'kiri-creality-ender-5', 'kiri-anycubic-kobra']) {
         const r = await pagina.evaluate(o => window.probar(o), { caso: 'cubo', impresoraId: id, calidad: 'rapido' });
         const p = probarPausa(r.gcode, 20);
         revisar(`pausa en ${id}`, p.ok, p.detalle);
@@ -607,6 +608,7 @@ try {
     await probarCambios({ laminar, revisar }); // cambios por altura (ADR 0002)
     await probarTorres({ laminar, revisar, pagina }); // torres de calibración (ADR 0002)
     await probarPiezasKiri({ revisar, pagina }); // varias piezas con track.pos (ADR 0003, T0)
+    await probarPerfilesRevisados({ laminar, revisar, pagina }); // 8 impresoras populares revisadas
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());
