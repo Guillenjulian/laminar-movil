@@ -12,6 +12,7 @@
 
 import { laminar } from '../motor/motor.js';
 import { armarConfiguracion } from '../perfiles/perfiles.js';
+import { configuracionDeTorre } from '../perfiles/torres.js';
 import { maxTriangulos } from '../config.js';
 import { estado, matrizModelo } from './estado.js';
 import { irA } from './navegacion.js';
@@ -60,13 +61,15 @@ async function mantenerPantalla() {
  * @returns {{dispositivo: object, proceso: object, avisos: string[]}}
  */
 function configuracionActual() {
+    // Si hay una torre de calibración, lo que ella fija (Avanzado, relleno, cambios) pisa lo del usuario.
+    const t = estado.torre ? configuracionDeTorre(estado.torre) : null;
     return armarConfiguracion({
         impresoraId: estado.impresoraId,
         calidad: estado.calidad,
         material: estado.material,
-        soportes: estado.soportes,
-        personal: { ...estado.personal, avanzado: estado.avanzado },
-        cambios: estado.cambios,
+        soportes: t ? t.soportes : estado.soportes,
+        personal: { ...estado.personal, ...t?.personal, avanzado: { ...estado.avanzado, ...t?.avanzado } },
+        cambios: t ? t.cambios : estado.cambios,
     });
 }
 

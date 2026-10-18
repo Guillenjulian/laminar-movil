@@ -66,6 +66,7 @@ export async function mostrarRecientes() {
  * @returns {void}
  */
 export function programarGuardado() {
+    if (estado.torre) return; // la torre no entra en recientes
     const { nombre, stl, rotacion, escala } = estado;
     const bytes = stl.byteLength;
     if (pendiente && (pendiente.nombre !== nombre || pendiente.bytes !== bytes)) guardarPendiente(); // otro modelo

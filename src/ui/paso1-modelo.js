@@ -15,6 +15,7 @@ import { maxTriangulos } from '../config.js';
 import * as almacen from '../almacen.js';
 import { crearVisor } from './visor.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
+import { prepararTorre } from './torres.js';
 import * as formato from './formato.js';
 import { $ } from './util-dom.js';
 import { estado, matrizModelo } from './estado.js';
@@ -25,6 +26,7 @@ export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
 let visor = null; // visor del modelo (se crea al cargar el primer modelo)
 let litofania = null; // hoja "Litofanía desde una foto" (se crea en iniciarPaso1)
+let torres = null; // hoja "Torre de calibración" (se crea en iniciarPaso1)
 
 /**
  * Cablea #archivo, #foto, #otroModelo, #ejemplo, #siguiente, la lista de recientes, escala,
@@ -40,6 +42,13 @@ export function iniciarPaso1() {
         cerrar: cerrarHojas,
         cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar }),
     });
+    torres = prepararTorre({
+        abrir: () => abrirHoja('torre'),
+        cerrar: cerrarHojas,
+        cargar: (nombre, generar, torre) => cargarArchivo(nombre, null, { generar, guardar: false, torre }),
+        contexto: () => ({ impresoraId: estado.impresoraId, material: estado.material }),
+    });
+    $('botonTorre').onclick = torres.abrir;
     conectarSubida();
     conectarTransformacion();
 }
@@ -66,6 +75,7 @@ export function elegirOtroModelo() {
     guardarPendiente();
     estado.stl = null;
     estado.vista = null;
+    estado.torre = null;
     visor?.quitarModelo();
     $('conModelo').hidden = true;
     $('sinModelo').hidden = false;
@@ -103,7 +113,7 @@ async function alElegirArchivo(e) {
 async function cargarArchivo(
     nombre,
     buffer,
-    { guardar = true, esStl = false, generar = null, transformacion = null } = {},
+    { guardar = true, esStl = false, generar = null, transformacion = null, torre = null } = {},
 ) {
     const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
     if (tipo === 'imagen') return litofania.abrirFoto(nombre, buffer);
@@ -115,7 +125,7 @@ async function cargarArchivo(
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
-        montarModelo(nombre, datos, transformacion);
+        montarModelo(nombre, datos, transformacion, torre);
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
         if (guardar)
             await almacen.guardarModelo(nombre, datos.buffer).catch(err => console.warn('No se guardó el modelo', err));
@@ -141,11 +151,14 @@ async function leerModelo(nombre, buffer, tipo, generar) {
 }
 
 /** Llena `estado`, crea el visor si falta, pone cama y modelo y actualiza los textos del paso. */
-function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion) {
+function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre = null) {
     estado.nombre = nombre;
     estado.stl = buffer;
     estado.vista = { triangulos, tamano };
     estado.resultado = null;
+    estado.torre = torre; // la torre fija sus alturas: sin escala ni rotación
+    estado.cambios = []; // los cambios por altura dependen del modelo
+    $('ajustesModelo').hidden = !!torre;
     ({ rotacion: estado.rotacion, escala: estado.escala } = transformacion ?? almacen.normalizarTransformacion());
 
     $('conModelo').hidden = false;
@@ -165,6 +178,7 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
 /** Avisos sobre el modelo: si es muy pesado (se va a simplificar) o si no entra en la cama. */
 function actualizarAvisoModelo() {
     if (!estado.vista) return;
+    torres?.revisar(estado.torre);
     const { triangulos } = estado.vista;
     const tamano = tamanoActual();
     const imp = buscarImpresora(estado.impresoraId);

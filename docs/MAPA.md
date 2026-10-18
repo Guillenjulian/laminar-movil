@@ -32,17 +32,18 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
-| `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config`, `recientes` |
+| `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config`, `recientes` |
 | `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación: 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
 | `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda), su tarjeta y "Mi impresora" (formulario, copiar, editar, borrar) | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
 | `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
-| `src/ui/paso3-laminar.js` | Lanza el laminado, muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `config` |
+| `src/ui/paso3-laminar.js` | Lanza el laminado (con la configuración de la torre si hay una), muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `perfiles/torres`, `config` |
 | `src/ui/paso4-resultado.js` | Resumen del resultado, avisos y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles` |
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción) y pausas de filamento | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config` |
 | `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
 | `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
+| `src/ui/torres.js` | Hoja "Torre de calibración" del paso 1 (ADR 0002): tipo, cantidad de bloques, valor de cada uno (sugeridos según impresora y material), avisos y carga como modelo con `estado.torre`. Con torre se ocultan escala y rotación y no entra en recientes | `perfiles/torres`, `perfiles/perfiles`, `motor/motor`, `util-dom`, `formato` |
 | `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor`, `motor/litofania`, `formato` |
 | `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen. `iniciarMateriales()` registra el listener de "Poné el precio" (lo llama `main.js`) | `perfiles`, `almacen`, `formato` |
 | `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
@@ -60,7 +61,7 @@ Nivel 4   paso4-resultado ──► vista-capas, paso2-config
 Nivel 3   paso2-config ──► impresoras
 Nivel 2   paso1-modelo   impresoras   vista-capas   paso3-laminar   ──► navegacion
 Nivel 1   navegacion ──► estado
-Nivel 0   estado, util-dom, actualizacion, cambios  ──► hojas ya existentes (avanzado, formato, materiales,
+Nivel 0   estado, util-dom, actualizacion, cambios, torres ──► hojas ya existentes (avanzado, formato, materiales,
                                               litofania, visor, motor/*, perfiles/*, almacen, config)
 ```
 
@@ -111,7 +112,8 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
 | `resultado` | `{ gcode, info, archivo, impresoraId }` del último laminado | no |
-| `cambios` | Cambios por altura (`Cambio[]`, ADR 0002); se pasan a `armarConfiguracion` | no |
+| `cambios` | Cambios por altura (`Cambio[]`, ADR 0002); se pasan a `armarConfiguracion`. Se vacían al cargar un modelo | no |
+| `torre` | Torre de calibración cargada (`Torre` + `aviso` + `resumen`, ADR 0002) o `null`; si existe, `paso3-laminar` usa `configuracionDeTorre` por encima de Avanzado, Personalizar, soportes y cambios | no |
 | `pausas`, `coloresFilamento`, `modoColor` | Pausas y colores de la vista previa | no |
 
 ## 4. Pruebas

@@ -37,6 +37,7 @@ export const estado = {
     personal: {}, // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
     avanzado: {}, // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
     cambios: [], // cambios por altura (ADR 0002, ver src/ui/cambios.js); no se persiste: dependen del modelo
+    torre: null, // torre de calibración cargada como modelo (ADR 0002, ver ui/torres.js); no se persiste
     resultado: null, // { gcode, info, archivo, impresoraId }
     pausas: new Map(), // capa -> { capa, offset, z }: pausas para cambiar filamento
     coloresFilamento: [...COLORES_FILAMENTO], // color de cada filamento (1º, 2º, ...) en la vista previa

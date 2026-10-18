@@ -36,13 +36,14 @@ export function iniciarNavegacion() {
  * Al cambiar de paso: actualiza .pantalla/.acciones/.pasos, #atras, scroll de #main y avisa a los
  * suscriptores de alMostrarPaso.
  * @param {1|2|3|4} paso
- * @param {'impresoras'|'mi'|'litofania'|null} [hoja]
+ * @param {'impresoras'|'mi'|'litofania'|'torre'|null} [hoja]
  * @returns {void}
  */
 export function mostrar(paso, hoja = null) {
     $('hojaImpresoras').hidden = hoja !== 'impresoras';
     $('hojaMiImpresora').hidden = hoja !== 'mi';
     $('hojaLitofania').hidden = hoja !== 'litofania';
+    $('hojaTorre').hidden = hoja !== 'torre';
     if (paso === estado.paso && yaMostrado) return;
     yaMostrado = true;
     estado.paso = paso;
@@ -72,7 +73,7 @@ export function irA(paso, { reemplazar = false } = {}) {
 
 /**
  * Abre una hoja encima del paso actual (nivel de historial +1).
- * @param {'impresoras'|'mi'|'litofania'} hoja
+ * @param {'impresoras'|'mi'|'litofania'|'torre'} hoja
  * @returns {void}
  */
 export function abrirHoja(hoja) {

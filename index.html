@@ -53,6 +53,7 @@
                         Litofanía desde una foto
                         <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" hidden />
                     </label>
+                    <button class="boton chico boton-foto" id="botonTorre">Torre de calibración</button>
                     <div id="recientes" hidden>
                         <h2>Recientes</h2>
                         <ul class="recientes" id="listaRecientes"></ul>
@@ -66,9 +67,10 @@
                         <p class="nombre" id="nombreModelo"></p>
                         <p id="datosModelo"></p>
                         <div class="aviso" id="avisoModelo" hidden></div>
+                        <div class="aviso" id="avisoTorre" hidden></div>
 
                         <!-- Ajustes del modelo en la cama -->
-                        <div class="ajustes-modelo">
+                        <div class="ajustes-modelo" id="ajustesModelo">
                             <div class="fila-escala">
                                 <label for="escala">Escala</label>
                                 <button type="button" class="boton-capa" id="escalaMenos" aria-label="Achicar 10 %">
@@ -112,6 +114,7 @@
 
             <!-- Paso 2: impresora y calidad -->
             <section class="pantalla" data-paso="2" hidden>
+                <p class="aviso" id="lineaTorre" hidden></p>
                 <h2>Impresora</h2>
                 <div id="impresoraElegida"></div>
                 <button class="boton" id="cambiarImpresora">Cambiar impresora</button>
@@ -561,6 +564,48 @@
 
                 <p class="aviso error" id="errorLitofania" hidden></p>
                 <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
+            </form>
+        </section>
+
+        <section class="hoja" id="hojaTorre" hidden aria-label="Torre de calibración">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1>Torre de calibración</h1>
+            </header>
+            <form class="contenido-hoja formulario" id="formTorre" novalidate>
+                <p class="nota">
+                    Una pieza de prueba para encontrar el mejor valor: cada bloque se imprime con uno distinto. Después
+                    elegí el bloque que quedó mejor.
+                </p>
+                <fieldset>
+                    <legend>Tipo</legend>
+                    <label class="opcion">
+                        <input type="radio" name="tipoTorre" value="temperatura" checked />
+                        <span><b>Temperatura</b><br /><small>Un bloque por temperatura de la boquilla.</small></span>
+                    </label>
+                    <label class="opcion">
+                        <input type="radio" name="tipoTorre" value="retraccion" />
+                        <span><b>Retracción</b><br /><small>Un bloque por distancia de retracción.</small></span>
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>Bloques (de abajo hacia arriba)</legend>
+                    <div class="dos">
+                        <label
+                            >Cantidad (3 a 8)
+                            <input name="bloques" type="number" inputmode="numeric" min="3" max="8" step="1"
+                        /></label>
+                        <label
+                            >Alto de cada uno (mm)
+                            <input name="alto" type="number" inputmode="decimal" min="6" max="15" step="1"
+                        /></label>
+                    </div>
+                    <div id="valoresTorre" class="valores-torre"></div>
+                    <p class="nota">Ya vienen los valores sugeridos para tu impresora y material: podés cambiarlos.</p>
+                </fieldset>
+                <p class="aviso" id="avisoTorreHoja" hidden></p>
+                <p class="aviso error" id="errorTorre" hidden></p>
+                <button type="submit" class="boton grande primario">Crear torre</button>
             </form>
         </section>
 

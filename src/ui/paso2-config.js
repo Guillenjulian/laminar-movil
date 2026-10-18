@@ -53,6 +53,20 @@ export function dibujarOpciones() {
     dibujarPersonalizar();
     avanzado?.dibujar();
     cambios?.dibujar();
+    dibujarTorre();
+}
+
+/** Línea informativa de la torre de calibración cargada; sus valores pisan Avanzado, el relleno y los cambios.
+ *  @returns {void} */
+function dibujarTorre() {
+    const t = estado.torre;
+    $('lineaTorre').hidden = !t;
+    $('cambiosAltura').hidden = !!t;
+    if (!t) return;
+    const tipo = t.tipo === 'temperatura' ? 'temperatura' : 'retracción';
+    $('lineaTorre').textContent =
+        `Torre de ${tipo}: ${t.resumen} (de abajo hacia arriba). La torre fija esos valores, el relleno y los ` +
+        'cambios por altura, y no usa soportes; calidad, material e impresora siguen siendo los tuyos.';
 }
 
 /** Tarjeta del material elegido (descripción, avisos y precio del rollo). @returns {void} */

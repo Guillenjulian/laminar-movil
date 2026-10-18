@@ -11,7 +11,7 @@
 import * as almacen from './almacen.js';
 import * as materialesUI from './ui/materiales.js';
 import { cargarPreferencias } from './ui/estado.js';
-import { iniciarNavegacion, mostrar } from './ui/navegacion.js';
+import { iniciarNavegacion, mostrar, alMostrarPaso } from './ui/navegacion.js';
 import { iniciarImpresoras } from './ui/impresoras.js';
 import { iniciarPaso2, dibujarOpciones } from './ui/paso2-config.js';
 import { iniciarPaso1, alCambiarImpresora, elegirOtroModelo, mostrarRecientes } from './ui/paso1-modelo.js';
@@ -31,6 +31,8 @@ iniciarImpresoras({
     },
 });
 iniciarPaso2();
+// Al entrar al paso 2 se redibuja: el modelo nuevo (y su torre, si es una) cambia lo que muestra.
+alMostrarPaso(paso => paso === 2 && dibujarOpciones());
 iniciarPaso3({ alTerminar: mostrarResultado });
 iniciarPaso4({ alOtroModelo: elegirOtroModelo });
 iniciarVistaCapas();

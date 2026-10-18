@@ -29,6 +29,7 @@ export const CONTRATOS = {
         importa: conBase(
             VISOR,
             'ui/litofania',
+            'ui/torres',
             FORMATO,
             MOTOR,
             'motor/transformar',
@@ -37,6 +38,10 @@ export const CONTRATOS = {
             'config',
             'ui/recientes',
         ),
+    },
+    'ui/torres': {
+        exports: { prepararTorre: 1 },
+        importa: ['perfiles/torres', PERFILES, MOTOR, 'ui/util-dom', FORMATO],
     },
     'ui/recientes': {
         exports: { iniciarRecientes: 1, mostrarRecientes: 0, programarGuardado: 0, guardarPendiente: 0 },
@@ -67,7 +72,10 @@ export const CONTRATOS = {
         exports: { iniciarVistaCapas: 0, armarVistaPrevia: 0 },
         importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config'),
     },
-    'ui/paso3-laminar': { exports: { iniciarPaso3: 1 }, importa: conBase(MOTOR, PERFILES, 'config') },
+    'ui/paso3-laminar': {
+        exports: { iniciarPaso3: 1 },
+        importa: conBase(MOTOR, PERFILES, 'perfiles/torres', 'config'),
+    },
     'ui/paso4-resultado': {
         exports: { iniciarPaso4: 1, mostrarResultado: 0 },
         importa: conBase('ui/vista-capas', 'ui/paso2-config', FORMATO, 'ui/materiales', 'motor/pausas', PERFILES),

@@ -6,6 +6,26 @@
     margin-top: 0;
 }
 
+/* Hoja "Torre de calibración": un campo por bloque. */
+.valores-torre {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+.valores-torre label,
+.valores-torre label > span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.valores-torre label {
+    justify-content: space-between;
+}
+.valores-torre input {
+    width: 6rem;
+}
+
 /* Vista de la foto elegida. */
 .foto-litofania {
     margin: 0;
