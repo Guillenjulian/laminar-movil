@@ -133,10 +133,17 @@ export async function probarSoportesGanchos(ctx) {
         ...SOPORTES,
     });
     revisarLlamadas(ctx, r);
+    // Sin zonas el puente real no cambia nada; con zonas el G-code cambia (las zonas se restan de verdad).
+    const sinZonas = await ctx.laminar({ piezas: [{ caso: 'te', posiciones: POS, bloqueos: [] }], ...SOPORTES });
     ctx.revisar(
-        'c. el G-code con ganchos es idéntico al de una corrida sin ganchos (salvo la fecha de la línea 2)',
-        sinFecha(r.gcode) === sinFecha(ref.gcode),
-        `${r.gcode.length} caracteres, ${r.gcode.split('\n').length} líneas`,
+        'c. sin zonas el G-code con ganchos es idéntico al de una corrida sin ganchos (salvo la fecha de la línea 2)',
+        sinFecha(sinZonas.gcode) === sinFecha(ref.gcode),
+        `${sinZonas.gcode.length} caracteres, ${sinZonas.gcode.split('\n').length} líneas`,
     );
-    await revisarCasosLimite(ctx, r);
+    ctx.revisar(
+        'con zonas el G-code cambia (se restan de la sombra)',
+        sinFecha(r.gcode) !== sinFecha(ref.gcode),
+        `${r.gcode.length} caracteres`,
+    );
+    await revisarCasosLimite(ctx, sinZonas);
 }
