@@ -57,12 +57,18 @@ function medirArea(v) {
     return area;
 }
 
-function agrupar(v, celda, { min, max }) {
+function agrupar(v, celda, caja) {
+    const { indice, sumas, cuenta } = asignarCeldas(v, celda, caja);
+    const tris = armarTriangulos(indice);
+    return { vertices: promediar(tris, sumas, cuenta), triangulos: tris.length / 3 };
+}
+
+// 1. Asigna cada vértice a su celda y acumula posiciones para promediar.
+// Devuelve el índice de celda de cada vértice, la suma de posiciones y la cuenta por celda.
+function asignarCeldas(v, celda, { min, max }) {
     const inv = 1 / celda;
     const nx = Math.floor((max[0] - min[0]) * inv) + 1;
     const ny = Math.floor((max[1] - min[1]) * inv) + 1;
-
-    // 1. Asignar cada vértice a su celda y acumular posiciones para promediar.
     const celdas = new Map(); // clave de celda -> índice de vértice nuevo
     let sumas = new Float64Array(3 * 1024);
     let cuenta = new Uint32Array(1024);
@@ -78,12 +84,8 @@ function agrupar(v, celda, { min, max }) {
             celdas.set(clave, id);
             if (id >= cuenta.length) {
                 // agrandar los arreglos al doble
-                const s = new Float64Array(sumas.length * 2);
-                s.set(sumas);
-                sumas = s;
-                const c = new Uint32Array(cuenta.length * 2);
-                c.set(cuenta);
-                cuenta = c;
+                sumas = duplicar(sumas, Float64Array);
+                cuenta = duplicar(cuenta, Uint32Array);
             }
         }
         sumas[id * 3] += v[i];
@@ -92,8 +94,18 @@ function agrupar(v, celda, { min, max }) {
         cuenta[id]++;
         indice[j] = id;
     }
+    return { indice, sumas, cuenta };
+}
 
-    // 2. Rearmar triángulos, salteando los degenerados y los repetidos.
+// Copia el arreglo en otro del doble de largo.
+function duplicar(arreglo, Tipo) {
+    const nuevo = new Tipo(arreglo.length * 2);
+    nuevo.set(arreglo);
+    return nuevo;
+}
+
+// 2. Rearma los triángulos, salteando los degenerados y los repetidos.
+function armarTriangulos(indice) {
     const vistos = new Set();
     const tris = [];
     for (let j = 0; j < indice.length; j += 3) {
@@ -106,8 +118,11 @@ function agrupar(v, celda, { min, max }) {
         vistos.add(ordenados);
         tris.push(a, b, c);
     }
+    return tris;
+}
 
-    // 3. Escribir el resultado con las posiciones promedio.
+// 3. Escribe el resultado con las posiciones promedio de cada celda.
+function promediar(tris, sumas, cuenta) {
     const salida = new Float32Array(tris.length * 3);
     for (let t = 0; t < tris.length; t++) {
         const id = tris[t],
@@ -116,5 +131,5 @@ function agrupar(v, celda, { min, max }) {
         salida[t * 3 + 1] = sumas[id * 3 + 1] / n;
         salida[t * 3 + 2] = sumas[id * 3 + 2] / n;
     }
-    return { vertices: salida, triangulos: tris.length / 3 };
+    return salida;
 }

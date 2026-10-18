@@ -103,6 +103,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración → STL binario |
 | `recorridos.worker.js` | G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa |
 | `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
+| `formatos-3mf.js` | Lector de 3MF (`leer3MF`, `leerXML3MF`); `formatos.js` lo re-exporta |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |
 | `piezas.js` | Varias piezas o copias (ADR 0003): `acomodar` (estantes en la cama), `repartirTriangulos` y `validarCantidad`; funciones puras, sin imports |
 | `preparar-piezas.js` | `prepararPiezas` (ADR 0003): lee, transforma, decima (tope repartido), centra y replica por copia; valida la cama. Exporta `centrar` (la usa el worker). No importa Kiri |
@@ -205,7 +206,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Altura variable sin subir Z | parche de `slice.js` en `vendor-kiri.mjs` |
 | La pausa cae en un lugar raro | `recorridos.worker.js` (`pausaCapa`) y `pausas.js` |
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `preparar-piezas.js` (`centrar`) |
-| Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
+| Un archivo no abre | `formatos.js` y `formatos-3mf.js` (mensajes de error) y `convertir.worker.js` |
 | Un botón del paso 1 no responde | `iniciarPaso1()` en `src/ui/paso1-modelo.js` |
 | Escala, rotación, apoyar cara o los avisos del modelo fallan | `crearAjuste()` en `src/ui/ajuste-modelo.js` |
 | Un modelo cargado no aparece en `estado` (los accesores no escriben) | `montarModelo()` en `src/ui/paso1-modelo.js` y `crearPieza()` en `src/ui/estado.js` |
@@ -226,7 +227,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - ESLint 9.x está deprecado: migrar a ESLint 10.
-- Warnings de `npm run lint` (10, 0 errores; no bloquean). Funciones: `generarLitofania` (`src/motor/litofania.js`), `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`), `agrupar` (`src/motor/decimar.js`), `leerOBJ` y `leerXML3MF` (`src/motor/formatos.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
+- Warnings de `npm run lint` (6, 0 errores; no bloquean). Funciones: `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
 - `src/perfiles/perfiles.js` tiene 310 líneas físicas (el lint no lo marca porque no cuenta blancos ni comentarios): dividir antes de agregarle algo (por ejemplo, sacar `idVigente`, `reemplaza` y la búsqueda de impresoras a `impresoras-catalogo.js`).
 - Piezas y copias (ADR 0003):
   - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).
