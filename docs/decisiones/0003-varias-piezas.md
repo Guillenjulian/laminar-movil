@@ -6,7 +6,11 @@
 
 ## Estado
 
-Propuesto
+Aceptado con cambios (CTO, 2026-10-18). Cambio del CTO: el riesgo R1 se mide **antes** de construir la UI. Se suma
+**T0** (dev motor, ola 1, en paralelo con T1–T3): prueba en el Kiri real con dos widgets en `track.pos` distintos y
+falda, borde, balsa y soportes, que verifica en el G-code que cada pieza y sus extras caen en su posición. Si falla,
+T4 desplaza los vértices en `prepararPiezas` y los widgets van con `pos` en cero (plan B de R1); el contrato del
+mensaje al worker no cambia.
 
 ## Contexto
 
