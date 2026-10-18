@@ -5,7 +5,7 @@
 // Igual que "Personalizar": en `estado.avanzado` se guarda SÓLO lo que el
 // usuario cambió (ej. { jarron: true, tempBoquilla: 215 }); el resto sale de la
 // impresora, la calidad y el material elegidos (ver valoresDeAvanzado en
-// perfiles.js). estado.js lo guarda con las preferencias (IndexedDB) y se lo pasa
+// perfiles.js). estado.js lo guarda con las preferencias (IndexedDB) y paso3-laminar.js lo pasa
 // a armarConfiguracion como `personal.avanzado`, que lo traduce a claves de Kiri.
 
 import { buscarImpresora, valoresDeAvanzado, COSTURAS } from '../perfiles/perfiles.js';
