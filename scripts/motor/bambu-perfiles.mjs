@@ -27,6 +27,7 @@ const TABLA = {
 };
 // Variables que Kiri reemplaza en el G-code (vendor/kiri/src/kiri/mode/fdm/work/export.js, `subst` y `subst.layer`).
 // Una desconocida no falla: Kiri la reemplaza por 0 sin avisar, por eso se revisa el JSON.
+// Es un subconjunto a propósito (las que usan los perfiles): si un perfil necesita otra que Kiri conoce, sumala acá.
 const VARIABLES_KIRI = new Set([
     'minx',
     'maxx',

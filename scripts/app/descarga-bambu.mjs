@@ -194,9 +194,14 @@ async function revisarEnder(ctx) {
         (await archivosArmados(pagina)) === 0,
         `${await archivosArmados(pagina)} archivos`,
     );
-    const { nombre, bytes } = await descargar(ctx);
-    revisar('Ender: se arma al tocar Descargar', (await archivosArmados(pagina)) === 1);
-    await pagina.evaluate(() => (window.File = window.__FileOriginal));
+    let descarga;
+    try {
+        descarga = await descargar(ctx);
+        revisar('Ender: se arma al tocar Descargar', (await archivosArmados(pagina)) === 1);
+    } finally {
+        await pagina.evaluate(() => (window.File = window.__FileOriginal));
+    }
+    const { nombre, bytes } = descarga;
     const texto = bytes.toString('utf8');
     revisar('Ender: la descarga sigue llamándose *.gcode', nombre === `${NOMBRE}.gcode`, nombre);
     revisar(
