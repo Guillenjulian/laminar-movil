@@ -108,7 +108,7 @@ if (process.sliceSupportTree) {
 }
 // ->
 // PARCHE laminar-movil: soportes árbol (ADR 0004)
-const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol(stack, widget.anno?.bloqueos, {
+const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
     lineWidth, sliceHeight, angulo: process.sliceSupportAngle,
 });
 
@@ -118,7 +118,7 @@ for (let slice of stack.slice().reverse()) {
 for (let slice of arbolListo ? [] : stack.slice().reverse()) { // PARCHE laminar-movil
 
 // C. Antes de "// pump shadow to clean to clean it up"
-shadow = globalThis.laminarMovil?.sinBloqueos(shadow, slice.z, widget.anno?.bloqueos) ?? shadow; // PARCHE laminar-movil
+shadow = globalThis.laminarMovil?.sinBloqueos?.(shadow, slice.z, widget.anno?.bloqueos, minArea) ?? shadow; // PARCHE laminar-movil
 ```
 
 ### 2. Bloqueo de soportes por zona
@@ -309,8 +309,16 @@ export function instalarGanchosSoportes() {}
 //   stack: slices de Kiri de abajo hacia arriba; usa slice.z, slice.shadow y slice.topPolys().
 //   Escribe slice.supports en cada una y devuelve true; si no hay voladizos devuelve true igual
 //   (todas las capas con supports = []). Devuelve false sólo si falló, y entonces Kiri sigue con 'automatic'.
-// globalThis.laminarMovil.sinBloqueos(shadow, z, bloqueos) -> Polygon[]
-//   Resta seccionBloqueos(bloqueos, z) a `shadow` (con POLY.subtract). Sin bloqueos devuelve `shadow` tal cual.
+//   Cuando devuelve true, el bucle de Kiri no corre y `sinBloqueos` NO se llama: el árbol respeta las zonas por su
+//   cuenta (no siembra ni pasa por ellas, y poda lo que queda colgado). Los dos ganchos se llaman con `?.`.
+// globalThis.laminarMovil.sinBloqueos(shadow, z, bloqueos, minArea) -> Polygon[]
+//   Resta seccionBloqueos(bloqueos, z) a `shadow` (con POLY.subtract y el `minArea` = lineWidth² del bucle de Kiri,
+//   que el parche pasa como cuarto argumento). Sin bloqueos devuelve `shadow` tal cual.
+// Registro de llamadas: en producción no se registra nada. Sólo con `proceso.laminarDiagnostico` (que pone solamente
+//   prueba-motor.html; el worker la quita del proceso antes de Kiri) se guardan y viajan en `info.ganchos`.
+// src/motor/bloqueos.js (T4): + `radioSeccion(bloqueo, z) -> number` (√(R²−dz²), 0 si |dz| ≥ R), `LADOS_SECCION = 16` y
+//   `FACTOR_SECCION` (1/cos(π/16)); la sección es el `circulo` de geometria-2d (único dueño) con el radio agrandado
+//   (circunscripto). El árbol (`tocaBloqueo`) usa `radioSeccion × FACTOR_SECCION`: ningún círculo suyo cae en la sección.
 
 // src/perfiles/soportes.js
 /** @typedef {'no'|'normal'|'arbol'} TipoSoporte */
@@ -467,8 +475,8 @@ la tabla de módulos (ningún módulo de `src/motor/` importa `ui/`; los puros n
 | R3 | Los parches se rompen con una actualización de Kiri (anclas de texto) | `parchar` falla fuerte si no encuentra el texto; T0 los prueba; el puente, si no está instalado o devuelve `false`, deja a Kiri con `'automatic'` (degradación suave). |
 | R4 | Memoria en celu de gama baja con modelos altos | Tope `maxNodos`, círculos de 8 lados y sin unión de polígonos; salida estimada < 25 MB. El tope de triángulos (ADR 0003) sigue mandando. Se mide en T7 (pico del worker con la malla pesada). |
 | R5 | `widget.anno` no llega a `processSupports` en el flujo `sync` → `slice`, o `slice.z` no es local | T0 lo comprueba en la prueba (b) y (d) antes de construir. Plan B: pasar los bloqueos por `settings.process.laminarBloqueos` por widget (`process` sí llega), con el mismo contrato de datos. |
-| R6 | Un voladizo dentro de una zona sin soporte se imprime en el aire y falla | Aviso en la UI cuando la esfera toca el cuerpo: "Si el voladizo queda dentro, esa parte se imprime sin apoyo." (la UI conoce el centro y el radio; no calcula contra la malla). |
-| R7 | El punto tocado no está en el marco de la pieza que esperamos (la malla del visor no está centrada como `centrar()`) | T3 lo prueba con una pieza girada y copias en dos posiciones; si difiere, `alTocarPunto` corrige restando el centro de la caja de la malla. |
+| R6 | Un voladizo dentro de una zona sin soporte se imprime en el aire y falla | T4: con 'normal' el voladizo queda sin soporte dentro de la esfera (probado por coordenadas); con 'arbol' los troncos sin camino se podan. Aviso en la UI cuando la esfera toca el cuerpo: "Si el voladizo queda dentro, esa parte se imprime sin apoyo." (la UI conoce el centro y el radio; no calcula contra la malla). |
+| R7 | (T4: el motor aplica las zonas en el marco local de cada copia; probado con dos copias, en coordenadas absolutas = centro + posición + local.) El punto tocado no está en el marco de la pieza que esperamos (la malla del visor no está centrada como `centrar()`) | T3 lo prueba con una pieza girada y copias en dos posiciones; si difiere, `alTocarPunto` corrige restando el centro de la caja de la malla. |
 | R8 | `soportes` quedó como boolean en algún consumidor no listado (`'no'` es verdadero en JS) | T6 recorre `grep -rn soportes src scripts`; la prueba de `tipo.mjs` y la de estado cubren los consumidores conocidos (`paso2-config`, `paso3`, `paso4`, `estado`, `perfiles`, tarjeta del material). |
 | R9 | Cancelar durante `planificarArbol` | Es sincrónico y corto (< 1 s con los topes); el cancelar del laminado ya corta entre capas de Kiri. Si midiéramos más, se parte el trabajo y se cede al worker cada N capas. |
 
