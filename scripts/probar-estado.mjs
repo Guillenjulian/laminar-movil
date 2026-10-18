@@ -81,6 +81,67 @@ function paraMotor(e, chequear) {
     e.estado.piezas = [];
 }
 
+/** Pieza cúbica de `lado` mm (escala opcional) para las pruebas de acomodo. */
+function cubo(e, lado, escala = 1) {
+    return e.crearPieza({
+        nombre: 'c',
+        stl: buf(),
+        vista: { triangulos: 12, tamano: { x: lado, y: lado, z: lado } },
+        transformacion: { rotacion: transformar.identidad(), escala },
+    });
+}
+
+/** acomodarPiezas: cubos de 20 mm en la Ender 3 V3 SE (cama 220 × 220, separación 10 mm), valores exactos. */
+function acomodo(e, a, chequear) {
+    const { estado } = e;
+    estado.impresoraId = 'creality-ender-3-v3-se';
+    estado.piezas = [cubo(e, 20)];
+    const uno = a.acomodarPiezas();
+    chequear(
+        uno.entra && uno.fuera.length === 0 && estado.entra && mismo(estado.piezas[0].posiciones, [{ x: 0, y: 0 }]),
+        'acomodarPiezas: 1 pieza da [{0,0}] y entra',
+    );
+    const dos = cubo(e, 20);
+    estado.piezas = [cubo(e, 20), dos];
+    chequear(
+        a.acomodarPiezas().entra &&
+            mismo(estado.piezas[0].posiciones, [{ x: -15, y: 0 }]) &&
+            mismo(dos.posiciones, [{ x: 15, y: 0 }]),
+        'acomodarPiezas: 2 cubos de 20 mm en 220: centros (-15, 0) y (15, 0)',
+    );
+    estado.piezas = [cubo(e, 20, 2), cubo(e, 20, 2)];
+    chequear(
+        a.acomodarPiezas().entra && mismo(estado.piezas[1].posiciones, [{ x: 25, y: 0 }]),
+        'acomodarPiezas: con escala 2 (40 mm) sigue entrando, centros (-25, 0) y (25, 0)',
+    );
+    acomodoCopias(e, a, chequear);
+}
+
+/** acomodarPiezas: copias, lo que no entra y el caso sin piezas. */
+function acomodoCopias(e, a, chequear) {
+    const { estado } = e;
+    const copias = cubo(e, 20);
+    copias.copias = 3;
+    estado.piezas = [copias];
+    chequear(
+        a.acomodarPiezas().entra &&
+            mismo(copias.posiciones, [
+                { x: -30, y: 0 },
+                { x: 0, y: 0 },
+                { x: 30, y: 0 },
+            ]),
+        'acomodarPiezas: 3 copias de una pieza: una posición por copia',
+    );
+    estado.piezas = [cubo(e, 200), cubo(e, 200)];
+    const grande = a.acomodarPiezas();
+    chequear(
+        !grande.entra && !estado.entra && grande.fuera.length > 0,
+        'acomodarPiezas: 200 mm más 200 mm no entra en 220 (fuera: ' + grande.fuera + ')',
+    );
+    estado.piezas = [];
+    chequear(a.acomodarPiezas().entra && estado.entra, 'acomodarPiezas: sin piezas entra');
+}
+
 /**
  * Corre las pruebas de estado.
  * @param {(ok:boolean, texto:string) => void} chequear
@@ -92,4 +153,5 @@ export async function probarEstado(chequear, cargar) {
     sinPieza(e, chequear);
     conPiezas(e, chequear);
     paraMotor(e, chequear);
+    acomodo(e, await cargar('/src/ui/acomodo.js'), chequear);
 }

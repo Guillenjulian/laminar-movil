@@ -5,7 +5,7 @@
 // avisa con `alTerminar` (que carga el paso 4) y después va al paso 4 reemplazando el historial.
 //
 // Flujo: #laminar -> empezarLaminado -> configuracionActual (desde estado) -> prepararPantallaLaminado
-// (paso 3, progreso en 0) -> AbortController + mantenerPantalla -> ejecutarLaminado (motor, con
+// (paso 3, progreso en 0) -> acomodarPiezas (si no entran: error y no lamina) -> AbortController + mantenerPantalla -> ejecutarLaminado (motor, con
 // alProgresar = ponerProgreso) -> estado.resultado -> alTerminar() -> irA(4, reemplazar).
 // Error: se muestra el mensaje y el botón pasa a "Volver". #cancelar aborta y vuelve atrás.
 // Importarlo no toca el DOM: los manejadores se registran en `iniciarPaso3`.
@@ -15,7 +15,8 @@ import { validarCambios } from '../perfiles/cambios.js';
 import { armarConfiguracion } from '../perfiles/perfiles.js';
 import { configuracionDeTorre } from '../perfiles/torres.js';
 import { maxTriangulos } from '../config.js';
-import { estado, matrizModelo } from './estado.js';
+import { acomodarPiezas } from './acomodo.js';
+import { estado, piezasParaMotor } from './estado.js';
 import { irA } from './navegacion.js';
 import { $ } from './util-dom.js';
 
@@ -93,17 +94,16 @@ function prepararPantallaLaminado() {
 }
 
 /**
- * Corre el motor sobre una copia del STL y arma el resultado (gcode, info, avisos, nombre de archivo).
+ * Corre el motor sobre las piezas ya acomodadas y arma el resultado (gcode, info, avisos, nombre de archivo).
  * @param {{dispositivo: object, proceso: object, avisos: string[], cambios: object[], signal: AbortSignal}} config
  * @returns {Promise<object>} lo que devuelve `laminar`, más `avisos`, `archivo` e `impresoraId`.
  */
 async function ejecutarLaminado({ dispositivo, proceso, avisos, cambios, signal }) {
     const r = await laminar({
-        stl: estado.stl.slice(0), // copia: el original queda para volver a laminar
+        piezas: piezasParaMotor(), // copias de los STL: los originales quedan para volver a laminar
         dispositivo,
         proceso,
         maxTriangulos: maxTriangulos(),
-        transformacion: matrizModelo(),
         alProgresar: ponerProgreso,
         signal,
     });
@@ -119,6 +119,18 @@ async function ejecutarLaminado({ dispositivo, proceso, avisos, cambios, signal 
 }
 
 /**
+ * Muestra el error en la pantalla de laminado y deja el botón como "Volver".
+ * @param {string} mensaje
+ * @returns {void}
+ */
+function mostrarError(mensaje) {
+    $('tituloLaminando').textContent = 'No se pudo laminar';
+    $('errorLaminado').textContent = mensaje;
+    $('errorLaminado').hidden = false;
+    $('cancelar').textContent = 'Volver';
+}
+
+/**
  * Flujo completo del laminado: prepara la pantalla, lanza el motor con cancelación y bloqueo de
  * pantalla, guarda el resultado y avisa a `alTerminar`. Si falla muestra el error; si se canceló, no hace nada más.
  * @param {() => void} alTerminar  se llama con `estado.resultado` ya cargado.
@@ -127,6 +139,10 @@ async function ejecutarLaminado({ dispositivo, proceso, avisos, cambios, signal 
 async function empezarLaminado(alTerminar) {
     const config = configuracionActual();
     prepararPantallaLaminado();
+    if (!acomodarPiezas().entra) {
+        mostrarError('Las piezas no entran en la cama. Probá con menos copias o más chicas.');
+        return;
+    }
 
     estado.cancelar = new AbortController();
     const bloqueo = await mantenerPantalla();
@@ -136,10 +152,7 @@ async function empezarLaminado(alTerminar) {
         irA(4, { reemplazar: true }); // así "atrás" desde el resultado vuelve a la configuración
     } catch (err) {
         if (err.name === 'AbortError') return;
-        $('tituloLaminando').textContent = 'No se pudo laminar';
-        $('errorLaminado').textContent = err.message;
-        $('errorLaminado').hidden = false;
-        $('cancelar').textContent = 'Volver';
+        mostrarError(err.message);
     } finally {
         bloqueo?.release();
         estado.cancelar = null;

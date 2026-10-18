@@ -43,6 +43,10 @@ export const CONTRATOS = {
             'ui/piezas-ui',
         ),
     },
+    'ui/acomodo': {
+        exports: { acomodarPiezas: 0 },
+        importa: ['config', 'motor/piezas', 'motor/transformar', PERFILES, 'ui/estado'],
+    },
     'ui/ajuste-modelo': {
         exports: { crearAjuste: 1 },
         importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/transformar', PERFILES, 'config'],
@@ -95,7 +99,7 @@ export const CONTRATOS = {
     },
     'ui/paso3-laminar': {
         exports: { iniciarPaso3: 1 },
-        importa: conBase(MOTOR, PERFILES, 'perfiles/cambios', 'perfiles/torres', 'config'),
+        importa: conBase(MOTOR, PERFILES, 'perfiles/cambios', 'perfiles/torres', 'config', 'ui/acomodo'),
     },
     'ui/paso4-resultado': {
         exports: { iniciarPaso4: 1, mostrarResultado: 0 },

@@ -4,10 +4,16 @@
 // activa y con el foco); su escala se ve en #datosModelo (que sale del visor) y en una captura del visor;
 // tocar la chip 1 la vuelve activa y la escala muestra la suya; quitar la 2 vuelve a una pieza sin chips
 // (el visor ya no la dibuja y el foco va a "Agregar pieza"). Después: quitar la activa cuando es la primera,
-// el tope de MAX_PIEZAS (8) y que con una torre no se vea "Agregar pieza".
+// el tope de MAX_PIEZAS (8) y que con una torre no se vea "Agregar pieza". Al final (T9), laminado: 2 cubos
+// se laminan acomodados (2 grupos de extrusión en la capa 2, en las X de `acomodar`, y "2 piezas" en el
+// resumen) y uno agrandado hasta que no entra da el error "Las piezas no entran en la cama" sin laminar.
 //
 // Precondición: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
 // Deja: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
+
+import fs from 'node:fs';
+import { acomodar } from '../../src/motor/piezas.js';
+import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarPiezas(ctx) {
@@ -15,6 +21,8 @@ export async function probarPiezas(ctx) {
     await probarQuitar(ctx);
     await probarTope(ctx);
     await probarTorre(ctx);
+    await probarLaminarVarias(ctx);
+    await probarNoEntra(ctx);
 }
 
 const chips = pagina => pagina.locator('#listaPiezas .chip');
@@ -148,4 +156,81 @@ async function probarTorre({ page: pagina, ok: revisar, visible, elegirArchivo }
     revisar('con una torre no se ve "Agregar pieza"', !(await visible('#agregarPieza')));
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
     revisar('de vuelta al cubo: vuelve "Agregar pieza"', await visible('#agregarPieza'));
+}
+
+const CAMA = 220; // Ender 3 V3 SE, origen en la esquina: el centro de la cama es (110, 110)
+
+/** X de las extrusiones de la capa `n` del G-code (coordenadas de cama). */
+function xDeCapa(gcode, n) {
+    const xs = [];
+    let dentro = false;
+    let x = 0;
+    for (const l of gcode.split('\n')) {
+        const capa = l.match(/^;LAYER:(\d+)/);
+        if (capa) dentro = +capa[1] === n;
+        if (!/^G[01] /.test(l)) continue;
+        x = +(l.match(/ X(-?[\d.]+)/)?.[1] ?? x);
+        if (dentro && /^G1 .*[XY].* E\d/.test(l)) xs.push(x);
+    }
+    return xs;
+}
+
+/** Con 2 cubos de 20 mm: lamina, y revisa los 2 grupos de extrusión de la capa 2 y el resumen del paso 4. */
+async function probarLaminarVarias({ page: pagina, ok: revisar, esperarResultado }) {
+    await pagina.tap('#agregarEjemplo');
+    await pagina.waitForFunction(() => document.querySelectorAll('#listaPiezas .chip').length === 2);
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await esperarResultado();
+    const [descarga] = await Promise.all([pagina.waitForEvent('download'), pagina.tap('#descargar')]);
+    const huella = { x: 20, y: 20 };
+    const esperado = acomodar([huella, huella], { x: CAMA, y: CAMA }, SEPARACION_PIEZAS_MM).posiciones;
+    const xs = xDeCapa(fs.readFileSync(await descarga.path(), 'utf8'), 2);
+    const centros = esperado.map(p => CAMA / 2 + p.x);
+    const grupos = centros.map(c => xs.filter(x => Math.abs(x - c) < 11));
+    revisar(
+        'varias piezas G-code: la capa 2 tiene extrusiones y todas caen en uno de los 2 grupos',
+        xs.length > 0 && grupos[0].length + grupos[1].length === xs.length && grupos.every(g => g.length > 0),
+        `${xs.length} extrusiones, grupos ${grupos.map(g => g.length)}`,
+    );
+    revisar(
+        'varias piezas G-code: cada grupo ocupa su cubo de 20 mm, centrado en la X de acomodar',
+        grupos.every((g, i) => Math.min(...g) >= centros[i] - 10.5 && Math.max(...g) <= centros[i] + 10.5) &&
+            grupos.every(g => Math.max(...g) - Math.min(...g) > 15),
+        grupos.map((g, i) => `${Math.min(...g)}..${Math.max(...g)} (centro ${centros[i]})`).join(' | '),
+    );
+    const resumen = await pagina.textContent('#resumen');
+    revisar('varias piezas: el resumen del paso 4 dice "2 piezas"', /2 piezas/.test(resumen), resumen);
+    await pagina.goBack();
+    await pagina.goBack();
+}
+
+/** Agranda la pieza 2 hasta que el conjunto no entra: aparece el error y el laminado no arranca. */
+async function probarNoEntra({ page: pagina, ok: revisar, visible }) {
+    await pagina.fill('#escala', '1000'); // 20 mm -> 200 mm: cada una entra sola, juntas no
+    await pagina.locator('#escala').blur();
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
+    revisar(
+        'varias piezas: si no entran, error "Las piezas no entran en la cama…"',
+        /^Las piezas no entran en la cama/.test(await pagina.textContent('#errorLaminado')),
+        await pagina.textContent('#errorLaminado'),
+    );
+    revisar(
+        'varias piezas: si no entran no se lamina (sigue en el paso 3, en 0 %, sin resultado)',
+        (await visible('section[data-paso="3"]')) &&
+            (await pagina.textContent('#porcentaje')) === '0 %' &&
+            (await pagina.textContent('#cancelar')) === 'Volver' &&
+            !(await visible('section[data-paso="4"]')),
+    );
+    await pagina.tap('#cancelar');
+    await pagina.goBack();
+    await pagina.tap('#restablecerModelo');
+    await pagina.tap('#listaPiezas li:nth-child(2) .chip-quitar');
+    revisar(
+        'varias piezas: restaurado un cubo de 20 mm a 100 %',
+        (await pagina.inputValue('#escala')) === '100' && (await medidas(pagina)) === '20,0 × 20,0 × 20,0 mm',
+        await medidas(pagina),
+    );
 }

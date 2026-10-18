@@ -13,7 +13,7 @@ import { alMostrarPaso } from './navegacion.js';
 
 const ESPERA_MS = 500;
 let temporizador = null;
-let pendiente = null; // { nombre, bytes, transformacion } captado al programar
+const pendientes = new Map(); // 'nombre|bytes' -> { nombre, bytes, transformacion } captado al programar
 
 /**
  * Cablea la lista de recientes (abrir y borrar) y el guardado pendiente al salir.
@@ -61,16 +61,18 @@ export async function mostrarRecientes() {
 }
 
 /**
- * Programa el guardado de rotación y escala del modelo actual en su reciente (500 ms después del
- * último cambio). Capta los valores ahora, así cambiar de modelo antes no los mezcla.
+ * Programa el guardado de rotación y escala de todas las piezas (ADR 0003, sección 5) en sus recientes
+ * (500 ms después del último cambio). Capta los valores ahora, así cambiar de modelo antes no los mezcla.
+ * Las copias no se guardan. Con la misma clave (nombre y bytes) gana la última pieza.
  * @returns {void}
  */
 export function programarGuardado() {
     if (estado.torre) return; // la torre no entra en recientes
-    const { nombre, stl, rotacion, escala } = estado;
-    const bytes = stl.byteLength;
-    if (pendiente && (pendiente.nombre !== nombre || pendiente.bytes !== bytes)) guardarPendiente(); // otro modelo
-    pendiente = { nombre, bytes, transformacion: { rotacion, escala } };
+    for (const p of estado.piezas.filter(q => q.origen === 'modelo')) {
+        const bytes = p.stl.byteLength;
+        const transformacion = { rotacion: [...p.rotacion], escala: p.escala };
+        pendientes.set(`${p.nombre}|${bytes}`, { nombre: p.nombre, bytes, transformacion });
+    }
     clearTimeout(temporizador);
     temporizador = setTimeout(guardarPendiente, ESPERA_MS);
 }
@@ -81,7 +83,7 @@ export function programarGuardado() {
  */
 export function guardarPendiente() {
     clearTimeout(temporizador);
-    const p = pendiente;
-    pendiente = null;
-    if (p) almacen.guardarTransformacion(p.nombre, p.bytes, p.transformacion).catch(() => {});
+    const lista = [...pendientes.values()];
+    pendientes.clear();
+    for (const p of lista) almacen.guardarTransformacion(p.nombre, p.bytes, p.transformacion).catch(() => {});
 }
