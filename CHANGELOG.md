@@ -9,7 +9,20 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Agregado
 
-- Sprint 0 de salud del código: ESLint + Prettier, división de main.js, CI en GitHub Actions
+- ESLint y Prettier, con `npm run lint`, `lint:fix`, `format` y `format:check`.
+- CI en GitHub Actions: build, lint, formato y las suites de prueba en cada PR y en cada push a `main`.
+- Prueba de contratos de los módulos de `src/ui/` (`npm run test:contratos`).
+- ADR 0001 (`docs/decisiones/0001-dividir-main.md`): división de `main.js`.
+
+### Cambiado
+
+- `main.js` dividido en 10 módulos de `src/ui/` (de 1007 a 68 líneas).
+- `probar-app.mjs` dividido por área en `scripts/app/`, con helpers en `scripts/lib/`.
+- Código formateado con Prettier.
+
+### Corregido
+
+- `materiales.js` ya no registra listeners al importarse.
 
 ## [0.1.0] - 2026-10-18
 

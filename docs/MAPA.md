@@ -2,6 +2,7 @@
 
 > **Para qué sirve:** ubicar rápido dónde está cada cosa sin leer todo el código.
 > **Regla:** todo cambio que agregue, mueva o borre un módulo actualiza este mapa en el mismo commit.
+> **Decisiones de arquitectura:** están en [`docs/decisiones/`](decisiones/). La división de `src/main.js` es el [ADR 0001](decisiones/0001-dividir-main.md).
 
 ## 1. Flujo general
 
@@ -27,10 +28,18 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | Archivo | Responsabilidad | Depende de |
 |---|---|---|
 | `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
-| `src/main.js` | Punto de entrada (~70 líneas): inicializa en orden los módulos de `src/ui/`, cablea sus callbacks y registra el service worker (ADR 0001) | `ui/*` (todos los módulos de pasos, `estado`, `navegacion`, `util-dom`, `materiales`), `almacen` |
+| `src/main.js` | Punto de entrada: inicializa los módulos de `src/ui/` en orden (ver ADR 0001) | `almacen` y los módulos de `src/ui/` que inicializa (ver grafo abajo) |
+| `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
+| `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config` |
+| `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda), su tarjeta y "Mi impresora" (formulario, copiar, editar, borrar) | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
+| `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
+| `src/ui/paso3-laminar.js` | Lanza el laminado, muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `config` |
+| `src/ui/paso4-resultado.js` | Resumen del resultado, avisos y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles` |
+| `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción) y pausas de filamento | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config` |
+| `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Todavía no lo usa `main.js` (R4 pendiente, ver sección 6) | `util-dom` |
 | `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
@@ -41,6 +50,20 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/config.js` | Límites que dependen de la memoria del equipo (triángulos, tramos de la vista previa) | — |
 | `src/sw.js` | Service worker (offline). `vite.config.js` le inyecta la lista de archivos | — |
 | `src/estilos*.css` | Estilos: base + uno por área (formatos, materiales, avanzado) | — |
+
+Grafo de dependencias de `src/ui/` (ADR 0001, sección 2; `A → B` = A importa B):
+
+```
+Nivel 5   main.js ──► (todos los de abajo)
+Nivel 4   paso4-resultado ──► vista-capas, paso2-config
+Nivel 3   paso2-config ──► impresoras
+Nivel 2   paso1-modelo   impresoras   vista-capas   paso3-laminar   ──► navegacion
+Nivel 1   navegacion ──► estado
+Nivel 0   estado, util-dom, actualizacion  ──► hojas ya existentes (avanzado, formato, materiales,
+                                              litofania, visor, motor/*, perfiles/*, almacen, config)
+```
+
+La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contratos` la verifica y detecta ciclos.
 
 ### Motor (`src/motor/`)
 
@@ -74,6 +97,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano.** Los parches están en el script y marcados `PARCHE laminar-movil`. Detalle en `vendor/kiri/ORIGEN.md`.
 
 ## 3. Estado (`estado` en src/ui/estado.js)
+
+`estado` vive en `src/ui/estado.js`. Los módulos de la interfaz lo importan (un solo objeto, por referencia) y lo leen en el momento; `cargarPreferencias` lo rellena al arrancar y `guardarPreferencias` / `guardarPropias` lo envían a IndexedDB.
 
 | Clave | Qué guarda | Se persiste |
 |---|---|---|
@@ -136,8 +161,21 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | La pausa cae en un lugar raro | `recorridos.worker.js` (`pausaCapa`) y `pausas.js` |
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `laminador.worker.js` (`centrar`) |
 | Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
+| Un botón del paso 1 no responde | `iniciarPaso1()` en `src/ui/paso1-modelo.js` |
+| Un botón del paso 2 no responde o una opción no se redibuja | `iniciarPaso2()` y `dibujarOpciones()` en `src/ui/paso2-config.js` |
+| Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
+| Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |
+| La vista previa por capas no responde | `iniciarVistaCapas()` en `src/ui/vista-capas.js` |
+| No se puede elegir o guardar una impresora | `iniciarImpresoras()` en `src/ui/impresoras.js` |
+| "Atrás" sale de la app o no cierra la hoja; el paso no cambia | `iniciarNavegacion()` y `mostrar()` en `src/ui/navegacion.js` |
+| Las preferencias o "Mi impresora" no se guardan o no vuelven al abrir | `cargarPreferencias`, `guardarPreferencias` y `guardarPropias` en `src/ui/estado.js` |
+| El precio del rollo no se guarda | `iniciarMateriales()` en `src/ui/materiales.js` |
+| El aviso "Hay una versión nueva" no aparece | `src/ui/actualizacion.js`, y `registrarServiceWorker()` en `src/main.js` (todavía duplicada) |
 
 ## 6. Deuda técnica conocida
-- La división de `src/main.js` (ADR 0001) va casi terminada: ya están todos los módulos de `src/ui/` salvo `actualizacion` (R4); `registrarServiceWorker` sigue en `main.js` (~70 líneas).
-- `scripts/probar-app.mjs` (~530 líneas) es un solo recorrido largo: dividir por área con helpers compartidos.
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
+- `src/ui/vista-capas.js` (317 líneas) está cerca del límite de 300 del lint: si crece, plan B = `pausas-ui.js` (ADR 0001).
+- `src/ui/impresoras.js` (288 líneas) está cerca del límite: plan B = `formulario-impresora.js` (ADR 0001).
+- ESLint 9.x está deprecado: migrar a ESLint 10.
+- `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
+- R4 pendiente (ADR 0001): `actualizacion.js` todavía no lo usa `main.js`, que conserva su propia `registrarServiceWorker`.

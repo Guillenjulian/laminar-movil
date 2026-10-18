@@ -69,6 +69,14 @@ npm run test:transformar  # matrices de escala/rotación (Node, sin navegador)
 npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
 ```
 
+Calidad de código y contratos de los módulos de la interfaz (sin navegador):
+
+```bash
+npm run lint             # ESLint (recomendado + límites de tamaño como aviso)
+npm run format           # Prettier: aplica el formato (format:check sólo verifica)
+npm run test:contratos   # exports, aridad, que importar no toque el DOM, aristas permitidas y ciclos (ADR 0001)
+```
+
 La CI de GitHub Actions (`.github/workflows/ci.yml`) corre build, lint, format:check y todas las suites en cada PR y en cada push a `main`.
 
 Para probar en el celu en la misma red Wi-Fi: `npm run build && npx vite preview --host` y abrí la
@@ -134,7 +142,10 @@ Makerbot) y avisa en la app cuando el G-code de inicio no usa la temperatura ele
 ## Cómo está armado
 
 ```
-index.html, src/main.js     Interfaz de 4 pasos (JS sin frameworks)
+index.html, src/main.js     Punto de entrada: inicializa los módulos de la interfaz (JS sin frameworks)
+src/ui/                     Interfaz: un módulo por paso (paso1-modelo, paso2-config, paso3-laminar,
+                            paso4-resultado) y las piezas compartidas (estado, navegacion, impresoras...).
+                            Ver docs/MAPA.md y docs/decisiones/0001-dividir-main.md
 src/ui/visor.js             Visor 3D (three.js + OrbitControls)
 src/motor/motor.js          API del motor para la interfaz (un worker por tarea)
 src/motor/laminador.worker.js  Worker de laminado: lee STL, simplifica, llama a Kiri
@@ -147,6 +158,8 @@ src/motor/transformar.js    Matrices 3×3: escala, rotaciones y "apoyar cara" (l
 src/perfiles/               Impresoras, materiales y opciones en JSON; generico.js arma
                             calidades y perfiles a partir de pocos datos
 scripts/importar-impresoras-kiri.mjs  Trae los perfiles de impresoras de Kiri:Moto
+scripts/app/               Pruebas de la app por área (las orquesta scripts/probar-app.mjs)
+scripts/lib/               Helpers compartidos de las pruebas (servidor, Chromium, contadores)
 src/almacen.js              IndexedDB: preferencias y modelos recientes
 src/sw.js                   Service worker (offline); la lista de archivos la completa vite.config.js
 vendor/kiri/                Motor Kiri:Moto (sólo los archivos que usa el worker)
