@@ -30,6 +30,8 @@ async function probarEscala({ page: pagina, ok: revisar }) {
         (await medidas()) === '22,0 × 22,0 × 22,0 mm' && (await pagina.inputValue('#escala')) === '110',
         await medidas(),
     );
+    await pagina.tap('#escalaMenos');
+    revisar('escala -10 % (desde 110 %)', (await pagina.inputValue('#escala')) === '100', await medidas());
     await pagina.fill('#escala', '200');
     await pagina.press('#escala', 'Enter');
     await pagina.locator('#escala').blur();

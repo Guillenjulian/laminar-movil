@@ -1,9 +1,8 @@
 // Lógica de la app: 4 pasos (subir → configurar → laminar → listo).
 
-import { laminar, leerParaVista, leerRecorridos, convertirAStl } from './motor/motor.js';
+import { laminar, leerRecorridos } from './motor/motor.js';
 import { TIPOS, COLORES_FILAMENTO } from './motor/tipos-linea.js';
 import { insertarPausas } from './motor/pausas.js';
-import * as transformar from './motor/transformar.js';
 import {
     listaImpresoras,
     buscarImpresora,
@@ -22,7 +21,6 @@ import { crearVisor } from './ui/visor.js';
 import { crearAvanzado } from './ui/avanzado.js';
 import * as formato from './ui/formato.js';
 import * as almacen from './almacen.js';
-import { tipoArchivo, prepararLitofania } from './ui/litofania.js';
 import * as materialesUI from './ui/materiales.js';
 import { $, escapar } from './ui/util-dom.js';
 import {
@@ -34,228 +32,18 @@ import {
     cargarPreferencias,
 } from './ui/estado.js';
 import { iniciarNavegacion, mostrar, irA, abrirHoja, cerrarHojas, alMostrarPaso } from './ui/navegacion.js';
+import { iniciarPaso1, alCambiarImpresora, elegirOtroModelo, mostrarRecientes } from './ui/paso1-modelo.js';
 
-let visor = null; // visor del modelo (paso 1)
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
 
-// PUENTE R1/R3: pausa los visores y la reproducción según el paso (pasa a paso1 y vista-capas).
+// PUENTE R3: pausa el visor de capas y la reproducción según el paso (pasa a vista-capas).
 alMostrarPaso(p => {
-    visor?.pausar(p !== 1);
     visorCapas?.pausar(p !== 4);
     if (p !== 4) pararReproduccion();
 });
 iniciarNavegacion();
+iniciarPaso1();
 materialesUI.iniciarMateriales();
-
-// ---------------------------------------------------------------------------
-// Paso 1: subir el STL
-
-// Acepta STL, OBJ y 3MF (estos dos se convierten a STL en un worker y sigue
-// todo igual). Una foto abre la hoja de litofanía.
-// `esStl`: el buffer ya es STL aunque el nombre diga .obj/.3mf (los recientes
-// guardan el STL convertido con el nombre original).
-// `generar`: función que devuelve una promesa con el STL (litofanía).
-async function cargarArchivo(nombre, buffer, { guardar = true, esStl = false, generar = null } = {}) {
-    const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
-    if (tipo === 'imagen') return litofania.abrirFoto(nombre, buffer);
-    if (!tipo) {
-        alert('No sabemos leer ese archivo. Elegí un modelo STL, OBJ o 3MF (o una foto para hacer una litofanía).');
-        return;
-    }
-    $('cargando').hidden = false;
-    $('sinModelo').hidden = true;
-    try {
-        if (generar) buffer = await generar();
-        else if (tipo !== 'stl') buffer = (await convertirAStl(nombre, buffer)).stl;
-        // La vista previa se arma en un worker; le pasamos una copia del archivo.
-        const { vertices, triangulos, tamano } = await leerParaVista(buffer.slice(0));
-        estado.nombre = nombre;
-        estado.stl = buffer;
-        estado.vista = { triangulos, tamano };
-        estado.resultado = null;
-        estado.rotacion = transformar.identidad();
-        estado.escala = 1;
-
-        $('conModelo').hidden = false;
-        if (!visor) visor = crearVisor($('visor'));
-        const imp = buscarImpresora(estado.impresoraId).dispositivo;
-        visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
-        visor.ponerModelo(vertices);
-
-        $('nombreModelo').textContent = nombre;
-        activarElegirCara(false);
-        aplicarTransformacion();
-        $('siguiente').disabled = false;
-
-        // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
-        if (guardar)
-            await almacen.guardarModelo(nombre, buffer).catch(err => console.warn('No se guardó el modelo', err));
-    } catch (err) {
-        // Si ya había un modelo cargado, queda ése; si no, volvemos a la pantalla inicial.
-        $('sinModelo').hidden = !!estado.stl;
-        alert('No pudimos leer el archivo: ' + err.message);
-    } finally {
-        $('cargando').hidden = true;
-    }
-}
-
-// Avisos sobre el modelo: si es muy pesado (se va a simplificar) o si no entra en la cama.
-function actualizarAvisoModelo() {
-    if (!estado.vista) return;
-    const { triangulos } = estado.vista;
-    const tamano = tamanoActual();
-    const imp = buscarImpresora(estado.impresoraId);
-    const d = imp.dispositivo;
-    const avisos = [];
-    const noEntra = tamano.x > d.bedWidth || tamano.y > d.bedDepth || tamano.z > d.maxHeight;
-    if (noEntra) {
-        avisos.push(
-            `<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
-                'Rotalo o achicalo con los botones de abajo.',
-        );
-    }
-    $('ajustarCama').hidden = !noEntra;
-    const max = maxTriangulos();
-    if (triangulos > max) {
-        avisos.push(
-            `<b>Modelo pesado:</b> tiene ${formato.triangulos(triangulos)}. Para que el celu no se quede ` +
-                `sin memoria, antes de laminar lo vamos a simplificar a unos ${formato.triangulos(max)}. ` +
-                'Se pueden perder detalles muy finos.',
-        );
-    }
-    $('avisoModelo').innerHTML = avisos.join('<br><br>');
-    $('avisoModelo').hidden = avisos.length === 0;
-}
-
-async function alElegirArchivo(e) {
-    const archivo = e.target.files[0];
-    e.target.value = ''; // para poder elegir el mismo archivo otra vez
-    if (archivo) await cargarArchivo(archivo.name, await archivo.arrayBuffer());
-}
-$('archivo').onchange = alElegirArchivo;
-$('foto').onchange = alElegirArchivo;
-
-// Hoja "Litofanía desde una foto" (ver ui/litofania.js).
-const litofania = prepararLitofania({
-    abrir: () => abrirHoja('litofania'),
-    cerrar: cerrarHojas,
-    cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar }),
-});
-
-// "Elegir otro modelo": vuelve a la pantalla inicial (archivo, ejemplo y recientes).
-$('otroModelo').onclick = () => {
-    estado.stl = null;
-    estado.vista = null;
-    visor?.quitarModelo();
-    $('conModelo').hidden = true;
-    $('sinModelo').hidden = false;
-    $('siguiente').disabled = true;
-    mostrarRecientes();
-};
-
-// Lista de modelos recientes guardados en el celu.
-async function mostrarRecientes() {
-    const lista = await almacen.listarModelos().catch(() => []);
-    $('recientes').hidden = lista.length === 0;
-    $('listaRecientes').innerHTML = lista
-        .map(
-            m => `<li>
-        <button class="reciente" data-id="${m.id}">
-            <b>${escapar(m.nombre)}</b>
-            <small>${new Date(m.fecha).toLocaleDateString('es-AR')} · ${formato.bytes(m.bytes)}</small>
-        </button>
-        <button class="borrar" data-borrar="${m.id}" aria-label="Borrar ${escapar(m.nombre)}">×</button>
-    </li>`,
-        )
-        .join('');
-}
-
-$('listaRecientes').onclick = async e => {
-    const boton = e.target.closest('button');
-    if (!boton) return;
-    if (boton.dataset.borrar) {
-        await almacen.borrarModelo(Number(boton.dataset.borrar));
-        mostrarRecientes();
-        return;
-    }
-    const id = Number(boton.dataset.id);
-    const modelo = (await almacen.listarModelos()).find(m => m.id === id);
-    const stl = await almacen.leerModelo(id);
-    if (modelo && stl) await cargarArchivo(modelo.nombre, stl, { esStl: true });
-};
-
-$('ejemplo').onclick = async () => {
-    const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
-    await cargarArchivo('cubo-20mm.stl', await r.arrayBuffer());
-};
-
-$('siguiente').onclick = () => irA(2);
-
-// --- Modelo en la cama: escala, rotaciones y "apoyar cara" ---
-
-// Tamaño del modelo como va a quedar en la cama.
-function tamanoActual() {
-    return visor?.tamanoModelo() || estado.vista.tamano;
-}
-
-function aplicarTransformacion() {
-    visor.ponerTransformacion(matrizModelo());
-    const pct = Math.round(estado.escala * 1000) / 10;
-    $('escala').value = pct;
-    $('datosModelo').textContent =
-        `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
-    $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
-    actualizarAvisoModelo();
-}
-
-function ponerEscala(s) {
-    if (!(s > 0)) return;
-    estado.escala = Math.min(20, Math.max(0.01, s));
-    aplicarTransformacion();
-}
-
-$('escalaMenos').onclick = () => ponerEscala(Math.round(estado.escala * 10 - 1) / 10 || 0.05);
-$('escalaMas').onclick = () => ponerEscala(Math.round(estado.escala * 10 + 1) / 10);
-$('escala').addEventListener('change', e => ponerEscala(Number(e.target.value) / 100));
-
-document.querySelectorAll('[data-rotar]').forEach(b => {
-    b.onclick = () => {
-        estado.rotacion = transformar.multiplicar(transformar.rotacion90(b.dataset.rotar), estado.rotacion);
-        aplicarTransformacion();
-    };
-});
-
-// "Achicar para que entre": la escala más grande que entra en la cama (con un 2 % de margen).
-$('ajustarCama').onclick = () => {
-    const d = buscarImpresora(estado.impresoraId).dispositivo;
-    const t = tamanoActual(),
-        s = estado.escala;
-    const factor = Math.min(d.bedWidth / t.x, d.bedDepth / t.y, d.maxHeight / t.z) * 0.98;
-    ponerEscala(Math.floor(s * factor * 100) / 100);
-};
-
-$('restablecerModelo').onclick = () => {
-    estado.rotacion = transformar.identidad();
-    estado.escala = 1;
-    activarElegirCara(false);
-    aplicarTransformacion();
-};
-
-// "Apoyar cara": el usuario toca una cara y el modelo gira para que quede sobre la cama.
-function activarElegirCara(activo) {
-    estado.eligiendoCara = activo;
-    $('apoyarCara').classList.toggle('activo', activo);
-    $('apoyarCara').textContent = activo ? 'Cancelar' : 'Apoyar cara';
-    $('ayudaCara').hidden = !activo;
-    visor?.elegirCara(activo, normal => {
-        // La normal viene en coordenadas de la impresora; la escala es uniforme, así
-        // que alcanza con agregar la rotación que la lleva hacia abajo.
-        estado.rotacion = transformar.multiplicar(transformar.rotacionQueApoya(normal), estado.rotacion);
-        activarElegirCara(false);
-        aplicarTransformacion();
-    });
-}
-$('apoyarCara').onclick = () => activarElegirCara(!estado.eligiendoCara);
 
 // ---------------------------------------------------------------------------
 // Paso 2: impresora, calidad, material y soportes (todo en una sola pantalla)
@@ -419,11 +207,7 @@ function elegirImpresora(id) {
     const imp = buscarImpresora(id);
     if (!imp.calidades[estado.calidad]) estado.calidad = Object.keys(imp.calidades)[0];
     dibujarOpciones();
-    if (visor) {
-        const d = imp.dispositivo;
-        visor.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
-    }
-    actualizarAvisoModelo();
+    alCambiarImpresora();
     guardarPreferencias();
 }
 
@@ -1009,7 +793,7 @@ $('descargar').onclick = () => {
 
 $('otro').onclick = () => {
     estado.resultado = null;
-    $('otroModelo').click();
+    elegirOtroModelo();
     irA(1);
 };
 

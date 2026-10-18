@@ -27,7 +27,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | Archivo | Responsabilidad | Depende de |
 |---|---|---|
 | `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
-| `src/main.js` | Manejadores de los pasos (en división, ver ADR 0001). ⚠️ ~1050 líneas: ver la sección 6 | casi todo, `ui/estado`, `ui/util-dom`, `ui/navegacion` |
+| `src/main.js` | Manejadores de los pasos 2 a 4 (en división, ver ADR 0001; el paso 1 ya está en `ui/paso1-modelo`). ⚠️ ~840 líneas: ver la sección 6 | casi todo, `ui/estado`, `ui/util-dom`, `ui/navegacion`, `ui/paso1-modelo` |
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
@@ -138,6 +138,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
 
 ## 6. Deuda técnica conocida
-- La división de `src/main.js` (ADR 0001) va a medias: ya están `ui/util-dom`, `ui/estado` y `ui/navegacion`; faltan `paso1-modelo`, `paso2-config`, `impresoras`, `paso3-laminar`, `paso4-resultado`, `vista-capas` y `actualizacion`.
+- La división de `src/main.js` (ADR 0001) va a medias: ya están `ui/util-dom`, `ui/estado`, `ui/navegacion` y `ui/paso1-modelo`; faltan `paso2-config`, `impresoras`, `paso3-laminar`, `paso4-resultado`, `vista-capas` y `actualizacion`.
 - `scripts/probar-app.mjs` (~530 líneas) es un solo recorrido largo: dividir por área con helpers compartidos.
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
