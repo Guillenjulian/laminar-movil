@@ -34,6 +34,7 @@ const ajuste = crearAjuste({
         piezas.reacomodar();
         bloqueos.sincronizar(); // después de acomodar: si cambió la pieza, vacía las zonas y lo avisa (ADR 0004)
     },
+    alActivarCara: () => bloqueos.apagar(), // "apoyar cara" y "marcar zona" son modos excluyentes
     torres: () => torres,
 });
 const piezas = crearPiezas({
@@ -52,6 +53,7 @@ const bloqueos = crearBloqueosUI({
         $('bloqueoAyuda').textContent = msg;
     },
     nuevoId: () => ++estado.ultimoIdBloqueo,
+    cancelarCara: () => ajuste.cancelarCara(),
 });
 
 /**

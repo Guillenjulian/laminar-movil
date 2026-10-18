@@ -21,6 +21,7 @@ import { estado, matrizModelo, piezaActiva } from './estado.js';
  * @param {() => (object|null)} ctx.visor visor del paso 1 (null si todavía no se creó)
  * @param {() => void} ctx.alCambiar se llama al final de cada cambio de escala o rotación
  *   (paso1: guardar el reciente; después, reacomodar las piezas)
+ * @param {() => void} [ctx.alActivarCara] se llama al entrar al modo "apoyar cara" (paso1 apaga el de marcar zonas)
  * @param {() => (object|null)} ctx.torres hoja de torres (su `revisar(torre)` se llama al avisar)
  * @returns {{conectar: () => void, aplicar: () => void, actualizarAviso: () => void, cancelarCara: () => void}}
  *   `conectar()` cablea escala, rotaciones, "ajustar a la cama", "restablecer" y "apoyar cara" (una vez);
@@ -88,6 +89,8 @@ function actualizarAviso(ctx) {
 function activarElegirCara(ctx, activo) {
     estado.eligiendoCara = activo;
     $('apoyarCara').classList.toggle('activo', activo);
+    $('apoyarCara').setAttribute('aria-pressed', String(activo));
+    if (activo) ctx.alActivarCara?.();
     $('apoyarCara').textContent = activo ? 'Cancelar' : 'Apoyar cara';
     $('ayudaCara').hidden = !activo;
     ctx.visor()?.elegirCara(activo, normal => {

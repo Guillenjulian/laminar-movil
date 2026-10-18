@@ -76,5 +76,6 @@ async function radioYEscala(ctx, chips, pulsado) {
         'zonas: cambiar la escala las vacía y lo avisa',
         (await chips.count()) === 0 && (await pagina.getByText(AVISO).count()) > 0,
     );
-    await pagina.tap('#escalaMenos');
+    await pagina.tap('#escalaMenos'); // otro reacomodar: el aviso no se borra con el redibujado
+    revisar('zonas: el aviso dura tras otro cambio de la pieza', (await pagina.getByText(AVISO).count()) > 0);
 }

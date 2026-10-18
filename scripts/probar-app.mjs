@@ -32,6 +32,7 @@ import { probarVistaLiviana } from './app/vista-liviana.mjs';
 import { probarOffline } from './app/offline.mjs';
 import { probarAcomodoConGiros, probarPrecioTrasRecargar } from './app/piezas-extra.mjs';
 import { probarBloqueos } from './app/bloqueos.mjs';
+import { probarBloqueosModos } from './app/bloqueos-modos.mjs';
 import { probarSoportesTipo } from './app/soportes-tipo.mjs';
 import { probarSoportesEstado } from './app/soportes-estado.mjs';
 import { probarVisorBloqueos } from './app/visor-bloqueos.mjs';
@@ -49,6 +50,7 @@ const AREAS = [
     probarCopias,
     probarAcomodoConGiros,
     probarBloqueos, // ADR 0004: zonas sin soporte (paso 1, cubo, 100 %); deja el paso 1
+    probarBloqueosModos, // ADR 0004: modos excluyentes y pieza no activa (mismo estado de entrada y de salida)
     probarConfig,
     volverAlPaso1,
     probarSoportesTipo, // ADR 0004: selector de tipo (parte del paso 1 con el cubo y soportes 'no'); deja el paso 2

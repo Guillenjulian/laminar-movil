@@ -1065,7 +1065,7 @@ input[type='range'] {
     color: var(--suave);
 }
 .zonas-sin-soporte {
-    margin-bottom: 12px;
+    margin: 12px 0;
 }
 .zonas-sin-soporte .fila-escala {
     margin-top: 8px;

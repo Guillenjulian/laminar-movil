@@ -105,8 +105,9 @@ function tocarModelo(est, cx, cy) {
     const hallado = buscarToque(est, cx, cy);
     if (!hallado) return;
     const { toque, id } = hallado;
-    est.alTocar?.(id);
+    // El punto va ANTES que el id: así quien marca zonas ve todavía la pieza activa de antes del toque (ADR 0004).
     est.alTocarPunto?.({ id, punto: puntoEnMarcoPieza(toque.point, toque.object) });
+    est.alTocar?.(id);
     if (!est.alElegirCara) return;
     // La normal del triángulo viene en coordenadas del modelo: la llevamos a las
     // de la impresora con la "matriz de normales" (sirve aunque haya escala).

@@ -63,6 +63,39 @@
                     <div class="visor" id="visor" aria-label="Vista 3D del modelo">
                         <p class="ayuda-gestos">1 dedo: girar · 2 dedos: zoom · doble toque: centrar</p>
                     </div>
+                    <!-- Zonas sin soporte de la pieza activa (ADR 0004; sólo modelos) -->
+                    <div class="zonas-sin-soporte" id="bloqueosPanel" hidden>
+                        <button type="button" class="boton" id="bloqueoMarcar" aria-pressed="false">
+                            Marcar zona sin soporte
+                        </button>
+                        <div class="fila-escala" role="group" aria-labelledby="bloqueoRadioEtiqueta">
+                            <span id="bloqueoRadioEtiqueta">Radio de la zona</span>
+                            <button
+                                type="button"
+                                class="boton-capa"
+                                id="bloqueoRadioMenos"
+                                aria-label="Achicar el radio de la zona"
+                            >
+                                −
+                            </button>
+                            <output id="bloqueoRadioNum" class="copias-num" for="bloqueoRadioMenos bloqueoRadioMas">
+                                8
+                            </output>
+                            <span>mm</span>
+                            <button
+                                type="button"
+                                class="boton-capa"
+                                id="bloqueoRadioMas"
+                                aria-label="Agrandar el radio de la zona"
+                            >
+                                +
+                            </button>
+                        </div>
+                        <ul class="piezas" id="bloqueoLista" aria-label="Zonas sin soporte"></ul>
+                        <p class="aviso" id="bloqueoAyuda" aria-live="polite"></p>
+                        <p class="aviso" id="bloqueoNota"></p>
+                    </div>
+
                     <div class="ficha">
                         <ul class="piezas" id="listaPiezas" aria-label="Piezas" hidden></ul>
                         <p class="solo-lectores" id="avisoPiezas" aria-live="polite"></p>
@@ -119,7 +152,9 @@
                                 <button type="button" class="boton" data-rotar="x">↻ X 90°</button>
                                 <button type="button" class="boton" data-rotar="y">↻ Y 90°</button>
                                 <button type="button" class="boton" data-rotar="z">↻ Z 90°</button>
-                                <button type="button" class="boton" id="apoyarCara">Apoyar cara</button>
+                                <button type="button" class="boton" id="apoyarCara" aria-pressed="false">
+                                    Apoyar cara
+                                </button>
                                 <button type="button" class="boton" id="ajustarCama" hidden>
                                     Achicar para que entre
                                 </button>
@@ -128,39 +163,6 @@
                             <p class="aviso" id="ayudaCara" hidden>
                                 Tocá la cara del modelo que querés apoyar sobre la cama.
                             </p>
-                        </div>
-
-                        <!-- Zonas sin soporte de la pieza activa (ADR 0004; sólo modelos) -->
-                        <div class="zonas-sin-soporte" id="bloqueosPanel" hidden>
-                            <button type="button" class="boton" id="bloqueoMarcar" aria-pressed="false">
-                                Marcar zona sin soporte
-                            </button>
-                            <div class="fila-escala" role="group" aria-labelledby="bloqueoRadioEtiqueta">
-                                <span id="bloqueoRadioEtiqueta">Radio de la zona</span>
-                                <button
-                                    type="button"
-                                    class="boton-capa"
-                                    id="bloqueoRadioMenos"
-                                    aria-label="Achicar el radio de la zona"
-                                >
-                                    −
-                                </button>
-                                <output id="bloqueoRadioNum" class="copias-num" for="bloqueoRadioMenos bloqueoRadioMas">
-                                    8
-                                </output>
-                                <span>mm</span>
-                                <button
-                                    type="button"
-                                    class="boton-capa"
-                                    id="bloqueoRadioMas"
-                                    aria-label="Agrandar el radio de la zona"
-                                >
-                                    +
-                                </button>
-                            </div>
-                            <ul class="piezas" id="bloqueoLista" aria-label="Zonas sin soporte"></ul>
-                            <p class="aviso" id="bloqueoAyuda" aria-live="polite"></p>
-                            <p class="aviso" id="bloqueoNota"></p>
                         </div>
 
                         <div class="agregar-pieza" id="agregarPieza" hidden>

@@ -52,18 +52,24 @@ export function chipZona(zona, n, nombrePieza, elegida) {
  *   `alTocarPunto(fn|null)` y su `marcasBloqueo` ({poner, quitar}, de `crearMarcasBloqueo`)
  * @param {(msg: string) => void} ctx.avisar muestra un aviso en la pantalla
  * @param {() => number} ctx.nuevoId id nuevo para una zona (`++ultimoIdBloqueo` en estado; nunca se reutiliza)
+ * @param {() => void} [ctx.cancelarCara] sale del modo "apoyar cara": los dos modos son excluyentes
  * @param {() => void} [ctx.alCambiar] se llama tras agregar, cambiar el radio, quitar o vaciar zonas
- * @returns {{conectar: () => void, dibujar: () => void, sincronizar: () => void}}
+ * @returns {{conectar: () => void, dibujar: () => void, sincronizar: () => void, apagar: () => void}}
+ *   `apagar()` sale del modo "marcar" (paso1 lo llama al entrar en "apoyar cara");
  *   `conectar()` cablea botón, stepper de radio, lista y toques (una vez);
  *   `dibujar()` redibuja lista y marcas de la pieza activa (llamar al cambiar de pieza activa o cargar un modelo);
  *   `sincronizar()` compara `firmaBloqueos` con la actual y vacía las zonas si cambió la pieza.
  */
 export function crearBloqueosUI(ctx) {
-    const est = { ...ctx, conectado: false, modo: false, radio: RADIO_INICIAL_MM, elegida: null };
+    const est = { ...ctx, conectado: false, modo: false, radio: RADIO_INICIAL_MM, elegida: null, aviso: '' };
     return {
         conectar: () => conectar(est),
         dibujar: () => dibujar(est),
         sincronizar: () => sincronizar(est),
+        apagar: () => {
+            est.modo = false;
+            dibujar(est);
+        },
     };
 }
 
@@ -78,12 +84,15 @@ function conectar(est) {
     if (est.conectado) return;
     est.conectado = true;
     $('bloqueoMarcar').onclick = () => {
+        est.aviso = '';
         est.modo = !est.modo;
+        if (est.modo) est.cancelarCara?.(); // excluyentes con "apoyar cara"
         dibujar(est);
     };
     $('bloqueoRadioMenos').onclick = () => cambiarRadio(est, -1);
     $('bloqueoRadioMas').onclick = () => cambiarRadio(est, 1);
     $('bloqueoLista').onclick = e => {
+        est.aviso = '';
         const quitar = e.target.closest('[data-quitar]');
         if (quitar) return quitarZona(est, Number(quitar.dataset.quitar));
         const chip = e.target.closest('[data-zona]');
@@ -99,7 +108,8 @@ function conectar(est) {
 /** Toque sobre una pieza con el modo activo: agrega una esfera con el radio elegido en el punto tocado. */
 function tocar(est, { id, punto }) {
     const p = pieza();
-    if (!est.modo || !p || p.id !== id) return;
+    if (!est.modo || !p || p.id !== id) return; // una pieza no activa sólo se activa (el visor avisa el punto antes que el id)
+    est.aviso = '';
     // El tope no se chequea acá: `dibujar` apaga el modo al llegar a MAX_BLOQUEOS, y sin modo se sale arriba.
     const lista = (p.bloqueos ??= []);
     const zona = validarBloqueos([
@@ -114,6 +124,7 @@ function tocar(est, { id, punto }) {
 
 /** Sube o baja el radio (2 a 40 mm); si hay una zona elegida, también se lo cambia a ella. */
 function cambiarRadio(est, delta) {
+    est.aviso = '';
     est.radio = Math.min(RADIO_MAX_MM, Math.max(RADIO_MIN_MM, est.radio + delta));
     const zona = pieza()?.bloqueos?.find(b => b.id === est.elegida);
     if (!zona) return dibujar(est);
@@ -153,6 +164,7 @@ function sincronizar(est) {
     }
     est.elegida = null;
     estado.resultado = null;
+    est.aviso = AVISO_VACIADAS; // dura hasta la próxima acción del usuario en el panel
     dibujar(est);
     est.avisar(AVISO_VACIADAS);
     est.alCambiar?.();
@@ -175,7 +187,9 @@ function dibujar(est) {
     $('bloqueoRadioMenos').disabled = est.radio <= RADIO_MIN_MM;
     $('bloqueoRadioMas').disabled = est.radio >= RADIO_MAX_MM;
     $('bloqueoLista').innerHTML = zonas.map((z, i) => chipZona(z, i + 1, p.nombre, z.id === est.elegida)).join('');
-    $('bloqueoAyuda').textContent = lleno ? `Máximo ${MAX_BLOQUEOS} zonas por pieza: quitá una para marcar otra.` : '';
+    $('bloqueoAyuda').textContent = lleno
+        ? `Máximo ${MAX_BLOQUEOS} zonas por pieza: quitá una para marcar otra.`
+        : est.aviso;
     ponerMarcas(est, p, zonas);
 }
 
