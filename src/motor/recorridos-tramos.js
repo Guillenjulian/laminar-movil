@@ -4,15 +4,43 @@
 // y no arman objetos ni closures.
 import { TIPOS } from './tipos-linea.js';
 import { Lista, q } from './recorridos-lista.js';
+import { NIVELES } from './recorridos-niveles.js';
 
-const DESVIO = 0.02; // mm: cuánto se puede apartar de la recta el punto que se saca
-const LARGO_CURVA = 3; // mm: largo máximo de un tramo unido que no es recto (para no aplanar curvas)
+const NIVEL_0 = NIVELES[0];
+
+/**
+ * Distancia de un punto a un segmento.
+ * @param {number} px X del punto
+ * @param {number} py Y del punto
+ * @param {number} ax X del inicio del segmento
+ * @param {number} ay Y del inicio del segmento
+ * @param {number} bx X del final del segmento
+ * @param {number} by Y del final del segmento
+ * @returns {number} mm
+ */
+export function distanciaASegmento(px, py, ax, ay, bx, by) {
+    const dx = bx - ax,
+        dy = by - ay,
+        l2 = dx * dx + dy * dy;
+    const t = l2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
 
 /** Tramos guardados hasta ahora y el último (para unir los alineados). */
 export class Tramos {
-    /** @param {number} maxSegmentos tope de tramos guardados */
-    constructor(maxSegmentos) {
+    /**
+     * @param {number} maxSegmentos tope de tramos guardados
+     * @param {number} [nivel] nivel de simplificación (0 a 3, ver recorridos-niveles.js)
+     */
+    constructor(maxSegmentos, nivel = 0) {
         this.maxSegmentos = maxSegmentos;
+        this.nivel = nivel;
+        // cuánto se puede apartar de la recta el punto que se saca, y largo máximo de un tramo unido que no es recto
+        this.desvio = NIVELES[nivel].desvio;
+        this.largoCurva = NIVELES[nivel].largoCurva;
+        this.simplificado = false; // ¿se unió algo que el nivel 0 no habría unido?
+        this.sacados = new Float64Array(64); // puntos sacados del último tramo (x, y), sólo con nivel > 0
+        this.nSacados = 0;
         this.pos = new Lista(Uint16Array, 6 * 65536);
         this.col = new Lista(Uint8Array, 6 * 65536);
         this.tip = new Lista(Uint8Array, 65536);
@@ -76,9 +104,41 @@ export class Tramos {
         const avanza = (x - sx) * lx + (y - sy) * ly > 0 && (nx - x) * lx + (ny - y) * ly > 0;
         const desvio = largo > 0 ? Math.abs((x - sx) * ly - (y - sy) * lx) / largo : Infinity;
         const sigueRecto = this.recto && desvio < 1e-4;
-        const unir = avanza && desvio < DESVIO && (sigueRecto || largo < LARGO_CURVA);
+        let unir = avanza && desvio < this.desvio && (sigueRecto || largo < this.largoCurva);
+        if (unir && this.nivel > 0) unir = this.confirmar(x, y, nx, ny, sigueRecto, desvio, largo);
         if (unir) this.recto = sigueRecto;
         return unir;
+    }
+
+    /**
+     * Sólo con nivel > 0: confirma la unión comprobando que todos los puntos sacados del tramo (no sólo el último)
+     * queden a menos de `desvio` del tramo nuevo, así el error no se acumula. Anota si el nivel 0 no lo habría unido.
+     * @param {number} x X del punto que se saca
+     * @param {number} y Y del punto que se saca
+     * @param {number} nx X final
+     * @param {number} ny Y final
+     * @param {boolean} sigueRecto el tramo sigue siendo recto
+     * @param {number} desvio distancia de (x, y) a la recta nueva
+     * @param {number} largo largo del tramo nuevo
+     * @returns {boolean} true si se une (y entonces (x, y) pasa a ser un punto sacado)
+     */
+    confirmar(x, y, nx, ny, sigueRecto, desvio, largo) {
+        const { sx, sy, sacados } = this;
+        if (!sigueRecto) {
+            for (let i = 0; i < this.nSacados; i += 2) {
+                if (distanciaASegmento(sacados[i], sacados[i + 1], sx, sy, nx, ny) >= this.desvio) return false;
+            }
+        }
+        if (!this.simplificado && !(desvio < NIVEL_0.desvio && (sigueRecto || largo < NIVEL_0.largoCurva))) {
+            this.simplificado = true;
+        }
+        if (this.nSacados + 2 > sacados.length) {
+            this.sacados = new Float64Array(sacados.length * 2);
+            this.sacados.set(sacados);
+        }
+        this.sacados[this.nSacados++] = x;
+        this.sacados[this.nSacados++] = y;
+        return true;
     }
 
     /**
@@ -127,6 +187,7 @@ export class Tramos {
         pos.n += 6;
         col.n += 6;
         this.segmentos++;
+        this.nSacados = 0;
         this.utipo = tipo;
         this.sx = x;
         this.sy = y;

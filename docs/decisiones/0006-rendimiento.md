@@ -149,14 +149,21 @@ cuánto se puede apartar de la recta el punto que se saca (`DESVIO`) y cuán lar
 tipos, la caja y los offsets de pausa **no cambian nunca** (se calculan por línea, no por tramo), así que pausas, deslizador
 y colores siguen idénticos. Es todo función pura y vive en Node.
 
-| Nivel | `DESVIO` (mm) | `LARGO_CURVA` (mm) | Uso |
-|---|---|---|---|
-| 0 | 0,02 | 3 | hoy, **idéntico bit a bit** |
-| 1 | 0,05 | 6 | |
-| 2 | 0,10 | 12 | |
-| 3 | 0,20 | 25 | último recurso |
+| Nivel | `DESVIO` (mm) | `LARGO_CURVA` (mm) | Tramos respecto del nivel 0 (medido) | `REDUCCION` | Uso |
+|---|---|---|---|---|---|
+| 0 | 0,02 | 3 | 100 % | 1 | hoy, **idéntico bit a bit** |
+| 1 | 0,08 | 10 | 76 a 88 % (media 83 %) | 0,88 | |
+| 2 | 0,15 | 20 | 59 a 69 % (media 65 %) | 0,70 | |
+| 3 | 0,30 | 40 | 44 a 52 % (media 49 %) | 0,52 | último recurso |
 
-Los valores son provisorios: T4 los confirma con `medir-recorridos.mjs` y con una prueba de error máximo (ver Pruebas).
+Calibrado en T4 (valores finales) con 5 G-codes de `scripts/lib/gcode-sintetico.mjs` de 600.000 líneas (círculos de
+segmentos de 0,15 a 0,35 mm, rectas, zigzag, retracciones, cambios de `; feature`, 3 piezas): rango por nivel de los 5
+G-codes; `REDUCCION` toma el peor caso (prudente). A diferencia del nivel 0, los niveles 1 a 3 comprueban **todos** los
+puntos que sacan contra el tramo unido (el error máximo medido punto a punto es `DESVIO`, más 0,015 mm de cuantizado),
+así que el error no se acumula; por eso `DESVIO` sube más que en la propuesta inicial. Con la regla estricta, la propuesta
+(0,05/0,10/0,20) sólo llegaba a 90/70/54 %.
+
+Los valores de la tabla son los finales de T4 (los de la propuesta eran provisorios); la prueba de error máximo está en `scripts/recorridos/niveles.mjs`.
 
 **El nivel se elige sin adivinar** (no se cuentan líneas ni se estima por tamaño de texto): se lee con el nivel pedido y,
 si se llena `maxSegmentos`, se proyecta cuánto faltaba y se reintenta con un nivel más alto. Como mucho 3 lecturas, y la
