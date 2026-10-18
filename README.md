@@ -22,7 +22,10 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
 1. **Subir STL, OBJ o 3MF**, o generar una **litofanía o relieve desde una foto** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
    **Acomodar el modelo en la cama**: escala (%), rotar de a 90° en X/Y/Z, **apoyar cara** (tocás una
    cara y queda sobre la cama) y "Achicar para que entre" si es más grande que la cama.
-2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
+   **Zonas sin soporte**: con "Marcar zona sin soporte", un toque sobre la pieza deja una esfera donde no querés
+   soportes (hasta 20 por pieza). "Apoyar cara" y marcar zonas no van juntos: es uno u otro.
+2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y los soportes:
+   No, Normal o Árbol (el árbol usa menos material).
    En **Personalizar**: patrón de relleno (panal, cuadrícula, giroide, cúbico, triángulos, líneas),
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
    En **Avanzado**: modo jarrón (espiral), altura de capa variable, costura, retracción, z-hop,
@@ -273,6 +276,14 @@ Esto queda pendiente de validar a mano:
 - [ ] Las miniaturas: que la pantalla de la impresora y Bambu Studio las muestren.
 - [ ] Volver con "Adelante" al paso 4 después de cambiar el material: que el archivo que se descarga o comparte tenga el G-code del material nuevo.
 - [ ] Filamento: el color de `slice_info.config` es fijo (`#FFFFFF`) para todos los materiales. El código de bandeja (`tray_info_idx`) ya sale de `materiales.json` (`bambu`); validar esos códigos contra un `slice_info.config` real de Bambu Studio.
+
+### Soportes árbol y zonas sin soporte (ADR 0004)
+
+- [ ] **Imprimir con soporte árbol** una pieza con voladizo: que la tapa apoye bien sobre los troncos y que
+      los troncos se despeguen fácil.
+- [ ] **Zona sin soporte en una pieza real**: que la zona marcada se vea sin soporte al imprimir y que el
+      voladizo que cae dentro se imprima como avisa la app.
+- [ ] **Marcar zonas con el dedo en un celu real**: el toque, el radio y quitar una zona.
 
 ### Otros
 

@@ -237,7 +237,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 
 ### CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, `test:visor-carga`, `test:chunks`, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, `test:visor-carga`, `test:chunks`, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:soportes`, `test:visor`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
 
 ## 5. Dónde buscar si algo falla
 
@@ -256,6 +256,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Altura variable sin subir Z | parche de `slice.js` en `vendor-kiri.mjs` |
 | La pausa cae en un lugar raro | `recorridos-lector.js` (`pausaCapa`) y `pausas.js` |
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `preparar-piezas.js` (`centrar`) |
+| El soporte árbol sale raro o falta debajo de un voladizo | `src/motor/soportes-arbol.js` (y `soportes-paso.js`, `soportes-siembra.js`, `soportes-poda.js`) y `src/motor/soportes-kiri.js` (el puente con Kiri) |
+| Una zona sin soporte no se respeta | `src/motor/bloqueos.js`, `sinBloqueos` en `src/motor/soportes-kiri.js` y `piezasParaMotor()` en `src/ui/estado.js` |
 | Un archivo no abre | `formatos.js` y `formatos-3mf.js` (mensajes de error) y `convertir.worker.js` |
 | Un botón del paso 1 no responde | `iniciarPaso1()` en `src/ui/paso1-modelo.js` |
 | Escala, rotación, apoyar cara o los avisos del modelo fallan | `crearAjuste()` en `src/ui/ajuste-modelo.js` |
@@ -280,6 +282,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - El chunk `motor` (~205 kB: perfiles y lógica compartida con `prueba-motor.html`) sigue en el arranque; el principal ya no lleva three.js (ADR 0006, T3) y `test:chunks` lo vigila.
 - Dos lectores de G-code en las pruebas del motor: `extrusionesDe` (`scripts/motor/soportes-kiri.mjs`, con tipo y extremos de cada extrusión) y `porCapa` (`gcode-capas.mjs`); unificarlos.
 - Soportes árbol: un tronco absorbido en una fusión puede quedar tangente al de abajo (~0,5 % de los círculos, puente de 4 a 5 mm); no se mitiga en v1 (ADR 0004, R1).
+- Soportes árbol: el tope de 150 nodos activos (`maxNodos`) no tiene prueba que llegue al límite (ADR 0004, sección 1).
+- Zonas sin soporte: se vacían al cambiar escala o rotación. Se podrían transformar con `matrizPieza` (ADR 0004, sección 2).
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - `npm run lint`: 0 errores y 0 warnings.
 - Piezas y copias (ADR 0003):

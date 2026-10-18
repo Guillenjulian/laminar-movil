@@ -9,7 +9,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Agregado
 
-- Soportes de tipo **Normal** o **Árbol** (paso 2) y **zonas sin soporte** (paso 1): con "Marcar zona sin soporte" un toque sobre la pieza deja una esfera (radio de 2 a 40 mm) donde no se genera soporte; hasta 20 por pieza, valen para todas las copias, se ven en el visor y se vacían (con aviso) si cambia la escala, la rotación o "Apoyar cara". Los pasos 2 y 4 avisan "N zonas sin soporte" cuando hay soportes. El árbol usa menos material que las columnas normales (ADR 0004).
+- Soportes de tipo **Normal** o **Árbol** (paso 2) y **zonas sin soporte** (paso 1): con "Marcar zona sin soporte" un toque sobre la pieza deja una esfera (radio de 2 a 40 mm) donde no se genera soporte; hasta 20 por pieza, valen para todas las copias, se ven en el visor y se vacían (con aviso) si cambia la escala, la rotación o "Apoyar cara". Los pasos 2 y 4 avisan "N zonas sin soporte" cuando hay soportes. El árbol usa menos material que las columnas normales, y los troncos que quedan colgados se podan (ADR 0004).
 - Las impresoras Bambu Lab (A1, A1 mini, P1S y X1C) entregan un `.gcode.3mf` en el paso 4: el mismo G-code con las pausas (`M400 U1`) dentro de un ZIP con el MD5 y los metadatos que espera Bambu (ADR 0005). Compartir lo arma por adelantado y avisa "Armando el archivo…"; las demás impresoras siguen bajando el `.gcode` de siempre. Los cuatro perfiles Bambu salen con aviso de "sin validar con la impresora".
 - Clave de perfil `salida` (y `modeloBambu`): dice si la descarga es `.gcode` o `.gcode.3mf`. Documentada en `src/perfiles/LEEME.md`.
 

@@ -6,7 +6,7 @@
 
 ## Estado
 
-Aceptado por el CTO el 2026-10-18, con estas decisiones:
+Implementado (T0 a T6; T7 cierre). Aceptado por el CTO el 2026-10-18, con estas decisiones:
 
 - **Opción (a)** (árbol propio simplificado), con el plan B (c) por el mismo contrato si T4 no converge.
 - **Sólo esfera en v1**; la caja entra después por `forma` sin romper el contrato.
@@ -14,6 +14,14 @@ Aceptado por el CTO el 2026-10-18, con estas decisiones:
 - **Las zonas se vacían con aviso** al cambiar escala, rotación o "apoyar cara". Queda como deuda: la escala de la
   app es uniforme, así que más adelante se pueden transformar con `matrizPieza` en vez de vaciarlas.
 - **T0 es un spike que puede frenar todo:** si (b) o (d) fallan, se vuelve a este ADR antes de la ola 1.
+- **Poda de troncos colgados:** un tronco que no llega a la cama, a la pieza ni a otro tronco se quita. Sin soporte
+  ahí es mejor que un tronco en el aire.
+- **Círculo de zona circunscripto:** la sección de cada zona es un polígono de 16 lados que la contiene, así el
+  árbol no pisa la zona aunque el polígono no sea un círculo exacto.
+- **La cama llega al árbol por `anno.cama`:** el árbol no saca soportes fuera de la cama.
+- **Apoyar cara y marcar zona son modos excluyentes:** no están prendidos a la vez.
+- **Tocar una pieza no activa sólo la activa:** no marca una zona en ella.
+- **Panel de zonas bajo el visor:** la lista y el radio van debajo del visor, no en otra hoja.
 
 ## Contexto
 
@@ -508,3 +516,16 @@ soportes árbol en modo cinta (belt) y en jarrón; soportes en la torre de calib
 - **Documentación:** al terminar T6/T7 se actualiza `docs/MAPA.md` (módulos nuevos, `estado.soportes` y
   `Pieza.bloqueos`, parches nuevos de `scripts/vendor-kiri.mjs`, dónde mirar si "el soporte árbol sale raro" o
   "la zona no se respeta").
+
+## Cómo quedó
+
+Lo medido al cerrar T7:
+
+- **Material:** el árbol da 34 % del filamento de soporte de `'normal'` en la T de prueba (la meta era ≤ 70 %).
+- **Regresión:** con `'normal'` y `'no'` el G-code es idéntico al de antes. Se verificó en 2928 configuraciones,
+  más el cubo y la T.
+- **Desfase por decimación:** ≤ 0,001 mm en el centro y en la base (R7), contra los 0,2 mm que aceptamos.
+- **Límite conocido:** un tronco absorbido queda tangente al de abajo en ~0,5 % de los círculos (R1, no se mitiga en v1).
+- **Módulos reales:** `soportes-arbol` (con `soportes-paso`, `soportes-siembra` y `soportes-poda`), `geometria-2d`,
+  `bloqueos`, `soportes-kiri`, `perfiles/soportes`, `visor-bloqueos`, `bloqueos-ui` y `soportes-tipo-ui`.
+  Las pruebas son `test:soportes`, `test:visor`, las de `test:motor` y `test:app` de cada área.
