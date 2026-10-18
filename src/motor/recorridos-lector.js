@@ -205,8 +205,8 @@ class Lector {
  *   pausaCapa: Float64Array, zCapa: Float32Array, caja: {min: number[], max: number[]}, incompleta: boolean,
  *   nivel: number, simplificado: boolean, leidoHasta: number }}
  *   `nivel`: el usado; `simplificado`: nivel > 0 y se unió algún tramo que el nivel 0 no habría unido; `leidoHasta`:
- *   posición de la primera línea no leída (`gcode.length` si se leyó todo); `posiciones`: 6 por tramo (ver CUANTIZADO); `colores`: 6 por tramo; `tipos`: índice en TIPOS de cada tramo;
- *   `inicioCapa`: índice del primer tramo de cada capa, + uno final; `pausaCapa`: posición en el texto donde
+ *   posición de la primera línea no leída (`gcode.length` si se leyó todo); `posiciones`: 6 por tramo (ver CUANTIZADO);
+ *   `colores`: 6 por tramo; `tipos`: índice en TIPOS de cada tramo; `inicioCapa`: índice del primer tramo de cada capa, + uno final; `pausaCapa`: posición en el texto donde
  *   insertar una pausa antes de cada capa (justo antes de subir Z, con la capa anterior terminada).
  */
 export function leer(gcode, maxSegmentos, opciones) {

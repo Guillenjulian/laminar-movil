@@ -173,14 +173,14 @@ primera se corta apenas se llena el tope, así que cuesta lo que costaría hoy:
 nivel = 0
 repetir:
     r = leer(gcode, maxSegmentos, { nivel })
-    si no r.incompleta o nivel == 3: devolver (r, simplificado = nivel > 0)
+    si no r.incompleta o nivel == 3: devolver r      // r.simplificado: se unió algo que el nivel 0 no habría unido
     proyectado = maxSegmentos * gcode.length / r.leidoHasta       // tramos que daría el nivel actual
     nivel = menor n > nivel tal que proyectado * REDUCCION[n] / REDUCCION[nivel] <= 0,9 * maxSegmentos
             (si no hay ninguno, 3)
 ```
 
-`REDUCCION = [1, 0.7, 0.5, 0.35]` (provisoria: fracción de tramos que queda respecto del nivel 0; T4 la calibra con
-G-codes de Kiri reales y la fija en `recorridos-niveles.js`).
+`REDUCCION = [1, 0.88, 0.70, 0.52]` (fracción de tramos que queda respecto del nivel 0, la del peor caso medido en T4;
+ver la tabla y `recorridos-niveles.js`).
 
 **Contrato de `leer`** (`src/motor/recorridos-lector.js`):
 
@@ -192,7 +192,7 @@ G-codes de Kiri reales y la fija en `recorridos-niveles.js`).
  * @returns {{ posiciones: Uint16Array, colores: Uint8Array, tipos: Uint8Array, inicioCapa: Uint32Array,
  *   pausaCapa: Float64Array, zCapa: Float32Array, caja: {min: number[], max: number[]}, incompleta: boolean,
  *   nivel: 0|1|2|3, simplificado: boolean, leidoHasta: number }}
- *   `nivel`: el usado; `simplificado`: `nivel > 0`; `leidoHasta`: posición en el texto de la primera línea no leída
+ *   `nivel`: el usado; `simplificado`: se unió algo que el nivel 0 no habría unido; `leidoHasta`: posición en el texto de la primera línea no leída
  *   (`gcode.length` si se leyó todo). Los campos anteriores significan lo mismo que antes.
  */
 export function leer(gcode, maxSegmentos, opciones) {}
@@ -407,9 +407,12 @@ salir juntas, cada una en su rama y con su PR chico.
   otro), pero `cache.addAll` falla entero si falta uno: `test:chunks` verifica que el chunk del visor esté en la lista.
 - **Pruebas `test:app` más frágiles** por el canvas que aparece después: por eso `esperarVisor` en todas las áreas que lo
   leen; si falta alguna, falla con un error claro y no a veces.
-- **Los niveles por defecto son una hipótesis.** `DESVIO`/`LARGO_CURVA`/`REDUCCION` provisorios; se calibran en T4 con
-  G-codes reales de Kiri (cubo, vaso en espiral, modelo orgánico) y la prueba de error máximo. Un nivel que se note a
-  simple vista se baja.
+- **Los niveles son una hipótesis calibrada con G-codes sintéticos.** `DESVIO`/`LARGO_CURVA`/`REDUCCION` se calibraron en T4
+  con `gcode-sintetico.mjs`, no con G-codes reales de Kiri (cubo, vaso en espiral, modelo orgánico): conviene
+  recalibrar con esos antes de confiar en `REDUCCION`. Un nivel que se note a simple vista se baja. Cota de error:
+  las uniones que el nivel 0 ya haría se aceptan sin la comprobación completa (así un nivel mayor nunca da más tramos),
+  y el nivel 0 acumula error (medido hasta ~0,06 mm); el resto de las uniones queda a menos de `DESVIO` de todos los
+  puntos que reemplaza.
 - **Reintentos.** En el peor caso son 3 lecturas, y las dos primeras se cortan al llenarse el tope; el costo extra queda en
   el worker y sólo cuando el G-code ya no entra. Se informa con `medir-recorridos` y no se acepta si el nivel 0 de un
   G-code que entra tarda más que hoy (el reintento no corre si no se llenó el tope).

@@ -3,13 +3,64 @@
 import { leer, armar } from './ayuda.mjs';
 import { generarGcode } from '../lib/gcode-sintetico.mjs';
 import { NIVELES, REDUCCION, siguienteNivel } from '../../src/motor/recorridos-niveles.js';
-import { distanciaASegmento } from '../../src/motor/recorridos-tramos.js';
 import { tipoDe } from '../../src/motor/recorridos-lista.js';
 
 // Cuantizado: cada coordenada se redondea a 0,02 mm (error <= 0,01 por eje, 0,0142 en diagonal) y el tramo
 // simplificado usa extremos cuantizados: se tolera 0,015 mm más que `desvio`.
 const CUANTIZACION = 0.015;
 const mm = v => v / 50 - 600;
+
+/** Distancia de un punto a un segmento (fórmula propia de la prueba, no la de producción). */
+function distanciaASegmento(px, py, ax, ay, bx, by) {
+    const dx = bx - ax,
+        dy = by - ay;
+    const t = Math.min(1, Math.max(0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1)));
+    return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+}
+
+function distancia({ revisar }) {
+    console.log('\n▶ niveles: la distancia de la prueba (valores a mano)');
+    const d = distanciaASegmento;
+    revisar('sobre el segmento: 0', d(1, 0, 0, 0, 2, 0) === 0);
+    revisar('al costado: 0,05 y 1', d(1, 0.05, 0, 0, 2, 0) === 0.05 && d(1, 1, 0, 0, 2, 0) === 1);
+    revisar('más allá de un extremo: distancia al extremo', d(3, 0, 0, 0, 2, 0) === 1 && d(-3, 4, 0, 0, 2, 0) === 5);
+    revisar('segmento de largo 0: distancia al punto', d(3, 4, 0, 0, 0, 0) === 5);
+}
+
+/** Hash FNV-1a de un array de enteros. */
+const hash = a => a.reduce((h, v) => Math.imul(h ^ v, 16777619) >>> 0, 2166136261);
+
+function nivel0Fijo({ revisar }) {
+    console.log('\n▶ niveles: nivel 0 fijo (valores de la base 18ba5d5)');
+    const r = leer(generarGcode(60000, 3), Infinity);
+    revisar(
+        'tramos, capas y hash de posiciones iguales a los de la base',
+        r.tipos.length === 7452 && r.zCapa.length === 23 && hash(r.posiciones) === 2953946863,
+        `${r.tipos.length} ${r.zCapa.length} ${hash(r.posiciones)}`,
+    );
+}
+
+function arcos({ revisar }) {
+    console.log('\n▶ niveles: un nivel mayor nunca da más tramos (arcos chicos)');
+    for (const [radio, paso] of [
+        [14, 0.15],
+        [10, 0.1],
+        [8, 0.1],
+        [5, 0.05],
+        [20, 0.2],
+    ]) {
+        const n = Math.round((2 * Math.PI * radio) / paso);
+        const L = ['; feature shells', `G1 X${100 + radio} Y100 E0.1`];
+        for (let i = 1; i <= n; i++) {
+            const a = (2 * Math.PI * i) / n;
+            L.push(
+                `G1 X${(100 + radio * Math.cos(a)).toFixed(3)} Y${(100 + radio * Math.sin(a)).toFixed(3)} E${i + 1}`,
+            );
+        }
+        const t = [0, 1, 2, 3].map(nivel => leer(armar(['G1 X1 Y1', ...L]), Infinity, { nivel }).tipos.length);
+        revisar(`R ${radio} paso ${paso}: ${t.join(' >= ')}`, t[1] <= t[0] && t[2] <= t[1] && t[3] <= t[2]);
+    }
+}
 
 /** Segmentos que extruyen del G-code (formato del generador sintético: coordenadas absolutas, E absoluto). */
 function segmentosOriginales(gcode) {
@@ -232,6 +283,9 @@ function siguientes({ revisar }) {
 
 export function probarNiveles(ctx) {
     const gcode = generarGcode(60000, 3);
+    distancia(ctx);
+    nivel0Fijo(ctx);
+    arcos(ctx);
     const rs = reduccion(ctx, gcode);
     exactitud(ctx, gcode, rs);
     sinCambios(ctx, gcode);

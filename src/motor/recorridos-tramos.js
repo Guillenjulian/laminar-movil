@@ -112,7 +112,11 @@ export class Tramos {
 
     /**
      * Sólo con nivel > 0: confirma la unión comprobando que todos los puntos sacados del tramo (no sólo el último)
-     * queden a menos de `desvio` del tramo nuevo, así el error no se acumula. Anota si el nivel 0 no lo habría unido.
+     * queden a menos de `desvio` del tramo nuevo, así el error no se acumula. Si el nivel 0 ya lo uniría, se une sin
+     * esa comprobación: un nivel mayor nunca da más tramos que el anterior (con arcos chicos, la comprobación
+     * completa rechazaba uniones que el nivel 0, que acumula error, hacía). Anota si el nivel 0 no lo habría unido.
+     * Cota de error: las uniones que el nivel 0 hace tienen su error acumulado (sin tope fijo; medido hasta ~0,06 mm),
+     * el resto queda a menos de `desvio` de todos los puntos.
      * @param {number} x X del punto que se saca
      * @param {number} y Y del punto que se saca
      * @param {number} nx X final
@@ -124,14 +128,13 @@ export class Tramos {
      */
     confirmar(x, y, nx, ny, sigueRecto, desvio, largo) {
         const { sx, sy, sacados } = this;
-        if (!sigueRecto) {
+        const loUniriaElNivel0 = desvio < NIVEL_0.desvio && (sigueRecto || largo < NIVEL_0.largoCurva);
+        if (!sigueRecto && !loUniriaElNivel0) {
             for (let i = 0; i < this.nSacados; i += 2) {
                 if (distanciaASegmento(sacados[i], sacados[i + 1], sx, sy, nx, ny) >= this.desvio) return false;
             }
         }
-        if (!this.simplificado && !(desvio < NIVEL_0.desvio && (sigueRecto || largo < NIVEL_0.largoCurva))) {
-            this.simplificado = true;
-        }
+        if (!loUniriaElNivel0) this.simplificado = true;
         if (this.nSacados + 2 > sacados.length) {
             this.sacados = new Float64Array(sacados.length * 2);
             this.sacados.set(sacados);
