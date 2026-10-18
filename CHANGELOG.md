@@ -7,13 +7,32 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [0.3.0] - 2026-10-18
+
+Sprint de deuda técnica.
+
+### Agregado
+
+- El paso 2 avisa si con la impresora elegida no entran todas las piezas, deshabilita Laminar y ofrece "Ir al paso 1" (`irAPaso1` en `navegacion.js`, sin carreras con el cierre de hojas).
+- Suite `test:recorridos` (Node) para el lector de la vista previa: cuantizado, pausas, tope, crecimiento, tipos de Kiri, unión de tramos, espiral, extrusión relativa y detección de capa.
+- Pruebas nuevas: acomodo con giros que no son de 90° (huella real), cama centrada con `originCenter`, progreso y cancelación con varias piezas, precio del rollo tras recargar.
+
 ### Cambiado
 
-- ESLint 10: migración desde ESLint 9 (`eslint` y `@eslint/js` ^10), con las mismas reglas del proyecto y 0 errores / 0 warnings.
+- ESLint 10: migración desde ESLint 9 (`eslint` y `@eslint/js` ^10), con las mismas reglas del proyecto y 0 errores / 0 warnings (antes 12 warnings). `engines.node` pasa a `>=20.19`.
+- Refactors sin cambio de comportamiento, verificados con regresiones antes/después:
+  - `perfiles.js` dividido en `catalogo.js` (impresoras), `valores.js` (lecturas de un perfil) y `perfiles.js` (`armarConfiguracion`);
+  - `formatos.js` con el 3MF en `formatos-3mf.js`; `decimar`, `generarLitofania`, `leerOBJ` y `leerXML3MF` partidas;
+  - `espiralar` partida; el lector de recorridos en `recorridos-lector.js`, `recorridos-tramos.js` y `recorridos-lista.js`;
+  - `crearAvanzado` y `prepararLitofania` partidas;
+  - `probar-motor.mjs` y `probar-formatos.mjs` divididos por tema (`scripts/motor/`, `scripts/formatos/`), y `puntosDeCapa` compartida en `scripts/lib/gcode.mjs`.
+- `materiales.js` ya no usa top-level await: `iniciarMateriales()` devuelve la promesa de precios y `main.js` la espera antes del primer dibujo.
 
 ### Corregido
 
 - La vista previa ya no muestra una capa vacía al final cuando el tope de tramos corta justo al empezar una capa nueva.
+- El progreso de "laminando" llega a 1 (antes quedaba entre 0,8 y 0,95 con una o varias piezas).
+- El foco al volver al paso 1 no saca botones del orden de tabulación.
 
 ## [0.2.0] - 2026-10-18
 

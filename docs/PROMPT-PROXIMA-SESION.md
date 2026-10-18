@@ -1,4 +1,4 @@
-# Prompt para la próxima sesión (Sprint 3)
+# Prompt para la próxima sesión (Sprint 4)
 
 Copiá todo lo que está debajo de la línea en una sesión nueva de Claude Code sobre el repo `Guillenjulian/laminar-movil`.
 
@@ -10,8 +10,8 @@ Tu trabajo es **orquestar** un equipo de agentes, no programar vos. Planificás,
 
 ## 0. Antes de empezar
 1. Leé **sólo** `docs/MAPA.md` (mapa de la app), `README.md`, `src/perfiles/LEEME.md` y la lista de ADRs en `docs/decisiones/` (sólo el título y el estado de cada uno). No leas todo el código: el mapa dice dónde está cada cosa.
-2. Corré `npm ci && npm run build`, `npm run lint`, `npm run format:check` y las suites (`test:transformar`, `test:formatos`, `test:cambios`, `test:torres`, `test:piezas`, `test:contratos`, `test:motor`, `test:app`) para confirmar que la base está verde. Chromium está en `/opt/pw-browsers`.
-3. Trabajá sobre la rama de la sesión. Si el PR #3 (sprint 2) sigue abierto, basate en su rama (`ccr-877adf2a-micwqt`, que ya incluye el PR #2); si ya se mergeó, en `main`. Abrí un PR a `main` y verificá el deploy de Vercel y la CI de GitHub Actions.
+2. Corré `npm ci && npm run build`, `npm run lint`, `npm run format:check` y las suites (`test:transformar`, `test:formatos`, `test:cambios`, `test:torres`, `test:piezas`, `test:recorridos`, `test:contratos`, `test:motor`, `test:app`) para confirmar que la base está verde. Chromium está en `/opt/pw-browsers`.
+3. Trabajá sobre la rama de la sesión. Si el PR #3 (sprints 2 y 3) sigue abierto, basate en su rama (`ccr-877adf2a-micwqt`, que ya incluye el PR #2); si ya se mergeó, en `main`. Abrí un PR a `main` y verificá el deploy de Vercel y la CI de GitHub Actions.
 
 ## 1. Equipo y roles
 
@@ -62,7 +62,7 @@ PRUEBAS: <qué agregar y dónde; qué comandos tienen que dar TODAS LAS PRUEBAS 
 ENTREGA: commit (sin push) con Conventional Commits + líneas de autoría + reporte breve UNA sola vez (hash, rama, archivos, ✔/✘, dudas)
 ```
 
-### Lecciones de los sprints 0, 1 y 2 (aplicalas)
+### Lecciones de los sprints 0 a 3 (aplicalas)
 - **Paralelizar sin pisarse:** "crear en paralelo, recablear en serie". Cuando varias tareas tocan el mismo archivo de pruebas, cada una pone sus casos en un archivo propio (`scripts/cambios/*.mjs`, `scripts/motor/*.mjs`, `scripts/app/*.mjs`) y agrega 1–2 líneas en el orquestador. Los conflictos que quedan (MAPA, `package.json`, `ci.yml`, `contratos-ui.js`) los resuelve el CTO al integrar, conservando ambas partes.
 - **Adelantar trabajo:** se puede arrancar una tarea sobre un commit todavía en revisión si su contrato es estable; después se rebasa.
 - **Máquina compartida:** con varios agentes, Chromium satura la máquina y `test:app` da timeouts falsos. Los agentes corren sólo sus áreas con un orquestador temporal; la suite completa la corre la CI. Si hay carga, nadie corre `test:app` completo en paralelo. Cortá con `TaskStop` cualquier agente que quede en bucle o reintentando.
@@ -76,9 +76,12 @@ ENTREGA: commit (sin push) con Conventional Commits + líneas de autoría + repo
 - **Pedir mutaciones al revisor:** que rompa a mano el código (comentar una línea, cambiar un signo) y confirme que la prueba falla. En el sprint 2 eso destapó pruebas que comparaban capturas o se comparaban consigo mismas.
 - **Un id por entidad:** nada de ids paralelos "para el visor" (T8 lo intentó y rompía la escala de las piezas agregadas).
 - **No hacer `cd` a un worktree desde la sesión principal:** cambia el directorio de trabajo y el hook de git mira el worktree equivocado.
+- **Refactor = regresión antes/después:** todo refactor trae un script temporal que guarda la salida en la base y la compara byte a byte después (configuraciones, mallas, G-code, salida de pruebas), y el revisor lo corre él mismo contra la base con `git worktree add`, más mutaciones a mano.
+- **Rendimiento en bucles calientes:** medí antes y después con varias tandas alternadas (la máquina compartida tiene ±30 % de ruido); el límite es +10 %.
+- **Una prueba que reproduce el bug primero:** el QA la deja fallando y recién después se arregla (así salió el progreso que no llegaba a 1 y la capa vacía del lector).
 
 ## 3. Estándares de código (obligatorios)
-- **Nada monolítico.** Módulos chicos con una sola responsabilidad: menos de 300 líneas por archivo y funciones de menos de 40. Si un archivo está cerca del límite (hoy `perfiles.js` 310 líneas físicas: dividir antes de tocarlo; `formatos.js` 308; `visor.js` 280; `piezas-ui.js` 204), se divide antes de agregarle cosas.
+- **Nada monolítico.** Módulos chicos con una sola responsabilidad: menos de 300 líneas por archivo y funciones de menos de 40. Si un archivo está cerca del límite (hoy `visor.js` 280, `perfiles.js` 239, `paso2-config.js` 237, `piezas-ui.js` 204), se divide antes de agregarle cosas.
 - **Código limpio y reutilizable.** Antes de escribir una función, buscá en el mapa si ya existe. Sin duplicación (constantes compartidas exportadas, por ejemplo `LIMITES` y `esBowden`). Funciones puras cuando se pueda; los efectos (DOM, IndexedDB, workers) en los bordes.
 - **Módulos de UI (ADR 0001):** nada toca el DOM al importarse, siempre se lee `estado.x` en el momento, y la comunicación entre pasos va por callbacks inyectados. Cada módulo nuevo de `src/ui/` suma su entrada en `scripts/lib/contratos-ui.js` (exports, aridades, aristas permitidas).
 - **Escalable:** datos en JSON (perfiles, materiales, opciones) y lógica separada de la interfaz.
@@ -104,9 +107,10 @@ ENTREGA: commit (sin push) con Conventional Commits + líneas de autoría + repo
 ### Ya hecho
 - Sprint 0: ESLint + Prettier, `main.js` dividido (ADR 0001), `probar-app.mjs` dividido, CI, CHANGELOG, prueba de contratos.
 - Sprint 1: recientes con escala y rotación (ítem 6); cambios por altura y torres de calibración (ítem 7, ADR 0002).
+- Sprint 3 (v0.3.0): deuda técnica — lint de 12 warnings a 0, ESLint 10, `perfiles.js`/`formatos.js`/lector de recorridos/`espiralar`/avanzado/litofanía divididos con regresiones idénticas, aviso en el paso 2 cuando no entran las piezas, `test:recorridos` y pruebas de giros, cama centrada, progreso y precio; arreglados el progreso de laminando y la capa vacía del lector.
 - Sprint 2 (v0.2.0): varias piezas y copias con acomodo automático (ítem 8, ADR 0003); perfiles revisados de 8 impresoras (ítem 10); división de `vista-capas`, `impresoras`, `visor` y `paso1-modelo`. Decisión del usuario: la torre sigue sin escala ni rotación.
 
-### Sprint 3 en adelante (producto)
+### Sprint 4 en adelante (producto)
 9. **Soportes tipo árbol** (verificar que anden sin el pool de minions) y bloqueo de soportes por zona.
 11. **Exportar `.gcode.3mf` para Bambu Lab.**
 12. **Enviar el G-code por red local** a OctoPrint o Moonraker (opcional y configurable).
@@ -114,10 +118,9 @@ ENTREGA: commit (sin push) con Conventional Commits + líneas de autoría + repo
 14. **Accesibilidad** (lectores de pantalla, contraste, foco) y textos en inglés opcionales.
 
 ### Deuda técnica (meterla en los sprints cuando toque esos archivos)
-- Funciones largas viejas que marca el lint (`crearAvanzado`, `prepararLitofania`, `armarConfiguracion`, `espiralar`, `leer` del worker de recorridos; la lista vigente está en el MAPA §6).
-- Piezas (ADR 0003): sin prueba de `p.tamano` con giros que no son de 90°; en el paso 2 no se avisa si al cambiar de impresora dejan de entrar las piezas (el error aparece recién al laminar); sin pruebas con `originCenter` ni cama de cinta.
-- Migrar a ESLint 10.
-- Top-level await de precios en `materiales.js`.
+- Lint en 0 warnings desde la v0.3.0: cualquier warning nuevo es un hallazgo.
+- Piezas (ADR 0003): sin prueba con cama de cinta; en recientes, dos piezas con el mismo nombre y peso guardan sólo la activa.
+- La lista vigente está en el MAPA §6.
 
 ### Validación con hardware (la hace una persona)
 - Imprimir: cubo Normal, pausa M600, PETG/TPU, modo jarrón, altura variable, una torre de temperatura y una de retracción en la Ender 3 V3 SE.
