@@ -137,6 +137,49 @@ function pruebasConfiguracionDeTorre(T, ok) {
     }
 }
 
+const mensaje = f => {
+    try {
+        f();
+        return '';
+    } catch (e) {
+        return e.message;
+    }
+};
+
+// Revisión: hotendMax bajo, tope en armarTorre, TPU, mensajes "Bloque N" y patrón fijo.
+function pruebasRevision(T, P, ok) {
+    console.log('\n▶ T6: revisión (hotendMax, TPU, mensajes)');
+    P.ponerImpresorasPropias([{ id: 'tope160', nombre: 'Tope', hotendMax: 160, camaMax: 100, firmware: 'marlin' }]);
+    ok(
+        'hotendMax 160: error claro (no llega a la temperatura mínima)',
+        /no llega a la temperatura mínima/.test(mensaje(() => T.valoresSugeridos('temperatura', ctxTorre('tope160')))),
+    );
+    const vTemp = [250, 245, 240];
+    ok(
+        'armarTorre rechaza valores > hotendMax con "Bloque N:"',
+        /^Bloque 1: /.test(mensaje(() => T.armarTorre({ tipo: 'temperatura', valores: vTemp, hotendMax: 240 }))) &&
+            T.armarTorre({ tipo: 'temperatura', valores: vTemp, hotendMax: 250 }).bloques.length === 3,
+    );
+    ok(
+        'valor fuera de rango: "Bloque N:" con el número del bloque',
+        /^Bloque 3: /.test(mensaje(() => T.armarTorre({ tipo: 'retraccion', valores: [1, 2, 11] }))),
+    );
+    const tpuTemp = T.valoresSugeridos('temperatura', ctxTorre(ENDER, 'tpu')).valores;
+    const tpuDir = T.valoresSugeridos('retraccion', ctxTorre(ENDER, 'tpu'));
+    const tpuBow = T.valoresSugeridos('retraccion', ctxTorre(BOWDEN, 'tpu'));
+    ok('TPU temperatura: escalera de 5 dentro de hotendMax', tpuTemp.length === 5 && tpuTemp.every(v => v <= 260));
+    ok(
+        'TPU retracción directa: 0,5..2,5 de a 0,5 y sin aviso',
+        J(tpuDir.valores) === J([0.5, 1, 1.5, 2, 2.5]) && !tpuDir.aviso,
+    );
+    ok(
+        'TPU retracción Bowden: misma escalera con el aviso del material',
+        J(tpuBow.valores) === J(tpuDir.valores) && tpuBow.aviso === P.materiales.tpu.avisoBowden,
+    );
+    const cfg = T.configuracionDeTorre(T.armarTorre({ tipo: 'temperatura', valores: [230, 225, 220] }));
+    ok('la torre fija un patrón de relleno no vacío', cfg.personal.patron === 'linear');
+}
+
 export async function probarConfiguracionTorres(ok) {
     const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
     try {
@@ -145,6 +188,7 @@ export async function probarConfiguracionTorres(ok) {
         pruebasValoresSugeridos(T, P, ok);
         pruebasArmarTorre(T, ok);
         pruebasConfiguracionDeTorre(T, ok);
+        pruebasRevision(T, P, ok);
     } finally {
         await vite.close();
     }

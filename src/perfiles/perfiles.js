@@ -107,6 +107,9 @@ export const COSTURAS = {
     giro: { nombre: 'Girando', descripcion: 'El arranque da vueltas alrededor de la pieza a medida que sube.' },
 };
 
+// Extrusor Bowden: la impresora retrae más de 2 mm (retracción en mm).
+export const esBowden = retraccionMm => retraccionMm > 2;
+
 // Valores "de fábrica" de Avanzado para la impresora, calidad y material
 // elegidos (lo que se usa si el usuario no toca nada).
 export function valoresDeAvanzado(impresoraId, calidad, material) {
@@ -278,7 +281,7 @@ export function armarConfiguracion({
     // no se llevan bien con Bowden (TPU), si la impresora retrae más de 2 mm.
     if (mat.aviso) avisos.push(mat.aviso);
     const retraccion = { ...imp.proceso, ...cal.proceso }.outputRetractDist;
-    if (mat.avisoBowden && retraccion > 2) avisos.push(mat.avisoBowden);
+    if (mat.avisoBowden && esBowden(retraccion)) avisos.push(mat.avisoBowden);
 
     limitarBoquilla(proceso, imp, avisos);
     const { camaMax } = imp.limites || {};
