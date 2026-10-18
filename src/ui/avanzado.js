@@ -5,7 +5,7 @@
 // Igual que "Personalizar": en `estado.avanzado` se guarda SÓLO lo que el
 // usuario cambió (ej. { jarron: true, tempBoquilla: 215 }); el resto sale de la
 // impresora, la calidad y el material elegidos (ver valoresDeAvanzado en
-// perfiles.js). main.js lo guarda con las preferencias (IndexedDB) y se lo pasa
+// perfiles.js). estado.js lo guarda con las preferencias (IndexedDB) y se lo pasa
 // a armarConfiguracion como `personal.avanzado`, que lo traduce a claves de Kiri.
 
 import { buscarImpresora, valoresDeAvanzado, COSTURAS } from '../perfiles/perfiles.js';
@@ -69,7 +69,7 @@ export function resumenAvanzado(av) {
     return partes.join(' · ');
 }
 
-// Arma la sección. `estado` es el de main.js (usa impresoraId, calidad,
+// Arma la sección. `estado` es el de src/ui/estado.js (usa impresoraId, calidad,
 // material y avanzado); `alCambiar` se llama después de cada cambio (para
 // guardar las preferencias).
 export function crearAvanzado({ estado, alCambiar = () => {} }) {
@@ -166,7 +166,7 @@ export function crearAvanzado({ estado, alCambiar = () => {} }) {
         alCambiar();
     };
     // Si cambia la calidad o el material, cambian los valores de fábrica.
-    // (Escuchamos en document: corre después del manejador de main.js.)
+    // (Escuchamos en document: corre después del manejador de src/ui/paso2-config.js.)
     document.addEventListener('change', e => {
         if (e.target.name === 'calidad' || e.target.name === 'material') dibujar();
     });

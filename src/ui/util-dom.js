@@ -1,5 +1,5 @@
 // Helpers mínimos de DOM y texto que usan todos los módulos de la interfaz.
-// Flujo: no depende de nadie; main.js y los módulos de src/ui/ lo importan.
+// Flujo: no depende de nadie; los módulos de src/ui/ lo importan.
 // No toca el DOM al importarse (sólo define funciones).
 
 /**

@@ -24,7 +24,7 @@ export function nombreLitofania(nombreFoto) {
     return nombreFoto.replace(/\.[a-z0-9]+$/i, '') + '-litofania.stl';
 }
 
-// Arma la hoja. `abrir()` y `cerrar()` son abrirHoja/cerrarHojas de main.js;
+// Arma la hoja. `abrir()` y `cerrar()` son abrirHoja/cerrarHojas de navegacion.js (paso1-modelo las pasa);
 // `cargar(nombre, generar)` carga el modelo, donde `generar()` devuelve una
 // promesa con el STL. Devuelve { abrirFoto(nombre, buffer) }.
 export function prepararLitofania({ abrir, cerrar, cargar }) {
