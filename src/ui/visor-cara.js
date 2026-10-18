@@ -13,17 +13,19 @@ const MAX_DURACION_MS = 400; // más que esto era una pulsación larga
  * @param {THREE.Camera} ctx.camara
  * @param {HTMLElement} ctx.dom  elemento que recibe los toques (el canvas del renderer)
  * @param {() => void} ctx.redibujar  pide un cuadro nuevo
- * @param {() => Map<number, THREE.Mesh>} ctx.mallas  mallas tocables por id de pieza (con una sola pieza: id 0)
+ * @param {() => THREE.Mesh[]} ctx.mallas  todas las mallas tocables, copias incluidas; el id de la pieza sale de
+ *   `malla.userData.idPieza` (si falta, 0)
  * @returns {{
  *   elegirCara: (activo: boolean, alElegir?: (normal: number[], id: number) => void) => void,
  *   alTocarPieza: (fn: ((id: number) => void) | null) => void,
  *   quitarResaltado: () => void,
+ *   destruir: () => void,
  * }}
  */
 export function crearSelectorCara(ctx) {
     // Estado compartido por las funciones de abajo: dependencias más lo que se va eligiendo.
     const est = { ...ctx, alElegirCara: null, alTocar: null, resaltado: null, rayo: new THREE.Raycaster() };
-    escucharToques(
+    const quitarOyentes = escucharToques(
         est.dom,
         () => !!(est.alElegirCara || est.alTocar),
         (cx, cy) => tocarModelo(est, cx, cy),
@@ -39,6 +41,11 @@ export function crearSelectorCara(ctx) {
             est.alTocar = fn;
         },
         quitarResaltado: () => quitarResaltado(est),
+        // Saca los oyentes del `dom` y el resaltado.
+        destruir() {
+            quitarOyentes();
+            quitarResaltado(est);
+        },
     };
 }
 
@@ -74,12 +81,12 @@ function buscarToque(est, cx, cy) {
     const r = est.dom.getBoundingClientRect();
     if (!r.width || !r.height) return null;
     const punto = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
-    const porMalla = new Map([...est.mallas()].map(([id, malla]) => [malla, id]));
-    if (!porMalla.size) return null;
-    for (const malla of porMalla.keys()) malla.updateMatrixWorld(true);
+    const mallas = est.mallas();
+    if (!mallas.length) return null;
+    for (const malla of mallas) malla.updateMatrixWorld(true);
     est.rayo.setFromCamera(punto, est.camara);
-    const [toque] = est.rayo.intersectObjects([...porMalla.keys()], false);
-    return toque?.face ? { toque, id: porMalla.get(toque.object) } : null;
+    const [toque] = est.rayo.intersectObjects(mallas, false);
+    return toque?.face ? { toque, id: toque.object.userData.idPieza ?? 0 } : null;
 }
 
 function tocarModelo(est, cx, cy) {
@@ -113,16 +120,17 @@ function materialResaltado() {
 
 // Un "toque" es apoyar y levantar un solo dedo (o el mouse) casi sin moverse y rápido.
 // Si se movió, tardó o hubo dos dedos, era un gesto de OrbitControls y no lo tomamos.
+// Devuelve una función que saca los oyentes.
 function escucharToques(dom, hayOyente, alToque) {
     const toques = new Map(); // pointerId → { x, y, t }
     let gestoMultiple = false;
-    dom.addEventListener('pointerdown', ev => {
+    const abajo = ev => {
         if (toques.size === 0) gestoMultiple = false;
         toques.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, t: performance.now() });
         if (toques.size > 1) gestoMultiple = true;
-    });
-    dom.addEventListener('pointercancel', ev => toques.delete(ev.pointerId));
-    dom.addEventListener('pointerup', ev => {
+    };
+    const cancelar = ev => toques.delete(ev.pointerId);
+    const arriba = ev => {
         const inicio = toques.get(ev.pointerId);
         toques.delete(ev.pointerId);
         if (!inicio || gestoMultiple || !hayOyente()) return;
@@ -130,5 +138,13 @@ function escucharToques(dom, hayOyente, alToque) {
         const movio = Math.hypot(ev.clientX - inicio.x, ev.clientY - inicio.y);
         if (movio >= MAX_MOVIMIENTO_PX || performance.now() - inicio.t >= MAX_DURACION_MS) return;
         alToque(ev.clientX, ev.clientY);
-    });
+    };
+    dom.addEventListener('pointerdown', abajo);
+    dom.addEventListener('pointercancel', cancelar);
+    dom.addEventListener('pointerup', arriba);
+    return () => {
+        dom.removeEventListener('pointerdown', abajo);
+        dom.removeEventListener('pointercancel', cancelar);
+        dom.removeEventListener('pointerup', arriba);
+    };
 }
