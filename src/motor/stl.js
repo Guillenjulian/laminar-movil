@@ -22,7 +22,8 @@ function esBinario(datos) {
 function leerBinario(datos) {
     const n = datos.getUint32(80, true);
     const vertices = new Float32Array(n * 9);
-    let o = 84, i = 0;
+    let o = 84,
+        i = 0;
     for (let t = 0; t < n; t++) {
         o += 12; // saltear la normal
         for (let k = 0; k < 9; k++) {

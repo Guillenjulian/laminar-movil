@@ -45,8 +45,12 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
 // de centrar el modelo en la cama.
 export async function laminar({ stl, dispositivo, proceso, maxTriangulos, transformacion, alProgresar, signal }) {
     const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
-    const r = await correr(worker, { tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos, transformacion }, [stl],
-        { alProgresar, signal });
+    const r = await correr(
+        worker,
+        { tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos, transformacion },
+        [stl],
+        { alProgresar, signal },
+    );
     return { gcode: r.gcode, info: r.info };
 }
 
@@ -77,8 +81,20 @@ export async function convertirAStl(nombre, buffer) {
 // (ver litofania.js). Devuelve { stl: ArrayBuffer }. Transfiere `grises`.
 export async function litofaniaAStl({ grises, ancho, alto, anchoMm, minMm, maxMm, tipo, marco }) {
     const worker = new Worker(new URL('./convertir.worker.js', import.meta.url), { type: 'module' });
-    const r = await correr(worker, {
-        tipo: 'litofania', grises, ancho, alto, anchoMm, minMm, maxMm, tipoLitofania: tipo, marco,
-    }, [grises.buffer]);
+    const r = await correr(
+        worker,
+        {
+            tipo: 'litofania',
+            grises,
+            ancho,
+            alto,
+            anchoMm,
+            minMm,
+            maxMm,
+            tipoLitofania: tipo,
+            marco,
+        },
+        [grises.buffer],
+    );
     return { stl: r.stl };
 }

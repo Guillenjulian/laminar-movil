@@ -82,7 +82,8 @@ function rodriguesHaciaAbajo([nx, ny, nz]) {
     const c = -nz; // n̂ · (0,0,-1)
     if (nx === 0 && ny === 0) return identidad(); // ya está apoyada
     // v = n̂ × (0,0,-1) = (-ny, nx, 0)
-    const vx = -ny, vy = nx;
+    const vx = -ny,
+        vy = nx;
     // [v]× (antisimétrica del producto vectorial, con vz = 0)
     const V = [0, 0, vy, 0, 0, -vx, -vy, vx, 0];
     const V2 = multiplicar(V, V);
@@ -91,9 +92,7 @@ function rodriguesHaciaAbajo([nx, ny, nz]) {
 }
 
 export function determinante(m) {
-    return m[0] * (m[4] * m[8] - m[5] * m[7])
-        - m[1] * (m[3] * m[8] - m[5] * m[6])
-        + m[2] * (m[3] * m[7] - m[4] * m[6]);
+    return m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) + m[2] * (m[3] * m[7] - m[4] * m[6]);
 }
 
 // ¿Es la identidad? (con una tolerancia chiquita para errores de redondeo)
@@ -105,7 +104,9 @@ export function esIdentidad(m) {
 export function aplicar(m, vertices) {
     const v = vertices;
     for (let i = 0; i < v.length; i += 3) {
-        const x = v[i], y = v[i + 1], z = v[i + 2];
+        const x = v[i],
+            y = v[i + 1],
+            z = v[i + 2];
         v[i] = m[0] * x + m[1] * y + m[2] * z;
         v[i + 1] = m[3] * x + m[4] * y + m[5] * z;
         v[i + 2] = m[6] * x + m[7] * y + m[8] * z;
@@ -131,10 +132,16 @@ export function aplicar(m, vertices) {
 export function medir(m, vertices) {
     const v = vertices;
     if (!v.length) return { x: 0, y: 0, z: 0 };
-    let x0 = Infinity, y0 = Infinity, z0 = Infinity;
-    let x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    let x0 = Infinity,
+        y0 = Infinity,
+        z0 = Infinity;
+    let x1 = -Infinity,
+        y1 = -Infinity,
+        z1 = -Infinity;
     for (let i = 0; i < v.length; i += 3) {
-        const x = v[i], y = v[i + 1], z = v[i + 2];
+        const x = v[i],
+            y = v[i + 1],
+            z = v[i + 2];
         const tx = m[0] * x + m[1] * y + m[2] * z;
         const ty = m[3] * x + m[4] * y + m[5] * z;
         const tz = m[6] * x + m[7] * y + m[8] * z;

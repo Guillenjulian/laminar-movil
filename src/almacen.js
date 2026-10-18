@@ -31,13 +31,19 @@ async function transaccion(nombres, modo, fn) {
         const tx = db.transaction(nombres, modo);
         const stores = Object.fromEntries(nombres.map(n => [n, tx.objectStore(n)]));
         let resultado;
-        Promise.resolve(fn(stores)).then(r => { resultado = r; }, rechazar);
+        Promise.resolve(fn(stores)).then(r => {
+            resultado = r;
+        }, rechazar);
         tx.oncomplete = () => resolver(resultado);
         tx.onerror = tx.onabort = () => rechazar(tx.error);
     });
 }
 
-const pedir = req => new Promise((ok, mal) => { req.onsuccess = () => ok(req.result); req.onerror = () => mal(req.error); });
+const pedir = req =>
+    new Promise((ok, mal) => {
+        req.onsuccess = () => ok(req.result);
+        req.onerror = () => mal(req.error);
+    });
 
 // --- Ajustes -----------------------------------------------------------------
 
@@ -46,7 +52,9 @@ export async function leerAjuste(clave) {
 }
 
 export async function guardarAjuste(clave, valor) {
-    return transaccion(['ajustes'], 'readwrite', s => { s.ajustes.put(valor, clave); });
+    return transaccion(['ajustes'], 'readwrite', s => {
+        s.ajustes.put(valor, clave);
+    });
 }
 
 // --- Modelos recientes -------------------------------------------------------
@@ -74,7 +82,9 @@ export async function guardarModelo(nombre, stl) {
     const lista = await listarModelos();
     const repetido = lista.find(m => m.nombre === nombre && m.bytes === stl.byteLength);
     if (repetido) {
-        await transaccion(['modelos'], 'readwrite', s => { s.modelos.put({ ...repetido, fecha: Date.now() }); });
+        await transaccion(['modelos'], 'readwrite', s => {
+            s.modelos.put({ ...repetido, fecha: Date.now() });
+        });
         return;
     }
     await transaccion(['modelos', 'archivos'], 'readwrite', async s => {

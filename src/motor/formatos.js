@@ -29,28 +29,35 @@ export function extension(nombre) {
 
 export function leerOBJ(entrada) {
     const texto = typeof entrada === 'string' ? entrada : new TextDecoder().decode(entrada);
-    const vertices = [];   // x, y, z de cada "v"
+    const vertices = []; // x, y, z de cada "v"
     const salida = [];
     const lineas = texto.split(/\r?\n/);
     for (let n = 0; n < lineas.length; n++) {
         const linea = lineas[n].trim();
         if (linea.startsWith('v ') || linea.startsWith('v\t')) {
             const p = linea.split(/\s+/);
-            const x = +p[1], y = +p[2], z = +p[3];
+            const x = +p[1],
+                y = +p[2],
+                z = +p[3];
             if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
                 throw new Error(`El OBJ tiene un vértice inválido en la línea ${n + 1}.`);
             }
             vertices.push(x, y, z);
         } else if (linea.startsWith('f ') || linea.startsWith('f\t')) {
             const total = vertices.length / 3;
-            const indices = linea.split(/\s+/).slice(1).map(parte => {
-                const i = parseInt(parte.split('/')[0], 10);
-                const real = i < 0 ? total + i : i - 1;
-                if (!Number.isInteger(i) || i === 0 || real < 0 || real >= total) {
-                    throw new Error(`El OBJ tiene una cara que apunta a un vértice que no existe (línea ${n + 1}).`);
-                }
-                return real;
-            });
+            const indices = linea
+                .split(/\s+/)
+                .slice(1)
+                .map(parte => {
+                    const i = parseInt(parte.split('/')[0], 10);
+                    const real = i < 0 ? total + i : i - 1;
+                    if (!Number.isInteger(i) || i === 0 || real < 0 || real >= total) {
+                        throw new Error(
+                            `El OBJ tiene una cara que apunta a un vértice que no existe (línea ${n + 1}).`,
+                        );
+                    }
+                    return real;
+                });
             if (indices.length < 3) continue; // una cara de 1 o 2 vértices no es un triángulo
             for (let k = 1; k < indices.length - 1; k++) {
                 for (const i of [indices[0], indices[k], indices[k + 1]]) {
@@ -140,9 +147,9 @@ export function leerXML3MF(xml) {
     const build = /<(?:\w+:)?build\b[^>]*>([\s\S]*?)<\/(?:\w+:)?build>/.exec(xml);
     let items = build
         ? [...build[1].matchAll(/<(?:\w+:)?item\b([^>]*)>/g)].map(m => {
-            const a = atributos(m[1]);
-            return { objeto: a.objectid, matriz: leerMatriz(a.transform) };
-        })
+              const a = atributos(m[1]);
+              return { objeto: a.objectid, matriz: leerMatriz(a.transform) };
+          })
         : [];
     if (items.length === 0) {
         items = [...objetos.entries()].filter(([, o]) => o.malla).map(([id]) => ({ objeto: id, matriz: null }));
@@ -169,7 +176,10 @@ export function leerXML3MF(xml) {
     if (total === 0) throw new Error('El 3MF no tiene triángulos.');
     const salida = new Float32Array(total);
     let o = 0;
-    for (const p of partes) { salida.set(p, o); o += p.length; }
+    for (const p of partes) {
+        salida.set(p, o);
+        o += p.length;
+    }
     return salida;
 }
 
@@ -180,7 +190,9 @@ function leerMalla3MF(cuerpo, id) {
     const vertices = [];
     for (const m of cuerpo.matchAll(/<(?:\w+:)?vertex\b([^>]*)>/g)) {
         const a = atributos(m[1]);
-        const x = +a.x, y = +a.y, z = +a.z;
+        const x = +a.x,
+            y = +a.y,
+            z = +a.z;
         if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
             throw new Error(`El 3MF tiene un vértice inválido en el objeto ${id}.`);
         }
@@ -218,7 +230,8 @@ function componer(a, b) {
     const r = new Array(12);
     for (let f = 0; f < 4; f++) {
         for (let c = 0; c < 3; c++) {
-            r[f * 3 + c] = a[f * 3] * b[c] + a[f * 3 + 1] * b[3 + c] + a[f * 3 + 2] * b[6 + c] + (f === 3 ? b[9 + c] : 0);
+            r[f * 3 + c] =
+                a[f * 3] * b[c] + a[f * 3 + 1] * b[3 + c] + a[f * 3 + 2] * b[6 + c] + (f === 3 ? b[9 + c] : 0);
         }
     }
     return r;
@@ -227,7 +240,9 @@ function componer(a, b) {
 function transformar(v, m, factor) {
     const salida = new Float32Array(v.length);
     for (let i = 0; i < v.length; i += 3) {
-        let x = v[i], y = v[i + 1], z = v[i + 2];
+        let x = v[i],
+            y = v[i + 1],
+            z = v[i + 2];
         if (m) {
             [x, y, z] = [
                 x * m[0] + y * m[3] + z * m[6] + m[9],
@@ -266,11 +281,19 @@ export function escribirSTL(v, encabezado = 'Laminar Movil') {
     for (let t = 0; t < n; t++) {
         const i = t * 9;
         // normal = (b - a) × (c - a), normalizada
-        const ux = v[i + 3] - v[i], uy = v[i + 4] - v[i + 1], uz = v[i + 5] - v[i + 2];
-        const wx = v[i + 6] - v[i], wy = v[i + 7] - v[i + 1], wz = v[i + 8] - v[i + 2];
-        let nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx;
+        const ux = v[i + 3] - v[i],
+            uy = v[i + 4] - v[i + 1],
+            uz = v[i + 5] - v[i + 2];
+        const wx = v[i + 6] - v[i],
+            wy = v[i + 7] - v[i + 1],
+            wz = v[i + 8] - v[i + 2];
+        let nx = uy * wz - uz * wy,
+            ny = uz * wx - ux * wz,
+            nz = ux * wy - uy * wx;
         const largo = Math.hypot(nx, ny, nz) || 1;
-        nx /= largo; ny /= largo; nz /= largo;
+        nx /= largo;
+        ny /= largo;
+        nz /= largo;
         datos.setFloat32(o, nx, true);
         datos.setFloat32(o + 4, ny, true);
         datos.setFloat32(o + 8, nz, true);

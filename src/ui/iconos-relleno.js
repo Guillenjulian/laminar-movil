@@ -1,23 +1,34 @@
 // Dibujitos de cada patrón de relleno (SVG de 48×48, usan el color del texto).
 
-const lineas = (angulos, paso = 8) => angulos.flatMap(a => {
-    // Líneas paralelas a `a` grados que cubren el cuadrado.
-    const r = (a * Math.PI) / 180, dx = Math.cos(r), dy = Math.sin(r);
-    const nx = -dy, ny = dx;
-    const d = [];
-    for (let k = -48; k <= 48; k += paso) {
-        const cx = 24 + nx * k, cy = 24 + ny * k;
-        d.push(`M${(cx - dx * 40).toFixed(1)} ${(cy - dy * 40).toFixed(1)}L${(cx + dx * 40).toFixed(1)} ${(cy + dy * 40).toFixed(1)}`);
-    }
-    return d;
-}).join('');
+const lineas = (angulos, paso = 8) =>
+    angulos
+        .flatMap(a => {
+            // Líneas paralelas a `a` grados que cubren el cuadrado.
+            const r = (a * Math.PI) / 180,
+                dx = Math.cos(r),
+                dy = Math.sin(r);
+            const nx = -dy,
+                ny = dx;
+            const d = [];
+            for (let k = -48; k <= 48; k += paso) {
+                const cx = 24 + nx * k,
+                    cy = 24 + ny * k;
+                d.push(
+                    `M${(cx - dx * 40).toFixed(1)} ${(cy - dy * 40).toFixed(1)}L${(cx + dx * 40).toFixed(1)} ${(cy + dy * 40).toFixed(1)}`,
+                );
+            }
+            return d;
+        })
+        .join('');
 
 function panal() {
     const d = [];
-    const r = 7, h = r * Math.sqrt(3);
+    const r = 7,
+        h = r * Math.sqrt(3);
     for (let fila = -1; fila < 9; fila++) {
         for (let col = -1; col < 5; col++) {
-            const cx = col * r * 3 + (fila % 2 ? r * 1.5 : 0), cy = fila * h / 2;
+            const cx = col * r * 3 + (fila % 2 ? r * 1.5 : 0),
+                cy = (fila * h) / 2;
             const p = [0, 1, 2, 3, 4, 5].map(i => {
                 const t = (Math.PI / 3) * i;
                 return `${(cx + r * Math.cos(t)).toFixed(1)} ${(cy + r * Math.sin(t)).toFixed(1)}`;

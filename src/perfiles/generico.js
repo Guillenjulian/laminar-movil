@@ -25,9 +25,18 @@ export function generarCalidades(boquilla = 0.4, velocidad = 60, perimetro = vel
         };
     };
     return {
-        rapido: calidad('Rápido', 'Capas de {capa} mm. Ideal para prototipos.', 0.7, 1.2, { sliceShells: 2, sliceFillSparse: 0.15 }),
-        normal: calidad('Normal', 'Capas de {capa} mm. Buen equilibrio entre tiempo y terminación.', 0.5, 1, { sliceShells: 3, sliceFillSparse: 0.2 }),
-        detalle: calidad('Detalle', 'Capas de {capa} mm. Más lento, mejor terminación.', 0.3, 0.7, { sliceShells: 3, sliceFillSparse: 0.2 }),
+        rapido: calidad('Rápido', 'Capas de {capa} mm. Ideal para prototipos.', 0.7, 1.2, {
+            sliceShells: 2,
+            sliceFillSparse: 0.15,
+        }),
+        normal: calidad('Normal', 'Capas de {capa} mm. Buen equilibrio entre tiempo y terminación.', 0.5, 1, {
+            sliceShells: 3,
+            sliceFillSparse: 0.2,
+        }),
+        detalle: calidad('Detalle', 'Capas de {capa} mm. Más lento, mejor terminación.', 0.3, 0.7, {
+            sliceShells: 3,
+            sliceFillSparse: 0.2,
+        }),
     };
 }
 

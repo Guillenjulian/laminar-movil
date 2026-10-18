@@ -1,433 +1,563 @@
 <!doctype html>
 <html lang="es-AR">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#f08a24">
-    <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="icon" href="./favicon.png" type="image/png">
-    <link rel="apple-touch-icon" href="./iconos/apple-touch-icon.png">
-    <meta name="description" content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión.">
-    <title>Laminar Móvil</title>
-    <link rel="stylesheet" href="./src/estilos.css">
-    <link rel="stylesheet" href="./src/estilos-formatos.css">
-    <link rel="stylesheet" href="./src/estilos-materiales.css">
-    <link rel="stylesheet" href="./src/estilos-avanzado.css">
-</head>
-<body>
-    <header class="barra">
-        <button class="atras" id="atras" aria-label="Volver" hidden>‹</button>
-        <h1>Laminar Móvil</h1>
-        <ol class="pasos" aria-label="Pasos">
-            <li data-paso="1">1</li><li data-paso="2">2</li><li data-paso="3">3</li><li data-paso="4">4</li>
-        </ol>
-    </header>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#f08a24" />
+        <link rel="manifest" href="./manifest.webmanifest" />
+        <link rel="icon" href="./favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="./iconos/apple-touch-icon.png" />
+        <meta name="description" content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión." />
+        <title>Laminar Móvil</title>
+        <link rel="stylesheet" href="./src/estilos.css" />
+        <link rel="stylesheet" href="./src/estilos-formatos.css" />
+        <link rel="stylesheet" href="./src/estilos-materiales.css" />
+        <link rel="stylesheet" href="./src/estilos-avanzado.css" />
+    </head>
+    <body>
+        <header class="barra">
+            <button class="atras" id="atras" aria-label="Volver" hidden>‹</button>
+            <h1>Laminar Móvil</h1>
+            <ol class="pasos" aria-label="Pasos">
+                <li data-paso="1">1</li>
+                <li data-paso="2">2</li>
+                <li data-paso="3">3</li>
+                <li data-paso="4">4</li>
+            </ol>
+        </header>
 
-    <main id="main">
-        <div class="banner" id="actualizacion" hidden>
-            Hay una versión nueva de la app.
-            <button class="boton chico primario" id="actualizar">Actualizar</button>
-        </div>
-
-        <!-- Paso 1: subir el STL -->
-        <section class="pantalla" data-paso="1">
-            <div class="sin-modelo" id="sinModelo">
-                <h2>Subí tu modelo</h2>
-                <p>Elegí un archivo <b>STL, OBJ o 3MF</b> del celu. Todo se procesa acá, no se sube a ningún lado.</p>
-                <label class="boton grande primario">
-                    Elegir archivo
-                    <input type="file" id="archivo" accept=".stl,.obj,.3mf,model/stl,application/sla,application/vnd.ms-pki.stl,model/obj,model/3mf,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,image/png,image/jpeg,image/webp" hidden>
-                </label>
-                <button class="boton" id="ejemplo">Probar con un cubo de ejemplo</button>
-                <label class="boton chico boton-foto">
-                    Litofanía desde una foto
-                    <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" hidden>
-                </label>
-                <div id="recientes" hidden>
-                    <h2>Recientes</h2>
-                    <ul class="recientes" id="listaRecientes"></ul>
-                </div>
+        <main id="main">
+            <div class="banner" id="actualizacion" hidden>
+                Hay una versión nueva de la app.
+                <button class="boton chico primario" id="actualizar">Actualizar</button>
             </div>
-            <div class="con-modelo" id="conModelo" hidden>
-                <div class="visor" id="visor" aria-label="Vista 3D del modelo">
-                    <p class="ayuda-gestos">1 dedo: girar · 2 dedos: zoom · doble toque: centrar</p>
-                </div>
-                <div class="ficha">
-                    <p class="nombre" id="nombreModelo"></p>
-                    <p id="datosModelo"></p>
-                    <div class="aviso" id="avisoModelo" hidden></div>
 
-                    <!-- Ajustes del modelo en la cama -->
-                    <div class="ajustes-modelo">
-                        <div class="fila-escala">
-                            <label for="escala">Escala</label>
-                            <button type="button" class="boton-capa" id="escalaMenos" aria-label="Achicar 10 %">−</button>
-                            <input type="number" id="escala" inputmode="decimal" min="1" max="2000" step="1" value="100" aria-label="Escala en por ciento">
-                            <span>%</span>
-                            <button type="button" class="boton-capa" id="escalaMas" aria-label="Agrandar 10 %">+</button>
+            <!-- Paso 1: subir el STL -->
+            <section class="pantalla" data-paso="1">
+                <div class="sin-modelo" id="sinModelo">
+                    <h2>Subí tu modelo</h2>
+                    <p>
+                        Elegí un archivo <b>STL, OBJ o 3MF</b> del celu. Todo se procesa acá, no se sube a ningún lado.
+                    </p>
+                    <label class="boton grande primario">
+                        Elegir archivo
+                        <input
+                            type="file"
+                            id="archivo"
+                            accept=".stl,.obj,.3mf,model/stl,application/sla,application/vnd.ms-pki.stl,model/obj,model/3mf,application/vnd.ms-package.3dmanufacturing-3dmodel+xml,image/png,image/jpeg,image/webp"
+                            hidden
+                        />
+                    </label>
+                    <button class="boton" id="ejemplo">Probar con un cubo de ejemplo</button>
+                    <label class="boton chico boton-foto">
+                        Litofanía desde una foto
+                        <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" hidden />
+                    </label>
+                    <div id="recientes" hidden>
+                        <h2>Recientes</h2>
+                        <ul class="recientes" id="listaRecientes"></ul>
+                    </div>
+                </div>
+                <div class="con-modelo" id="conModelo" hidden>
+                    <div class="visor" id="visor" aria-label="Vista 3D del modelo">
+                        <p class="ayuda-gestos">1 dedo: girar · 2 dedos: zoom · doble toque: centrar</p>
+                    </div>
+                    <div class="ficha">
+                        <p class="nombre" id="nombreModelo"></p>
+                        <p id="datosModelo"></p>
+                        <div class="aviso" id="avisoModelo" hidden></div>
+
+                        <!-- Ajustes del modelo en la cama -->
+                        <div class="ajustes-modelo">
+                            <div class="fila-escala">
+                                <label for="escala">Escala</label>
+                                <button type="button" class="boton-capa" id="escalaMenos" aria-label="Achicar 10 %">
+                                    −
+                                </button>
+                                <input
+                                    type="number"
+                                    id="escala"
+                                    inputmode="decimal"
+                                    min="1"
+                                    max="2000"
+                                    step="1"
+                                    value="100"
+                                    aria-label="Escala en por ciento"
+                                />
+                                <span>%</span>
+                                <button type="button" class="boton-capa" id="escalaMas" aria-label="Agrandar 10 %">
+                                    +
+                                </button>
+                            </div>
+                            <div class="botones-modelo">
+                                <button type="button" class="boton" data-rotar="x">↻ X 90°</button>
+                                <button type="button" class="boton" data-rotar="y">↻ Y 90°</button>
+                                <button type="button" class="boton" data-rotar="z">↻ Z 90°</button>
+                                <button type="button" class="boton" id="apoyarCara">Apoyar cara</button>
+                                <button type="button" class="boton" id="ajustarCama" hidden>
+                                    Achicar para que entre
+                                </button>
+                                <button type="button" class="boton" id="restablecerModelo" hidden>Restablecer</button>
+                            </div>
+                            <p class="aviso" id="ayudaCara" hidden>
+                                Tocá la cara del modelo que querés apoyar sobre la cama.
+                            </p>
                         </div>
-                        <div class="botones-modelo">
-                            <button type="button" class="boton" data-rotar="x">↻ X 90°</button>
-                            <button type="button" class="boton" data-rotar="y">↻ Y 90°</button>
-                            <button type="button" class="boton" data-rotar="z">↻ Z 90°</button>
-                            <button type="button" class="boton" id="apoyarCara">Apoyar cara</button>
-                            <button type="button" class="boton" id="ajustarCama" hidden>Achicar para que entre</button>
-                            <button type="button" class="boton" id="restablecerModelo" hidden>Restablecer</button>
-                        </div>
-                        <p class="aviso" id="ayudaCara" hidden>Tocá la cara del modelo que querés apoyar sobre la cama.</p>
-                    </div>
 
-                    <button class="boton chico" id="otroModelo">Elegir otro modelo</button>
-                </div>
-            </div>
-            <p class="cargando" id="cargando" hidden>Leyendo el modelo…</p>
-        </section>
-
-        <!-- Paso 2: impresora y calidad -->
-        <section class="pantalla" data-paso="2" hidden>
-            <h2>Impresora</h2>
-            <div id="impresoraElegida"></div>
-            <button class="boton" id="cambiarImpresora">Cambiar impresora</button>
-
-            <h2>Calidad</h2>
-            <div class="opciones" id="calidades"></div>
-
-            <h2>Material</h2>
-            <div class="opciones" id="materiales"></div>
-            <div id="tarjetaMaterial"></div>
-
-            <label class="interruptor">
-                <span>
-                    <b>Soportes</b><br>
-                    <small>Para partes que quedan "en el aire". Tarda más y gasta más filamento.</small>
-                </span>
-                <input type="checkbox" id="soportes">
-            </label>
-
-            <!-- Ajustes finos: todo a la vista dentro de un único desplegable (sin submenús) -->
-            <details class="personalizar" id="personalizar">
-                <summary>Personalizar relleno, paredes y adhesión</summary>
-
-                <h3>Relleno</h3>
-                <div class="patrones" id="patrones"></div>
-                <div class="fila-deslizador">
-                    <label for="densidad">Densidad</label>
-                    <output id="densidadValor"></output>
-                </div>
-                <input type="range" id="densidad" min="0" max="100" step="5">
-                <div class="atajos" id="atajosDensidad"></div>
-
-                <h3>Paredes</h3>
-                <div class="contadores">
-                    <div class="contador" data-clave="paredes" data-min="1" data-max="8">
-                        <span>Paredes</span>
-                        <button type="button" data-delta="-1" aria-label="Menos paredes">−</button>
-                        <output></output>
-                        <button type="button" data-delta="1" aria-label="Más paredes">+</button>
-                    </div>
-                    <div class="contador" data-clave="arriba" data-min="0" data-max="15">
-                        <span>Capas sólidas arriba</span>
-                        <button type="button" data-delta="-1" aria-label="Menos capas arriba">−</button>
-                        <output></output>
-                        <button type="button" data-delta="1" aria-label="Más capas arriba">+</button>
-                    </div>
-                    <div class="contador" data-clave="abajo" data-min="0" data-max="15">
-                        <span>Capas sólidas abajo</span>
-                        <button type="button" data-delta="-1" aria-label="Menos capas abajo">−</button>
-                        <output></output>
-                        <button type="button" data-delta="1" aria-label="Más capas abajo">+</button>
+                        <button class="boton chico" id="otroModelo">Elegir otro modelo</button>
                     </div>
                 </div>
+                <p class="cargando" id="cargando" hidden>Leyendo el modelo…</p>
+            </section>
 
-                <h3>Adhesión a la cama</h3>
-                <div class="opciones" id="adhesiones"></div>
+            <!-- Paso 2: impresora y calidad -->
+            <section class="pantalla" data-paso="2" hidden>
+                <h2>Impresora</h2>
+                <div id="impresoraElegida"></div>
+                <button class="boton" id="cambiarImpresora">Cambiar impresora</button>
 
-                <button type="button" class="boton enlace" id="restablecer">Volver a los valores de la calidad</button>
-            </details>
+                <h2>Calidad</h2>
+                <div class="opciones" id="calidades"></div>
 
-            <!-- Avanzado: plano, sin submenús. La lógica está en src/ui/avanzado.js -->
-            <details class="personalizar" id="avanzado">
-                <summary>Avanzado</summary>
+                <h2>Material</h2>
+                <div class="opciones" id="materiales"></div>
+                <div id="tarjetaMaterial"></div>
 
                 <label class="interruptor">
                     <span>
-                        <b>Modo jarrón</b><br>
-                        <small>Una sola pared que sube en espiral, sin relleno ni tapa.</small>
+                        <b>Soportes</b><br />
+                        <small>Para partes que quedan "en el aire". Tarda más y gasta más filamento.</small>
                     </span>
-                    <input type="checkbox" id="avJarron">
-                </label>
-                <p class="aviso" id="avisoJarron" hidden>Sirve para piezas huecas tipo maceta, vaso o florero:
-                    queda el fondo y una pared finita. El relleno y las paredes de "Personalizar" no se usan.</p>
-
-                <label class="interruptor">
-                    <span>
-                        <b>Altura de capa variable</b><br>
-                        <small id="detalleAlturaVariable">Capas más finas donde hay curvas; la de la calidad es la más gruesa.</small>
-                    </span>
-                    <input type="checkbox" id="avAlturaVariable">
+                    <input type="checkbox" id="soportes" />
                 </label>
 
-                <h3>Costura <small>(dónde empieza cada capa)</small></h3>
-                <div class="opciones" id="avCosturas"></div>
+                <!-- Ajustes finos: todo a la vista dentro de un único desplegable (sin submenús) -->
+                <details class="personalizar" id="personalizar">
+                    <summary>Personalizar relleno, paredes y adhesión</summary>
 
-                <h3>Retracción y viajes</h3>
-                <div class="contadores">
-                    <div class="contador" data-av="retraccion">
-                        <span>Retracción</span>
-                        <button type="button" data-paso-av="-1" aria-label="Menos retracción">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Más retracción">+</button>
+                    <h3>Relleno</h3>
+                    <div class="patrones" id="patrones"></div>
+                    <div class="fila-deslizador">
+                        <label for="densidad">Densidad</label>
+                        <output id="densidadValor"></output>
                     </div>
-                    <div class="contador" data-av="zHop">
-                        <span>Z-hop (subir al viajar)</span>
-                        <button type="button" data-paso-av="-1" aria-label="Menos z-hop">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Más z-hop">+</button>
+                    <input type="range" id="densidad" min="0" max="100" step="5" />
+                    <div class="atajos" id="atajosDensidad"></div>
+
+                    <h3>Paredes</h3>
+                    <div class="contadores">
+                        <div class="contador" data-clave="paredes" data-min="1" data-max="8">
+                            <span>Paredes</span>
+                            <button type="button" data-delta="-1" aria-label="Menos paredes">−</button>
+                            <output></output>
+                            <button type="button" data-delta="1" aria-label="Más paredes">+</button>
+                        </div>
+                        <div class="contador" data-clave="arriba" data-min="0" data-max="15">
+                            <span>Capas sólidas arriba</span>
+                            <button type="button" data-delta="-1" aria-label="Menos capas arriba">−</button>
+                            <output></output>
+                            <button type="button" data-delta="1" aria-label="Más capas arriba">+</button>
+                        </div>
+                        <div class="contador" data-clave="abajo" data-min="0" data-max="15">
+                            <span>Capas sólidas abajo</span>
+                            <button type="button" data-delta="-1" aria-label="Menos capas abajo">−</button>
+                            <output></output>
+                            <button type="button" data-delta="1" aria-label="Más capas abajo">+</button>
+                        </div>
                     </div>
-                    <div class="contador" data-av="coasting">
-                        <span>Coasting (cortar antes)</span>
-                        <button type="button" data-paso-av="-1" aria-label="Menos coasting">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Más coasting">+</button>
+
+                    <h3>Adhesión a la cama</h3>
+                    <div class="opciones" id="adhesiones"></div>
+
+                    <button type="button" class="boton enlace" id="restablecer">
+                        Volver a los valores de la calidad
+                    </button>
+                </details>
+
+                <!-- Avanzado: plano, sin submenús. La lógica está en src/ui/avanzado.js -->
+                <details class="personalizar" id="avanzado">
+                    <summary>Avanzado</summary>
+
+                    <label class="interruptor">
+                        <span>
+                            <b>Modo jarrón</b><br />
+                            <small>Una sola pared que sube en espiral, sin relleno ni tapa.</small>
+                        </span>
+                        <input type="checkbox" id="avJarron" />
+                    </label>
+                    <p class="aviso" id="avisoJarron" hidden>
+                        Sirve para piezas huecas tipo maceta, vaso o florero: queda el fondo y una pared finita. El
+                        relleno y las paredes de "Personalizar" no se usan.
+                    </p>
+
+                    <label class="interruptor">
+                        <span>
+                            <b>Altura de capa variable</b><br />
+                            <small id="detalleAlturaVariable"
+                                >Capas más finas donde hay curvas; la de la calidad es la más gruesa.</small
+                            >
+                        </span>
+                        <input type="checkbox" id="avAlturaVariable" />
+                    </label>
+
+                    <h3>Costura <small>(dónde empieza cada capa)</small></h3>
+                    <div class="opciones" id="avCosturas"></div>
+
+                    <h3>Retracción y viajes</h3>
+                    <div class="contadores">
+                        <div class="contador" data-av="retraccion">
+                            <span>Retracción</span>
+                            <button type="button" data-paso-av="-1" aria-label="Menos retracción">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Más retracción">+</button>
+                        </div>
+                        <div class="contador" data-av="zHop">
+                            <span>Z-hop (subir al viajar)</span>
+                            <button type="button" data-paso-av="-1" aria-label="Menos z-hop">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Más z-hop">+</button>
+                        </div>
+                        <div class="contador" data-av="coasting">
+                            <span>Coasting (cortar antes)</span>
+                            <button type="button" data-paso-av="-1" aria-label="Menos coasting">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Más coasting">+</button>
+                        </div>
+                        <div class="contador" data-av="wipe">
+                            <span>Wipe (limpiar al retraer)</span>
+                            <button type="button" data-paso-av="-1" aria-label="Menos wipe">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Más wipe">+</button>
+                        </div>
                     </div>
-                    <div class="contador" data-av="wipe">
-                        <span>Wipe (limpiar al retraer)</span>
-                        <button type="button" data-paso-av="-1" aria-label="Menos wipe">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Más wipe">+</button>
+
+                    <h3>Compensación de medidas</h3>
+                    <p class="nota">
+                        En mm, en total (no por lado). +0,1 agranda el agujero o la pieza 0,1 mm; − los achica.
+                    </p>
+                    <div class="contadores">
+                        <div class="contador" data-av="compAgujeros">
+                            <span>Agujeros</span>
+                            <button type="button" data-paso-av="-1" aria-label="Achicar agujeros">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Agrandar agujeros">+</button>
+                        </div>
+                        <div class="contador" data-av="compExterior">
+                            <span>Contorno exterior</span>
+                            <button type="button" data-paso-av="-1" aria-label="Achicar contorno">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Agrandar contorno">+</button>
+                        </div>
                     </div>
+
+                    <h3>Velocidad</h3>
+                    <div class="fila-deslizador">
+                        <label for="avVelocidad">Velocidad de impresión</label>
+                        <output id="avVelocidadValor"></output>
+                    </div>
+                    <input type="range" id="avVelocidad" min="50" max="150" step="10" />
+
+                    <h3>Temperatura y ventilador</h3>
+                    <div class="contadores">
+                        <div class="contador" data-av="tempBoquilla">
+                            <span>Boquilla</span>
+                            <button type="button" data-paso-av="-1" aria-label="Bajar boquilla">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Subir boquilla">+</button>
+                        </div>
+                        <div class="contador" data-av="tempCama">
+                            <span>Cama</span>
+                            <button type="button" data-paso-av="-1" aria-label="Bajar cama">−</button>
+                            <output></output>
+                            <button type="button" data-paso-av="1" aria-label="Subir cama">+</button>
+                        </div>
+                    </div>
+                    <div class="fila-deslizador">
+                        <label for="avVentilador">Ventilador de capa</label>
+                        <output id="avVentiladorValor"></output>
+                    </div>
+                    <input type="range" id="avVentilador" min="0" max="100" step="5" />
+
+                    <button type="button" class="boton enlace" id="avRestablecer">
+                        Volver a los valores de fábrica
+                    </button>
+                </details>
+            </section>
+
+            <!-- Paso 3: laminando -->
+            <section class="pantalla centrada" data-paso="3" hidden>
+                <h2 id="tituloLaminando">Laminando…</h2>
+                <div class="progreso" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progreso">
+                    <div class="relleno" id="relleno"></div>
+                </div>
+                <p class="porcentaje" id="porcentaje">0 %</p>
+                <p id="etapa">Preparando…</p>
+                <p class="nota">
+                    Podés dejar el celu quieto: el laminado sigue aunque la pantalla no cambie por un rato.
+                </p>
+                <div class="aviso error" id="errorLaminado" hidden></div>
+            </section>
+
+            <!-- Paso 4: listo -->
+            <section class="pantalla" data-paso="4" hidden>
+                <h2>¡Listo! 🎉</h2>
+
+                <!-- Vista previa capa por capa -->
+                <div class="visor visor-capas" id="visorCapas" aria-label="Vista previa de los recorridos">
+                    <p class="cargando-capas" id="cargandoCapas">Armando la vista previa…</p>
+                </div>
+                <div class="control-capas" id="controlCapas" hidden>
+                    <div class="fila-capa">
+                        <button type="button" class="boton-capa" id="capaMenos" aria-label="Capa anterior">−</button>
+                        <div class="riel">
+                            <input type="range" id="capa" min="0" value="0" aria-label="Capa" />
+                            <div class="marcas-pausa" id="marcasPausa" aria-hidden="true"></div>
+                        </div>
+                        <button type="button" class="boton-capa" id="capaMas" aria-label="Capa siguiente">+</button>
+                    </div>
+                    <div class="fila-capa">
+                        <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">▶</button>
+                        <span class="texto-capa" id="textoCapa"></span>
+                        <label class="tilde-capa"><input type="checkbox" id="soloCapa" /> Sólo esta</label>
+                    </div>
+                    <button type="button" class="boton" id="pausarCapa">⏸ Pausar acá para cambiar filamento</button>
+                    <div class="modo-color" id="modoColor" role="group" aria-label="Colores de la vista previa" hidden>
+                        <span>Colores:</span>
+                        <button type="button" data-modo="tipo">Tipo de línea</button>
+                        <button type="button" data-modo="filamento">Filamento</button>
+                    </div>
+                    <ul class="filamentos" id="listaPausas"></ul>
+                    <ul class="leyenda" id="leyenda"></ul>
+                    <p class="aviso" id="avisoVista" hidden></p>
                 </div>
 
-                <h3>Compensación de medidas</h3>
-                <p class="nota">En mm, en total (no por lado). +0,1 agranda el agujero o la pieza 0,1 mm; − los achica.</p>
-                <div class="contadores">
-                    <div class="contador" data-av="compAgujeros">
-                        <span>Agujeros</span>
-                        <button type="button" data-paso-av="-1" aria-label="Achicar agujeros">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Agrandar agujeros">+</button>
-                    </div>
-                    <div class="contador" data-av="compExterior">
-                        <span>Contorno exterior</span>
-                        <button type="button" data-paso-av="-1" aria-label="Achicar contorno">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Agrandar contorno">+</button>
-                    </div>
-                </div>
+                <dl class="resumen" id="resumen"></dl>
+                <div class="aviso" id="avisoResultado" hidden></div>
+                <p class="nota">Se guarda como <b id="nombreArchivo"></b>.</p>
+                <p class="nota">
+                    Pasá el archivo a la tarjeta microSD de la impresora (o mandalo por la app que uses).
+                </p>
+            </section>
+        </main>
 
-                <h3>Velocidad</h3>
-                <div class="fila-deslizador">
-                    <label for="avVelocidad">Velocidad de impresión</label>
-                    <output id="avVelocidadValor"></output>
-                </div>
-                <input type="range" id="avVelocidad" min="50" max="150" step="10">
-
-                <h3>Temperatura y ventilador</h3>
-                <div class="contadores">
-                    <div class="contador" data-av="tempBoquilla">
-                        <span>Boquilla</span>
-                        <button type="button" data-paso-av="-1" aria-label="Bajar boquilla">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Subir boquilla">+</button>
-                    </div>
-                    <div class="contador" data-av="tempCama">
-                        <span>Cama</span>
-                        <button type="button" data-paso-av="-1" aria-label="Bajar cama">−</button>
-                        <output></output>
-                        <button type="button" data-paso-av="1" aria-label="Subir cama">+</button>
-                    </div>
-                </div>
-                <div class="fila-deslizador">
-                    <label for="avVentilador">Ventilador de capa</label>
-                    <output id="avVentiladorValor"></output>
-                </div>
-                <input type="range" id="avVentilador" min="0" max="100" step="5">
-
-                <button type="button" class="boton enlace" id="avRestablecer">Volver a los valores de fábrica</button>
-            </details>
+        <!-- Pantallas que se abren encima (el botón "atrás" del celu las cierra) -->
+        <section class="hoja" id="hojaImpresoras" hidden aria-label="Elegir impresora">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1>Elegí tu impresora</h1>
+            </header>
+            <div class="contenido-hoja">
+                <input
+                    type="search"
+                    class="buscar"
+                    id="buscarImpresora"
+                    placeholder="Buscar (ej.: Ender, Prusa, Kobra)"
+                    autocomplete="off"
+                />
+                <button class="boton" id="nuevaImpresora">+ Agregar mi impresora</button>
+                <div id="listaImpresoras"></div>
+            </div>
         </section>
 
-        <!-- Paso 3: laminando -->
-        <section class="pantalla centrada" data-paso="3" hidden>
-            <h2 id="tituloLaminando">Laminando…</h2>
-            <div class="progreso" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progreso">
-                <div class="relleno" id="relleno"></div>
-            </div>
-            <p class="porcentaje" id="porcentaje">0 %</p>
-            <p id="etapa">Preparando…</p>
-            <p class="nota">Podés dejar el celu quieto: el laminado sigue aunque la pantalla no cambie por un rato.</p>
-            <div class="aviso error" id="errorLaminado" hidden></div>
-        </section>
+        <section class="hoja" id="hojaMiImpresora" hidden aria-label="Mi impresora">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1 id="tituloMiImpresora">Mi impresora</h1>
+            </header>
+            <form class="contenido-hoja formulario" id="formImpresora" novalidate>
+                <label>Nombre <input name="nombre" required maxlength="60" placeholder="Ej.: Mi Ender 3 Pro" /></label>
 
-        <!-- Paso 4: listo -->
-        <section class="pantalla" data-paso="4" hidden>
-            <h2>¡Listo! 🎉</h2>
-
-            <!-- Vista previa capa por capa -->
-            <div class="visor visor-capas" id="visorCapas" aria-label="Vista previa de los recorridos">
-                <p class="cargando-capas" id="cargandoCapas">Armando la vista previa…</p>
-            </div>
-            <div class="control-capas" id="controlCapas" hidden>
-                <div class="fila-capa">
-                    <button type="button" class="boton-capa" id="capaMenos" aria-label="Capa anterior">−</button>
-                    <div class="riel">
-                        <input type="range" id="capa" min="0" value="0" aria-label="Capa">
-                        <div class="marcas-pausa" id="marcasPausa" aria-hidden="true"></div>
+                <fieldset>
+                    <legend>Volumen de impresión (mm)</legend>
+                    <div class="tres">
+                        <label
+                            >Ancho (X)
+                            <input name="ancho" type="number" inputmode="numeric" min="50" max="1000" required
+                        /></label>
+                        <label
+                            >Fondo (Y)
+                            <input name="profundidad" type="number" inputmode="numeric" min="50" max="1000" required
+                        /></label>
+                        <label
+                            >Alto (Z) <input name="alto" type="number" inputmode="numeric" min="50" max="1000" required
+                        /></label>
                     </div>
-                    <button type="button" class="boton-capa" id="capaMas" aria-label="Capa siguiente">+</button>
-                </div>
-                <div class="fila-capa">
-                    <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">▶</button>
-                    <span class="texto-capa" id="textoCapa"></span>
-                    <label class="tilde-capa"><input type="checkbox" id="soloCapa"> Sólo esta</label>
-                </div>
-                <button type="button" class="boton" id="pausarCapa">⏸ Pausar acá para cambiar filamento</button>
-                <div class="modo-color" id="modoColor" role="group" aria-label="Colores de la vista previa" hidden>
-                    <span>Colores:</span>
-                    <button type="button" data-modo="tipo">Tipo de línea</button>
-                    <button type="button" data-modo="filamento">Filamento</button>
-                </div>
-                <ul class="filamentos" id="listaPausas"></ul>
-                <ul class="leyenda" id="leyenda"></ul>
-                <p class="aviso" id="avisoVista" hidden></p>
-            </div>
+                    <label class="tilde"
+                        ><input type="checkbox" name="origenCentro" /> El (0,0) está en el centro de la cama (deltas,
+                        algunas Klipper)</label
+                    >
+                </fieldset>
 
-            <dl class="resumen" id="resumen"></dl>
-            <div class="aviso" id="avisoResultado" hidden></div>
-            <p class="nota">Se guarda como <b id="nombreArchivo"></b>.</p>
-            <p class="nota">Pasá el archivo a la tarjeta microSD de la impresora (o mandalo por la app que uses).</p>
-        </section>
-    </main>
+                <fieldset>
+                    <legend>Boquilla y filamento</legend>
+                    <div class="dos">
+                        <label
+                            >Boquilla
+                            <select name="boquilla">
+                                <option value="0.2">0,2 mm</option>
+                                <option value="0.4">0,4 mm</option>
+                                <option value="0.6">0,6 mm</option>
+                                <option value="0.8">0,8 mm</option>
+                            </select>
+                        </label>
+                        <label
+                            >Filamento
+                            <select name="filamento">
+                                <option value="1.75">1,75 mm</option>
+                                <option value="2.85">2,85 mm</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="dos">
+                        <label
+                            >Extrusor
+                            <select name="extrusor">
+                                <option value="directo">Directo (direct drive)</option>
+                                <option value="bowden">Bowden (tubo)</option>
+                            </select>
+                        </label>
+                        <label
+                            >Retracción (mm)
+                            <input
+                                name="retraccion"
+                                type="number"
+                                inputmode="decimal"
+                                min="0"
+                                max="10"
+                                step="0.1"
+                                required
+                        /></label>
+                    </div>
+                </fieldset>
 
-    <!-- Pantallas que se abren encima (el botón "atrás" del celu las cierra) -->
-    <section class="hoja" id="hojaImpresoras" hidden aria-label="Elegir impresora">
-        <header class="barra">
-            <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-            <h1>Elegí tu impresora</h1>
-        </header>
-        <div class="contenido-hoja">
-            <input type="search" class="buscar" id="buscarImpresora" placeholder="Buscar (ej.: Ender, Prusa, Kobra)" autocomplete="off">
-            <button class="boton" id="nuevaImpresora">+ Agregar mi impresora</button>
-            <div id="listaImpresoras"></div>
-        </div>
-    </section>
+                <fieldset>
+                    <legend>Límites y velocidad</legend>
+                    <div class="tres">
+                        <label
+                            >Boquilla máx. (°C)
+                            <input name="hotendMax" type="number" inputmode="numeric" min="150" max="500" required
+                        /></label>
+                        <label
+                            >Cama máx. (°C)
+                            <input name="camaMax" type="number" inputmode="numeric" min="0" max="150" required
+                        /></label>
+                        <label
+                            >Velocidad (mm/s)
+                            <input name="velocidad" type="number" inputmode="numeric" min="10" max="500" required
+                        /></label>
+                    </div>
+                </fieldset>
 
-    <section class="hoja" id="hojaMiImpresora" hidden aria-label="Mi impresora">
-        <header class="barra">
-            <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-            <h1 id="tituloMiImpresora">Mi impresora</h1>
-        </header>
-        <form class="contenido-hoja formulario" id="formImpresora" novalidate>
-            <label>Nombre <input name="nombre" required maxlength="60" placeholder="Ej.: Mi Ender 3 Pro"></label>
-
-            <fieldset>
-                <legend>Volumen de impresión (mm)</legend>
-                <div class="tres">
-                    <label>Ancho (X) <input name="ancho" type="number" inputmode="numeric" min="50" max="1000" required></label>
-                    <label>Fondo (Y) <input name="profundidad" type="number" inputmode="numeric" min="50" max="1000" required></label>
-                    <label>Alto (Z) <input name="alto" type="number" inputmode="numeric" min="50" max="1000" required></label>
-                </div>
-                <label class="tilde"><input type="checkbox" name="origenCentro"> El (0,0) está en el centro de la cama (deltas, algunas Klipper)</label>
-            </fieldset>
-
-            <fieldset>
-                <legend>Boquilla y filamento</legend>
-                <div class="dos">
-                    <label>Boquilla
-                        <select name="boquilla">
-                            <option value="0.2">0,2 mm</option><option value="0.4">0,4 mm</option>
-                            <option value="0.6">0,6 mm</option><option value="0.8">0,8 mm</option>
+                <fieldset>
+                    <legend>Firmware y G-code</legend>
+                    <label
+                        >Firmware
+                        <select name="firmware">
+                            <option value="marlin">Marlin (la mayoría)</option>
+                            <option value="klipper">Klipper</option>
                         </select>
                     </label>
-                    <label>Filamento
-                        <select name="filamento"><option value="1.75">1,75 mm</option><option value="2.85">2,85 mm</option></select>
+                    <label>G-code de inicio <textarea name="inicio" rows="7" spellcheck="false"></textarea></label>
+                    <label>G-code de fin <textarea name="fin" rows="5" spellcheck="false"></textarea></label>
+                    <label
+                        >G-code de pausa (cambio de filamento)
+                        <textarea name="pausa" rows="2" spellcheck="false"></textarea>
                     </label>
-                </div>
-                <div class="dos">
-                    <label>Extrusor
-                        <select name="extrusor"><option value="directo">Directo (direct drive)</option><option value="bowden">Bowden (tubo)</option></select>
+                    <p class="nota">Variables: {temp}, {bed_temp}, {layer}, {layers}, {top} (fondo de la cama).</p>
+                </fieldset>
+
+                <p class="aviso error" id="errorImpresora" hidden></p>
+                <button type="submit" class="boton grande primario">Guardar impresora</button>
+                <button type="button" class="boton enlace" id="borrarImpresora" hidden>Borrar esta impresora</button>
+            </form>
+        </section>
+
+        <section class="hoja" id="hojaLitofania" hidden aria-label="Litofanía desde una foto">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1>Litofanía desde una foto</h1>
+            </header>
+            <form class="contenido-hoja formulario" id="formLitofania" novalidate>
+                <figure class="foto-litofania">
+                    <img id="fotoLitofania" alt="Foto elegida" />
+                    <figcaption id="nombreFoto"></figcaption>
+                </figure>
+
+                <fieldset>
+                    <legend>Tipo</legend>
+                    <label class="opcion">
+                        <input type="radio" name="tipo" value="litofania" checked />
+                        <span><b>Litofanía</b><br /><small>Lo oscuro queda grueso: se ve a contraluz.</small></span>
                     </label>
-                    <label>Retracción (mm) <input name="retraccion" type="number" inputmode="decimal" min="0" max="10" step="0.1" required></label>
-                </div>
-            </fieldset>
+                    <label class="opcion">
+                        <input type="radio" name="tipo" value="relieve" />
+                        <span><b>Relieve</b><br /><small>Lo claro queda alto.</small></span>
+                    </label>
+                </fieldset>
 
-            <fieldset>
-                <legend>Límites y velocidad</legend>
-                <div class="tres">
-                    <label>Boquilla máx. (°C) <input name="hotendMax" type="number" inputmode="numeric" min="150" max="500" required></label>
-                    <label>Cama máx. (°C) <input name="camaMax" type="number" inputmode="numeric" min="0" max="150" required></label>
-                    <label>Velocidad (mm/s) <input name="velocidad" type="number" inputmode="numeric" min="10" max="500" required></label>
-                </div>
-            </fieldset>
+                <fieldset>
+                    <legend>Medidas (mm)</legend>
+                    <label
+                        >Ancho
+                        <input
+                            name="ancho"
+                            type="number"
+                            inputmode="decimal"
+                            min="10"
+                            max="500"
+                            step="1"
+                            value="100"
+                            required
+                    /></label>
+                    <div class="dos">
+                        <label
+                            >Espesor mínimo
+                            <input
+                                name="minimo"
+                                type="number"
+                                inputmode="decimal"
+                                min="0.2"
+                                max="50"
+                                step="0.1"
+                                value="0.8"
+                                required
+                        /></label>
+                        <label
+                            >Espesor máximo
+                            <input
+                                name="maximo"
+                                type="number"
+                                inputmode="decimal"
+                                min="0.2"
+                                max="50"
+                                step="0.1"
+                                value="3.2"
+                                required
+                        /></label>
+                    </div>
+                    <label class="tilde"><input type="checkbox" name="marco" /> Agregar un marco de 2 mm</label>
+                    <p class="nota">
+                        Va a medir <b id="medidasLitofania"></b> (el alto sale de la proporción de la foto).
+                    </p>
+                </fieldset>
 
-            <fieldset>
-                <legend>Firmware y G-code</legend>
-                <label>Firmware
-                    <select name="firmware"><option value="marlin">Marlin (la mayoría)</option><option value="klipper">Klipper</option></select>
-                </label>
-                <label>G-code de inicio <textarea name="inicio" rows="7" spellcheck="false"></textarea></label>
-                <label>G-code de fin <textarea name="fin" rows="5" spellcheck="false"></textarea></label>
-                <label>G-code de pausa (cambio de filamento) <textarea name="pausa" rows="2" spellcheck="false"></textarea></label>
-                <p class="nota">Variables: {temp}, {bed_temp}, {layer}, {layers}, {top} (fondo de la cama).</p>
-            </fieldset>
+                <p class="aviso error" id="errorLitofania" hidden></p>
+                <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
+            </form>
+        </section>
 
-            <p class="aviso error" id="errorImpresora" hidden></p>
-            <button type="submit" class="boton grande primario">Guardar impresora</button>
-            <button type="button" class="boton enlace" id="borrarImpresora" hidden>Borrar esta impresora</button>
-        </form>
-    </section>
+        <!-- Botones principales siempre abajo, donde llega el pulgar -->
+        <footer class="acciones">
+            <div data-paso="1"><button class="boton grande primario" id="siguiente" disabled>Siguiente</button></div>
+            <div data-paso="2" hidden><button class="boton grande primario" id="laminar">Laminar</button></div>
+            <div data-paso="3" hidden><button class="boton grande" id="cancelar">Cancelar</button></div>
+            <div data-paso="4" hidden>
+                <button class="boton grande primario" id="compartir">Compartir G-code</button>
+                <button class="boton grande" id="descargar">Descargar</button>
+                <button class="boton enlace" id="otro">Laminar otro modelo</button>
+            </div>
+        </footer>
 
-    <section class="hoja" id="hojaLitofania" hidden aria-label="Litofanía desde una foto">
-        <header class="barra">
-            <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-            <h1>Litofanía desde una foto</h1>
-        </header>
-        <form class="contenido-hoja formulario" id="formLitofania" novalidate>
-            <figure class="foto-litofania">
-                <img id="fotoLitofania" alt="Foto elegida">
-                <figcaption id="nombreFoto"></figcaption>
-            </figure>
-
-            <fieldset>
-                <legend>Tipo</legend>
-                <label class="opcion">
-                    <input type="radio" name="tipo" value="litofania" checked>
-                    <span><b>Litofanía</b><br><small>Lo oscuro queda grueso: se ve a contraluz.</small></span>
-                </label>
-                <label class="opcion">
-                    <input type="radio" name="tipo" value="relieve">
-                    <span><b>Relieve</b><br><small>Lo claro queda alto.</small></span>
-                </label>
-            </fieldset>
-
-            <fieldset>
-                <legend>Medidas (mm)</legend>
-                <label>Ancho <input name="ancho" type="number" inputmode="decimal" min="10" max="500" step="1" value="100" required></label>
-                <div class="dos">
-                    <label>Espesor mínimo <input name="minimo" type="number" inputmode="decimal" min="0.2" max="50" step="0.1" value="0.8" required></label>
-                    <label>Espesor máximo <input name="maximo" type="number" inputmode="decimal" min="0.2" max="50" step="0.1" value="3.2" required></label>
-                </div>
-                <label class="tilde"><input type="checkbox" name="marco"> Agregar un marco de 2 mm</label>
-                <p class="nota">Va a medir <b id="medidasLitofania"></b> (el alto sale de la proporción de la foto).</p>
-            </fieldset>
-
-            <p class="aviso error" id="errorLitofania" hidden></p>
-            <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
-        </form>
-    </section>
-
-    <!-- Botones principales siempre abajo, donde llega el pulgar -->
-    <footer class="acciones">
-        <div data-paso="1"><button class="boton grande primario" id="siguiente" disabled>Siguiente</button></div>
-        <div data-paso="2" hidden><button class="boton grande primario" id="laminar">Laminar</button></div>
-        <div data-paso="3" hidden><button class="boton grande" id="cancelar">Cancelar</button></div>
-        <div data-paso="4" hidden>
-            <button class="boton grande primario" id="compartir">Compartir G-code</button>
-            <button class="boton grande" id="descargar">Descargar</button>
-            <button class="boton enlace" id="otro">Laminar otro modelo</button>
-        </div>
-    </footer>
-
-    <script type="module" src="./src/main.js"></script>
-</body>
+        <script type="module" src="./src/main.js"></script>
+    </body>
 </html>

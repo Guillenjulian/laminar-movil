@@ -108,11 +108,15 @@ export function crearAvanzado({ estado, alCambiar = () => {} }) {
             ? 'No se puede con el modo jarrón (la espiral necesita capas parejas).'
             : 'Capas más finas donde hay curvas; la de la calidad es la más gruesa.';
 
-        $('avCosturas').innerHTML = Object.entries(COSTURAS).map(([id, c]) =>
-            `<label class="opcion">
+        $('avCosturas').innerHTML = Object.entries(COSTURAS)
+            .map(
+                ([id, c]) =>
+                    `<label class="opcion">
                 <input type="radio" name="costura" value="${id}" ${id === v.costura ? 'checked' : ''} ${v.jarron ? 'disabled' : ''}>
                 <span><b>${c.nombre}</b><br><small>${c.descripcion}</small></span>
-            </label>`).join('');
+            </label>`,
+            )
+            .join('');
         seccion.querySelector('#avCosturas').classList.toggle('deshabilitado', v.jarron);
 
         seccion.querySelectorAll('.contador[data-av]').forEach(c => {
@@ -138,17 +142,22 @@ export function crearAvanzado({ estado, alCambiar = () => {} }) {
     $('avCosturas').addEventListener('change', e => {
         if (e.target.name === 'costura') cambiar('costura', e.target.value);
     });
-    seccion.querySelectorAll('.contador[data-av]').forEach(c => c.addEventListener('click', e => {
-        const b = e.target.closest('button');
-        if (!b) return;
-        const clave = c.dataset.av, l = limites(clave);
-        const nuevo = redondear(actuales()[clave] + l.paso * Number(b.dataset.pasoAv));
-        cambiar(clave, Math.min(l.max, Math.max(l.min, nuevo)));
-    }));
+    seccion.querySelectorAll('.contador[data-av]').forEach(c =>
+        c.addEventListener('click', e => {
+            const b = e.target.closest('button');
+            if (!b) return;
+            const clave = c.dataset.av,
+                l = limites(clave);
+            const nuevo = redondear(actuales()[clave] + l.paso * Number(b.dataset.pasoAv));
+            cambiar(clave, Math.min(l.max, Math.max(l.min, nuevo)));
+        }),
+    );
     for (const clave of Object.keys(DESLIZADORES)) {
         const id = clave === 'velocidad' ? 'avVelocidad' : 'avVentilador';
         // Mientras se arrastra sólo se actualiza el número; al soltar se guarda.
-        $(id).addEventListener('input', e => { $(id + 'Valor').textContent = `${e.target.value} %`; });
+        $(id).addEventListener('input', e => {
+            $(id + 'Valor').textContent = `${e.target.value} %`;
+        });
         $(id).addEventListener('change', e => cambiar(clave, Number(e.target.value)));
     }
     $('avRestablecer').onclick = () => {

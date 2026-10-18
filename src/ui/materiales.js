@@ -11,7 +11,8 @@ import * as almacen from '../almacen.js';
 // Se leen una sola vez al cargar la app (main.js ya espera con top-level await).
 let precios = (await almacen.leerAjuste('precios').catch(() => null)) || {};
 
-const escapar = texto => String(texto).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const escapar = texto =>
+    String(texto).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // Lista [id, material] sin las claves de comentario.
 export function listaMateriales() {
@@ -42,7 +43,7 @@ export function dibujarTarjeta(contenedor, config) {
     const id = config.material;
     const m = material(id);
     const { proceso, avisos } = armarConfiguracion(config);
-    const ventilador = Math.round((proceso.outputFanSpeed || 0) / 255 * 100);
+    const ventilador = Math.round(((proceso.outputFanSpeed || 0) / 255) * 100);
     const p = precio(id);
     contenedor.innerHTML = `<div class="tarjeta-material">
         <p class="descripcion">${escapar(m.descripcion || '')}</p>
@@ -70,7 +71,7 @@ export function filasResumen(mmFilamento, diametro, id) {
     const g = formato.gramos(mmFilamento, diametro, densidad);
     const p = precio(id);
     const costo = p
-        ? `≈ ${formato.pesos(g * p / 1000)}`
+        ? `≈ ${formato.pesos((g * p) / 1000)}`
         : '<button type="button" class="enlace" data-poner-precio>Poné el precio del rollo en el paso 2</button>';
     return [
         ['Filamento', formato.filamento(mmFilamento, diametro, densidad)],
@@ -83,5 +84,7 @@ export function filasResumen(mmFilamento, diametro, id) {
 document.addEventListener('click', e => {
     if (!e.target.closest('[data-poner-precio]')) return;
     history.back();
-    addEventListener('popstate', () => setTimeout(() => document.getElementById('precioRollo')?.focus(), 50), { once: true });
+    addEventListener('popstate', () => setTimeout(() => document.getElementById('precioRollo')?.focus(), 50), {
+        once: true,
+    });
 });

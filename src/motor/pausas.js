@@ -9,8 +9,11 @@ export function insertarPausas(gcode, pausas, lineas) {
     let desde = 0;
     for (const p of [...pausas].sort((a, b) => a.offset - b.offset)) {
         partes.push(gcode.slice(desde, p.offset));
-        partes.push(`; --- PAUSA: cambio de filamento antes de la capa ${p.capa + 1} (Z ${p.z.toFixed(2)} mm) ---\n` +
-            lineas.join('\n') + '\n');
+        partes.push(
+            `; --- PAUSA: cambio de filamento antes de la capa ${p.capa + 1} (Z ${p.z.toFixed(2)} mm) ---\n` +
+                lineas.join('\n') +
+                '\n',
+        );
         desde = p.offset;
     }
     partes.push(gcode.slice(desde));

@@ -95,7 +95,9 @@ export class RasterPath {
 };
 
 // 3. Recorrer el grafo de imports del worker con esbuild (sin escribir nada)
-const externos = Object.keys(SHIMS).map(s => '*' + s).concat(['*ext/jspoly.js']);
+const externos = Object.keys(SHIMS)
+    .map(s => '*' + s)
+    .concat(['*ext/jspoly.js']);
 const res = await build({
     entryPoints: [path.join(SRC, 'kiri/run/worker.js')],
     bundle: true,
@@ -128,10 +130,14 @@ for (const f of archivos) {
 // el navegador nunca se ejecutan (están protegidas con `typeof require`), pero
 // el bundler los ve e intenta resolverlos. Los apagamos.
 const jspoly = path.join(DESTINO, 'src', 'ext', 'jspoly.js');
-fs.writeFileSync(jspoly, '// PARCHE laminar-movil: require() deshabilitado (ver scripts/vendor-kiri.mjs)\n' +
-    fs.readFileSync(jspoly, 'utf8')
-        .replaceAll('typeof require !== "undefined" && require !== null', 'false')
-        .replace(/\brequire\(/g, 'requireDeshabilitado('));
+fs.writeFileSync(
+    jspoly,
+    '// PARCHE laminar-movil: require() deshabilitado (ver scripts/vendor-kiri.mjs)\n' +
+        fs
+            .readFileSync(jspoly, 'utf8')
+            .replaceAll('typeof require !== "undefined" && require !== null', 'false')
+            .replace(/\brequire\(/g, 'requireDeshabilitado('),
+);
 
 // 4c. Parches a bugs de Kiri que afectan al G-code. Si el texto no aparece
 // (cambió upstream), se corta acá para revisarlo a mano.
@@ -146,28 +152,36 @@ function parchar(rel, buscar, reemplazo, motivo) {
 // El ventilador cambia por punto (capas puente) pero la macro {fan_speed}
 // usaba el valor viejo: salía "M106 S0" en vez de prenderlo, y después no
 // se volvía a mandar. Resultado: ventilador apagado casi toda la impresión.
-parchar('kiri/mode/fdm/work/export.js',
+parchar(
+    'kiri/mode/fdm/work/export.js',
     'fanSpeed = out.fan ?? fanSpeed;',
     'fanSpeed = out.fan ?? fanSpeed;\n                subst.fan_speed = fanSpeed; // PARCHE laminar-movil',
-    'macro de ventilador desactualizada');
+    'macro de ventilador desactualizada',
+);
 // La primera capa no es "puente" para el ventilador (igual que para la velocidad).
-parchar('kiri/mode/fdm/work/prepare.js',
+parchar(
+    'kiri/mode/fdm/work/prepare.js',
     'if (preout.length && slice.isBridgeLayer) {',
     'if (preout.length && slice.isBridgeLayer && slice.index > 0) { // PARCHE laminar-movil',
-    'ventilador en la primera capa');
+    'ventilador en la primera capa',
+);
 // Altura de capa variable (sliceAdaptive): el slicer redondea las Z de corte a 3
 // decimales pero slice.js las busca sin redondear (indexOf da -1, la capa queda
 // sin altura y el G-code no sube Z). Además cortaba en el borde de arriba de la
 // capa en vez de en el medio (como en altura fija), así que cada capa salía media
 // capa más alta. Guardamos la mitad de la capa, redondeada.
-parchar('kiri/mode/fdm/work/slice.js',
+parchar(
+    'kiri/mode/fdm/work/slice.js',
     'zIndexes.push(zIncFirst);',
     'zIndexes.push((zIncFirst / 2).round(3)); // PARCHE laminar-movil: mitad de la capa, redondeado',
-    'altura variable: primera capa');
-parchar('kiri/mode/fdm/work/slice.js',
+    'altura variable: primera capa',
+);
+parchar(
+    'kiri/mode/fdm/work/slice.js',
     'zIndexes.push(zPos + zStep);',
     'zIndexes.push((zPos + zStep / 2).round(3)); // PARCHE laminar-movil: mitad de la capa, redondeado',
-    'altura variable: resto de las capas');
+    'altura variable: resto de las capas',
+);
 
 // 5. Escribir shims
 for (const [rel, codigo] of Object.entries(SHIMS)) {
@@ -178,7 +192,9 @@ for (const [rel, codigo] of Object.entries(SHIMS)) {
 
 // 6. Licencia y procedencia
 fs.copyFileSync(path.join(origen, 'license.md'), path.join(DESTINO, 'license.md'));
-fs.writeFileSync(path.join(DESTINO, 'ORIGEN.md'), `# Motor Kiri:Moto (vendorizado)
+fs.writeFileSync(
+    path.join(DESTINO, 'ORIGEN.md'),
+    `# Motor Kiri:Moto (vendorizado)
 
 - Repo: ${REPO}
 - Versión: ${version}
@@ -189,7 +205,9 @@ Generado por \`scripts/vendor-kiri.mjs\`: sólo se copian los ${archivos.length}
 que importa \`src/kiri/run/worker.js\`. Los archivos en \`src/ext/\` listados abajo
 son shims propios (no vienen de upstream):
 
-${Object.keys(SHIMS).map(s => '- `src/' + s + '`').join('\n')}
+${Object.keys(SHIMS)
+    .map(s => '- `src/' + s + '`')
+    .join('\n')}
 
 Parches (marcados con \`PARCHE laminar-movil\`):
 
@@ -199,6 +217,7 @@ Parches (marcados con \`PARCHE laminar-movil\`):
 - \`src/ext/jspoly.js\` tiene un parche mínimo (se apagan \`require()\` de CommonJS que nunca corren en el navegador).
 
 No editar a mano: para actualizar, correr \`npm run vendor:kiri\`.
-`);
+`,
+);
 
 console.log(`OK: ${archivos.length} archivos de Kiri:Moto ${version} (${commit.slice(0, 7)}) en vendor/kiri/`);

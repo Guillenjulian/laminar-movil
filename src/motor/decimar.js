@@ -29,7 +29,8 @@ export function decimar(vertices, maxTriangulos, alProgresar = () => {}) {
 }
 
 function medirCaja(v) {
-    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    const min = [Infinity, Infinity, Infinity],
+        max = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < v.length; i += 3) {
         for (let k = 0; k < 3; k++) {
             if (v[i + k] < min[k]) min[k] = v[i + k];
@@ -42,9 +43,15 @@ function medirCaja(v) {
 function medirArea(v) {
     let area = 0;
     for (let i = 0; i < v.length; i += 9) {
-        const ax = v[i + 3] - v[i], ay = v[i + 4] - v[i + 1], az = v[i + 5] - v[i + 2];
-        const bx = v[i + 6] - v[i], by = v[i + 7] - v[i + 1], bz = v[i + 8] - v[i + 2];
-        const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
+        const ax = v[i + 3] - v[i],
+            ay = v[i + 4] - v[i + 1],
+            az = v[i + 5] - v[i + 2];
+        const bx = v[i + 6] - v[i],
+            by = v[i + 7] - v[i + 1],
+            bz = v[i + 8] - v[i + 2];
+        const cx = ay * bz - az * by,
+            cy = az * bx - ax * bz,
+            cz = ax * by - ay * bx;
         area += Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
     }
     return area;
@@ -56,7 +63,7 @@ function agrupar(v, celda, { min, max }) {
     const ny = Math.floor((max[1] - min[1]) * inv) + 1;
 
     // 1. Asignar cada vértice a su celda y acumular posiciones para promediar.
-    const celdas = new Map();          // clave de celda -> índice de vértice nuevo
+    const celdas = new Map(); // clave de celda -> índice de vértice nuevo
     let sumas = new Float64Array(3 * 1024);
     let cuenta = new Uint32Array(1024);
     const indice = new Uint32Array(v.length / 3);
@@ -71,11 +78,17 @@ function agrupar(v, celda, { min, max }) {
             celdas.set(clave, id);
             if (id >= cuenta.length) {
                 // agrandar los arreglos al doble
-                const s = new Float64Array(sumas.length * 2); s.set(sumas); sumas = s;
-                const c = new Uint32Array(cuenta.length * 2); c.set(cuenta); cuenta = c;
+                const s = new Float64Array(sumas.length * 2);
+                s.set(sumas);
+                sumas = s;
+                const c = new Uint32Array(cuenta.length * 2);
+                c.set(cuenta);
+                cuenta = c;
             }
         }
-        sumas[id * 3] += v[i]; sumas[id * 3 + 1] += v[i + 1]; sumas[id * 3 + 2] += v[i + 2];
+        sumas[id * 3] += v[i];
+        sumas[id * 3 + 1] += v[i + 1];
+        sumas[id * 3 + 2] += v[i + 2];
         cuenta[id]++;
         indice[j] = id;
     }
@@ -84,7 +97,9 @@ function agrupar(v, celda, { min, max }) {
     const vistos = new Set();
     const tris = [];
     for (let j = 0; j < indice.length; j += 3) {
-        const a = indice[j], b = indice[j + 1], c = indice[j + 2];
+        const a = indice[j],
+            b = indice[j + 1],
+            c = indice[j + 2];
         if (a === b || b === c || a === c) continue;
         const ordenados = [a, b, c].sort((x, y) => x - y).join(',');
         if (vistos.has(ordenados)) continue;
@@ -95,7 +110,8 @@ function agrupar(v, celda, { min, max }) {
     // 3. Escribir el resultado con las posiciones promedio.
     const salida = new Float32Array(tris.length * 3);
     for (let t = 0; t < tris.length; t++) {
-        const id = tris[t], n = cuenta[id];
+        const id = tris[t],
+            n = cuenta[id];
         salida[t * 3] = sumas[id * 3] / n;
         salida[t * 3 + 1] = sumas[id * 3 + 1] / n;
         salida[t * 3 + 2] = sumas[id * 3 + 2] / n;

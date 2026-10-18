@@ -47,10 +47,9 @@ export function prepararLitofania({ abrir, cerrar, cargar }) {
         if (!foto) return;
         const o = leerOpciones();
         const marco = o.marco ? 2 * MARCO_MM : 0;
-        const alto = o.anchoMm * foto.imagen.height / foto.imagen.width;
-        $('medidasLitofania').textContent = o.anchoMm > 0
-            ? formato.milimetros({ x: o.anchoMm + marco, y: alto + marco, z: o.maxMm || 0 })
-            : '';
+        const alto = (o.anchoMm * foto.imagen.height) / foto.imagen.width;
+        $('medidasLitofania').textContent =
+            o.anchoMm > 0 ? formato.milimetros({ x: o.anchoMm + marco, y: alto + marco, z: o.maxMm || 0 }) : '';
     }
 
     function validar(o) {

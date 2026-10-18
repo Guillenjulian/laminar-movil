@@ -31,7 +31,8 @@ function serviceWorker() {
             };
             recorrer(salida);
             archivos.sort();
-            const codigo = fs.readFileSync(path.resolve('src/sw.js'), 'utf8')
+            const codigo = fs
+                .readFileSync(path.resolve('src/sw.js'), 'utf8')
                 .replace('self.__ARCHIVOS__', JSON.stringify(archivos, null, 4))
                 .replace('self.__VERSION__', JSON.stringify(hash.digest('hex').slice(0, 12)));
             fs.writeFileSync(path.join(salida, 'sw.js'), codigo);

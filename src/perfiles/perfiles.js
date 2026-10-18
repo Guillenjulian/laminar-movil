@@ -27,8 +27,12 @@ export function ponerImpresorasPropias(lista) {
 
 // Todas: primero las propias, después las revisadas y al final las importadas.
 export function listaImpresoras() {
-    return [...propias, ...incluidas].sort((a, b) =>
-        ORDEN[a.estado] - ORDEN[b.estado] || (a.marca || '').localeCompare(b.marca || '') || a.nombre.localeCompare(b.nombre));
+    return [...propias, ...incluidas].sort(
+        (a, b) =>
+            ORDEN[a.estado] - ORDEN[b.estado] ||
+            (a.marca || '').localeCompare(b.marca || '') ||
+            a.nombre.localeCompare(b.nombre),
+    );
 }
 
 export { materiales, opciones };
@@ -123,7 +127,7 @@ export function valoresDeAvanzado(impresoraId, calidad, material) {
         velocidad: 100,
         tempBoquilla: Math.min(mat.outputTemp, hotendMax),
         tempCama: Math.min(mat.outputBedTemp, camaMax),
-        ventilador: Math.round((mat.outputFanSpeed ?? 255) * 100 / 255),
+        ventilador: Math.round(((mat.outputFanSpeed ?? 255) * 100) / 255),
     };
 }
 
@@ -183,7 +187,7 @@ function avanzadoAProceso(av = {}, proceso, dispositivo) {
     // la impresora se aplican después, en armarConfiguracion.
     if (av.tempBoquilla !== undefined) p.outputTemp = p.firstLayerNozzleTemp = av.tempBoquilla;
     if (av.tempCama !== undefined) p.outputBedTemp = p.firstLayerBedTemp = av.tempCama;
-    if (av.ventilador !== undefined) p.outputFanSpeed = Math.round(av.ventilador * 255 / 100); // 50 % -> 128
+    if (av.ventilador !== undefined) p.outputFanSpeed = Math.round((av.ventilador * 255) / 100); // 50 % -> 128
     return p;
 }
 
@@ -191,7 +195,14 @@ function avanzadoAProceso(av = {}, proceso, dispositivo) {
 //   proceso base de la impresora → calidad → material → adhesión → personalizado → avanzado → extras
 // y recorta las temperaturas a los límites de la impresora.
 // Devuelve { dispositivo, proceso, avisos }.
-export function armarConfiguracion({ impresoraId, calidad = 'normal', material = 'pla', soportes = false, personal = {}, extras = {} }) {
+export function armarConfiguracion({
+    impresoraId,
+    calidad = 'normal',
+    material = 'pla',
+    soportes = false,
+    personal = {},
+    extras = {},
+}) {
     const imp = buscarImpresora(impresoraId);
     const cal = imp.calidades[calidad] || imp.calidades.normal;
     const mat = materiales[material] || materiales.pla;
@@ -199,7 +210,10 @@ export function armarConfiguracion({ impresoraId, calidad = 'normal', material =
 
     const dispositivo = sinComentarios(imp.dispositivo);
     const combinado = {
-        ...imp.proceso, ...cal.proceso, ...mat.proceso, ...adh.proceso,
+        ...imp.proceso,
+        ...cal.proceso,
+        ...mat.proceso,
+        ...adh.proceso,
         ...personalAProceso(personal),
     };
     const proceso = sinComentarios({

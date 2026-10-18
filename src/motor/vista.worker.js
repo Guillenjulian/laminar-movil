@@ -23,7 +23,8 @@ self.onmessage = e => {
 };
 
 function medir(v) {
-    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    const min = [Infinity, Infinity, Infinity],
+        max = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < v.length; i += 3) {
         for (let k = 0; k < 3; k++) {
             if (v[i + k] < min[k]) min[k] = v[i + k];

@@ -1,34 +1,81 @@
 /* Materiales (paso 2) y costo (paso 4). Usa las variables de estilos.css. */
 
 /* Seis materiales: en dos columnas para que no ocupen media pantalla. */
-#materiales { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-#materiales .opcion { gap: 10px; padding: 8px 12px; }
-#materiales .opcion small { font-size: 0.8rem; }
+#materiales {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+#materiales .opcion {
+    gap: 10px;
+    padding: 8px 12px;
+}
+#materiales .opcion small {
+    font-size: 0.8rem;
+}
 
 /* Tarjeta del material elegido */
 .tarjeta-material {
-    margin: 8px 0 12px; padding: 12px 14px;
-    border-radius: var(--radio); background: var(--tarjeta); border: 2px solid var(--acento);
+    margin: 8px 0 12px;
+    padding: 12px 14px;
+    border-radius: var(--radio);
+    background: var(--tarjeta);
+    border: 2px solid var(--acento);
 }
-.tarjeta-material .descripcion { margin: 0 0 4px; }
-.tarjeta-material small { display: block; color: var(--suave); }
-.tarjeta-material .aviso { margin: 8px 0 0; }
+.tarjeta-material .descripcion {
+    margin: 0 0 4px;
+}
+.tarjeta-material small {
+    display: block;
+    color: var(--suave);
+}
+.tarjeta-material .aviso {
+    margin: 8px 0 0;
+}
 
 .precio-rollo {
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-    margin: 12px 0 4px; font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 4px;
+    font-weight: 600;
 }
-.campo-precio { display: flex; align-items: center; gap: 6px; font-size: 1.2rem; }
+.campo-precio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1.2rem;
+}
 .campo-precio input {
-    width: 7.5em; min-height: 52px; padding: 6px 10px; text-align: right;
-    border-radius: 10px; border: 1px solid var(--borde); background: var(--fondo); color: var(--texto);
-    font: inherit; font-size: 1.25rem; font-variant-numeric: tabular-nums;
+    width: 7.5em;
+    min-height: 52px;
+    padding: 6px 10px;
+    text-align: right;
+    border-radius: 10px;
+    border: 1px solid var(--borde);
+    background: var(--fondo);
+    color: var(--texto);
+    font: inherit;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
 }
-.campo-precio input:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+.campo-precio input:focus {
+    outline: 2px solid var(--acento);
+    outline-offset: 1px;
+}
 
 /* "Poné el precio del rollo" en el resumen: parece un enlace, pero es un botón (tamaño táctil). */
 .enlace {
-    padding: 6px 0; min-height: 44px; border: 0; background: none;
-    color: var(--acento); font: inherit; font-weight: 600; text-align: right;
-    text-decoration: underline; cursor: pointer;
+    padding: 6px 0;
+    min-height: 44px;
+    border: 0;
+    background: none;
+    color: var(--acento);
+    font: inherit;
+    font-weight: 600;
+    text-align: right;
+    text-decoration: underline;
+    cursor: pointer;
 }

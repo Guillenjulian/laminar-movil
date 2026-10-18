@@ -30,9 +30,12 @@ const num = (linea, letra) => {
 export function espiralar(gcode) {
     const lineas = gcode.split('\n');
     const salida = [];
-    let x = NaN, y = NaN, z = NaN;   // posición actual
-    let zExtrusion = NaN;            // Z de la última extrusión
-    let xFin = NaN, yFin = NaN;      // dónde terminó la última extrusión
+    let x = NaN,
+        y = NaN,
+        z = NaN; // posición actual
+    let zExtrusion = NaN; // Z de la última extrusión
+    let xFin = NaN,
+        yFin = NaN; // dónde terminó la última extrusión
 
     let i = 0;
     while (i < lineas.length) {
@@ -48,21 +51,32 @@ export function espiralar(gcode) {
             if (capa && sube > 1e-6 && sube <= 1 && x === xFin && y === yFin) {
                 // Convertir: la Z va de zExtrusion a vz según lo recorrido.
                 salida.push(MARCA);
-                let recorrido = 0, px = xFin, py = yFin;
+                let recorrido = 0,
+                    px = xFin,
+                    py = yFin;
                 for (let k = i + 1; k < capa.fin; k++) {
                     const l = lineas[k];
-                    if (!/^G1\s/.test(l)) { salida.push(l); continue; }
+                    if (!/^G1\s/.test(l)) {
+                        salida.push(l);
+                        continue;
+                    }
                     const s = ' ' + l.split(';')[0];
                     const nx = isNaN(num(s, 'X')) ? px : num(s, 'X');
                     const ny = isNaN(num(s, 'Y')) ? py : num(s, 'Y');
                     const viaje = !(num(s, 'E') > 0);
                     if (!viaje) recorrido += Math.hypot(nx - px, ny - py);
-                    px = nx; py = ny;
-                    if (viaje) { salida.push(l); continue; } // el acercamiento corto, a la Z de antes
+                    px = nx;
+                    py = ny;
+                    if (viaje) {
+                        salida.push(l);
+                        continue;
+                    } // el acercamiento corto, a la Z de antes
                     const zk = zExtrusion + sube * Math.min(1, recorrido / capa.largo);
                     salida.push(l.replace(/^(G1(?:\s+[XY]-?[\d.]+)+)/, `$1 Z${zk.toFixed(4)}`));
                 }
-                x = xFin = px; y = yFin = py; z = zExtrusion = vz;
+                x = xFin = px;
+                y = yFin = py;
+                z = zExtrusion = vz;
                 i = capa.fin;
                 continue;
             }
@@ -71,12 +85,16 @@ export function espiralar(gcode) {
         salida.push(linea);
         if (esMov) {
             const s = ' ' + sinComentario;
-            const vx = num(s, 'X'), vy = num(s, 'Y'), ve = num(s, 'E');
+            const vx = num(s, 'X'),
+                vy = num(s, 'Y'),
+                ve = num(s, 'E');
             if (!isNaN(vx)) x = vx;
             if (!isNaN(vy)) y = vy;
             if (!isNaN(vz)) z = vz;
             if (ve > 0 && (!isNaN(vx) || !isNaN(vy))) {
-                zExtrusion = z; xFin = x; yFin = y;
+                zExtrusion = z;
+                xFin = x;
+                yFin = y;
             }
         }
         i++;
@@ -86,26 +104,37 @@ export function espiralar(gcode) {
     // ¿Las líneas desde `desde` hasta el próximo movimiento de Z son una sola
     // vuelta de pura extrusión? Devuelve { fin, largo } o null.
     function vueltaDesde(desde) {
-        let largo = 0, px = xFin, py = yFin, extrusiones = 0, movimientos = 0, k = desde;
+        let largo = 0,
+            px = xFin,
+            py = yFin,
+            extrusiones = 0,
+            movimientos = 0,
+            k = desde;
         for (; k < lineas.length; k++) {
             const l = lineas[k];
-            if (!l.startsWith('G')) continue;               // comentarios, M73, M106…
+            if (!l.startsWith('G')) continue; // comentarios, M73, M106…
             if (!/^G1\s/.test(l)) break;
             const s = ' ' + l.split(';')[0];
-            const vx = num(s, 'X'), vy = num(s, 'Y'), ve = num(s, 'E');
+            const vx = num(s, 'X'),
+                vy = num(s, 'Y'),
+                ve = num(s, 'E');
             // Se acepta un viaje corto al principio: en piezas redondas cada vuelta
             // arranca en el punto más cercano al final de la anterior, no en el mismo.
             if (movimientos++ === 0 && isNaN(ve) && isNaN(num(s, 'Z')) && (!isNaN(vx) || !isNaN(vy))) {
-                const nx = isNaN(vx) ? px : vx, ny = isNaN(vy) ? py : vy;
+                const nx = isNaN(vx) ? px : vx,
+                    ny = isNaN(vy) ? py : vy;
                 if (Math.hypot(nx - px, ny - py) > ACERCAMIENTO) return null;
-                px = nx; py = ny;
+                px = nx;
+                py = ny;
                 continue;
             }
             // Termina en el próximo cambio de Z, o en un viaje o retracción.
             if (!isNaN(num(s, 'Z')) || !(ve > 0) || (isNaN(vx) && isNaN(vy))) break;
-            const nx = isNaN(vx) ? px : vx, ny = isNaN(vy) ? py : vy;
+            const nx = isNaN(vx) ? px : vx,
+                ny = isNaN(vy) ? py : vy;
             largo += Math.hypot(nx - px, ny - py);
-            px = nx; py = ny;
+            px = nx;
+            py = ny;
             extrusiones++;
         }
         // La capa tiene que ser una sola vuelta: después no puede extruir nada más
@@ -114,7 +143,7 @@ export function espiralar(gcode) {
             const s = ' ' + lineas[j].split(';')[0];
             if (!/^ G[0-3]\s/.test(s)) continue;
             const z = !isNaN(num(s, 'Z'));
-            if (z && !/[XYE]/.test(s.slice(3))) break;    // cambio de capa
+            if (z && !/[XYE]/.test(s.slice(3))) break; // cambio de capa
             if (num(s, 'E') > 0 && (!isNaN(num(s, 'X')) || !isNaN(num(s, 'Y')))) return null;
         }
         // Lo que no es movimiento al final (ej. ";LAYER:n") queda para lo que sigue.

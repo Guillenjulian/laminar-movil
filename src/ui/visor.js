@@ -24,8 +24,10 @@ export function crearVisor(contenedor) {
     controles.enableDamping = true;
     controles.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 
-    let cama = null, modelo = null, tamanoCama = { x: 220, y: 220, z: 250 };
-    let tamano = null;  // tamaño del modelo ya transformado, en mm
+    let cama = null,
+        modelo = null,
+        tamanoCama = { x: 220, y: 220, z: 250 };
+    let tamano = null; // tamaño del modelo ya transformado, en mm
     let resaltado = null; // triángulo que marca la cara tocada en el modo "apoyar cara"
     let recorridos = null; // { grupo, abajo, actual, inicioCapa, esfera }
 
@@ -34,7 +36,10 @@ export function crearVisor(contenedor) {
         tamanoCama = { x, y, z };
         if (cama) {
             escena.remove(cama);
-            cama.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
+            cama.traverse(o => {
+                o.geometry?.dispose();
+                o.material?.dispose();
+            });
         }
         cama = new THREE.Group();
         const plano = new THREE.Mesh(
@@ -64,7 +69,10 @@ export function crearVisor(contenedor) {
         const c = geo.boundingBox;
         geo.translate(-(c.min.x + c.max.x) / 2, -(c.min.y + c.max.y) / 2, -c.min.z);
         geo.computeVertexNormals();
-        modelo = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xf08a24, roughness: 0.6, flatShading: true }));
+        modelo = new THREE.Mesh(
+            geo,
+            new THREE.MeshStandardMaterial({ color: 0xf08a24, roughness: 0.6, flatShading: true }),
+        );
         // La posición la manejamos a mano con la matriz (ver ponerTransformacion).
         modelo.matrixAutoUpdate = false;
         escena.add(modelo);
@@ -80,18 +88,16 @@ export function crearVisor(contenedor) {
         if (!modelo) return;
         quitarResaltado();
         const [a, b, c, d, e, f, g, h, i] = m || [1, 0, 0, 0, 1, 0, 0, 0, 1];
-        const matriz = new THREE.Matrix4().set(
-            a, b, c, 0,
-            d, e, f, 0,
-            g, h, i, 0,
-            0, 0, 0, 1,
-        );
+        const matriz = new THREE.Matrix4().set(a, b, c, 0, d, e, f, 0, g, h, i, 0, 0, 0, 0, 1);
         // Caja de los vértices ya transformados. Transformar la caja original no
         // alcanza: al girar, sus esquinas quedan afuera del modelo y la caja sale más grande.
         const pos = modelo.geometry.attributes.position.array;
-        const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+        const min = [Infinity, Infinity, Infinity],
+            max = [-Infinity, -Infinity, -Infinity];
         for (let k = 0; k < pos.length; k += 3) {
-            const x = pos[k], y = pos[k + 1], z = pos[k + 2];
+            const x = pos[k],
+                y = pos[k + 1],
+                z = pos[k + 2];
             const t = [a * x + b * y + c * z, d * x + e * y + f * z, g * x + h * y + i * z];
             for (let j = 0; j < 3; j++) {
                 if (t[j] < min[j]) min[j] = t[j];
@@ -163,7 +169,8 @@ export function crearVisor(contenedor) {
         if (!toque || !toque.face) return;
         // La normal del triángulo viene en coordenadas del modelo: la llevamos a las
         // de la impresora con la "matriz de normales" (sirve aunque haya escala).
-        const normal = toque.face.normal.clone()
+        const normal = toque.face.normal
+            .clone()
             .applyMatrix3(new THREE.Matrix3().getNormalMatrix(modelo.matrixWorld))
             .normalize();
         resaltar(toque.face, normal);
@@ -183,10 +190,19 @@ export function crearVisor(contenedor) {
         });
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(puntos, 3));
-        resaltado = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-            color: 0x2a7fff, transparent: true, opacity: 0.6, side: THREE.DoubleSide,
-            depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-        }));
+        resaltado = new THREE.Mesh(
+            geo,
+            new THREE.MeshBasicMaterial({
+                color: 0x2a7fff,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                polygonOffset: true,
+                polygonOffsetFactor: -2,
+                polygonOffsetUnits: -2,
+            }),
+        );
         escena.add(resaltado);
         redibujar();
     }
@@ -213,9 +229,15 @@ export function crearVisor(contenedor) {
             g.setAttribute('color', col);
             return g;
         };
-        const abajo = new THREE.LineSegments(geometria(), new THREE.LineBasicMaterial({
-            vertexColors: true, color: 0x9a9a9a, transparent: true, opacity: 0.55,
-        }));
+        const abajo = new THREE.LineSegments(
+            geometria(),
+            new THREE.LineBasicMaterial({
+                vertexColors: true,
+                color: 0x9a9a9a,
+                transparent: true,
+                opacity: 0.55,
+            }),
+        );
         const actual = new THREE.LineSegments(geometria(), new THREE.LineBasicMaterial({ vertexColors: true }));
         // Sin "frustum culling": three.js tendría que recorrer millones de puntos para
         // calcular la caja, y la pieza siempre está a la vista.
@@ -224,13 +246,17 @@ export function crearVisor(contenedor) {
         grupo.add(abajo, actual);
         // De enteros a mm, y del origen de la impresora al centro de la cama del visor.
         const { ESCALA, DESPLAZAMIENTO } = CUANTIZADO;
-        const dx = origenCentro ? 0 : tamanoCama.x / 2, dy = origenCentro ? 0 : tamanoCama.y / 2;
+        const dx = origenCentro ? 0 : tamanoCama.x / 2,
+            dy = origenCentro ? 0 : tamanoCama.y / 2;
         grupo.scale.setScalar(1 / ESCALA);
         grupo.position.set(-DESPLAZAMIENTO - dx, -DESPLAZAMIENTO - dy, -DESPLAZAMIENTO);
         escena.add(grupo);
 
         const centro = new THREE.Vector3(
-            (caja.min[0] + caja.max[0]) / 2 - dx, (caja.min[1] + caja.max[1]) / 2 - dy, (caja.min[2] + caja.max[2]) / 2);
+            (caja.min[0] + caja.max[0]) / 2 - dx,
+            (caja.min[1] + caja.max[1]) / 2 - dy,
+            (caja.min[2] + caja.max[2]) / 2,
+        );
         const radio = Math.hypot(caja.max[0] - caja.min[0], caja.max[1] - caja.min[1], caja.max[2] - caja.min[2]) / 2;
         recorridos = { grupo, abajo, actual, inicioCapa, col, esfera: { centro, radio } };
         vistaInicial();
@@ -240,7 +266,8 @@ export function crearVisor(contenedor) {
     function mostrarCapa(n, sola = false) {
         if (!recorridos) return;
         const { abajo, actual, inicioCapa } = recorridos;
-        const desde = inicioCapa[n], hasta = inicioCapa[n + 1];
+        const desde = inicioCapa[n],
+            hasta = inicioCapa[n + 1];
         actual.geometry.setDrawRange(desde * 2, (hasta - desde) * 2);
         abajo.geometry.setDrawRange(0, desde * 2);
         abajo.visible = !sola;
@@ -277,7 +304,9 @@ export function crearVisor(contenedor) {
 
     // Encuadra lo que haya (recorridos, modelo o la cama) desde adelante y arriba.
     function vistaInicial() {
-        let centro, radio, margen = 1.8; // un poco más lejos de lo justo, para ver la cama alrededor
+        let centro,
+            radio,
+            margen = 1.8; // un poco más lejos de lo justo, para ver la cama alrededor
         if (recorridos) {
             margen = 1.2; // en la vista previa interesa la pieza, de cerca
             centro = recorridos.esfera.centro.clone();
@@ -291,7 +320,7 @@ export function crearVisor(contenedor) {
             centro = new THREE.Vector3(0, 0, 0);
             radio = Math.max(tamanoCama.x, tamanoCama.y) / 2;
         }
-        const dist = radio / Math.sin((camara.fov * Math.PI) / 360) * margen;
+        const dist = (radio / Math.sin((camara.fov * Math.PI) / 360)) * margen;
         camara.position.copy(centro).add(new THREE.Vector3(0, -dist * 0.6, dist * 0.8));
         controles.target.copy(centro);
         controles.update();
@@ -314,8 +343,11 @@ export function crearVisor(contenedor) {
 
     // Sólo dibujamos cuando algo cambia (gesto, capa, tamaño) y mientras el visor
     // está a la vista: con millones de líneas, redibujar cada cuadro gasta mucha batería.
-    let activo = true, sucio = true;
-    const redibujar = () => { sucio = true; };
+    let activo = true,
+        sucio = true;
+    const redibujar = () => {
+        sucio = true;
+    };
     renderer.setAnimationLoop(() => {
         if (!activo) return;
         const seMovio = controles.update(); // true mientras dura el gesto (y su inercia)
@@ -341,6 +373,9 @@ export function crearVisor(contenedor) {
         atenuarAbajo,
         quitarRecorridos,
         vistaInicial,
-        pausar(p) { activo = !p; redibujar(); },
+        pausar(p) {
+            activo = !p;
+            redibujar();
+        },
     };
 }

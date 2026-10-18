@@ -1,91 +1,124 @@
 <!doctype html>
 <html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Prueba del motor</title>
-    <style>
-        body { font-family: system-ui, sans-serif; margin: 16px; }
-        button, select { font-size: 1.1rem; padding: 10px 14px; margin: 4px 4px 4px 0; }
-        pre { background: #eee; padding: 8px; max-height: 50vh; overflow: auto; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <!-- Página de diagnóstico: lamina mallas de prueba con los perfiles reales, sin la UI. -->
-    <h1>Prueba del motor</h1>
-    <p>
-        <select id="calidad">
-            <option value="rapido">Rápido</option>
-            <option value="normal" selected>Normal</option>
-            <option value="detalle">Detalle</option>
-        </select>
-        <label><input type="checkbox" id="soportes"> Soportes</label>
-    </p>
-    <p>
-        <button data-caso="cubo">Cubo 20 mm</button>
-        <button data-caso="te">"T" con voladizo</button>
-        <button data-caso="esfera">Esfera de 1,2 M triángulos</button>
-        <button data-caso="esferaChica">Esfera chica</button>
-        <button data-caso="tubo">Tubo con agujero</button>
-    </p>
-    <p id="estado">Listo para probar.</p>
-    <pre id="salida"></pre>
-    <script type="module">
-        import { laminar } from './src/motor/motor.js';
-        import { armarConfiguracion, listaImpresoras, buscarImpresora, ponerImpresorasPropias } from './src/perfiles/perfiles.js';
-        window.impresoras = listaImpresoras().map(i => ({ id: i.id, nombre: i.nombre, estado: i.estado }));
-        window.buscarImpresora = buscarImpresora;
-        // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
-        window.ponerImpresorasPropias = ponerImpresorasPropias;
-        import { maxTriangulos } from './src/config.js';
-        import { esfera, te, tubo } from './src/prueba/mallas.js';
-
-        const estado = document.getElementById('estado');
-        const salida = document.getElementById('salida');
-
-        async function obtenerSTL(caso) {
-            if (caso === 'esfera') return esfera();
-            if (caso === 'esferaChica') return esfera(10, 30); // 20 mm, ~3600 triángulos
-            if (caso === 'tubo') return tubo();
-            if (caso === 'te') return te();
-            return (await fetch('ejemplos/cubo-20mm.stl')).arrayBuffer();
-        }
-
-        // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
-        window.probar = async ({ caso = 'cubo', impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', material = 'pla', soportes = false, personal = {}, limite, transformacion } = {}) => {
-            const stl = await obtenerSTL(caso);
-            const { dispositivo, proceso, avisos } = armarConfiguracion({
-                impresoraId,
-                calidad,
-                material,
-                soportes,
-                personal,
-            });
-            const inicio = performance.now();
-            const r = await laminar({
-                stl, dispositivo, proceso,
-                maxTriangulos: limite ?? maxTriangulos(),
-                transformacion,
-                alProgresar: (etapa, valor) => estado.textContent = `${etapa} ${Math.round(valor * 100)}%`,
-            });
-            r.ms = Math.round(performance.now() - inicio);
-            r.avisos = avisos;
-            return r;
-        };
-
-        document.querySelectorAll('[data-caso]').forEach(boton => boton.onclick = async () => {
-            try {
-                const r = await window.probar({
-                    caso: boton.dataset.caso,
-                    calidad: document.getElementById('calidad').value,
-                    soportes: document.getElementById('soportes').checked,
-                });
-                estado.textContent = `OK en ${r.ms} ms — ${JSON.stringify(r.info)}`;
-                salida.textContent = r.gcode.split('\n').slice(0, 80).join('\n');
-            } catch (err) {
-                estado.textContent = 'Error: ' + err.message;
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Prueba del motor</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                margin: 16px;
             }
-        });
-    </script>
-</body>
+            button,
+            select {
+                font-size: 1.1rem;
+                padding: 10px 14px;
+                margin: 4px 4px 4px 0;
+            }
+            pre {
+                background: #eee;
+                padding: 8px;
+                max-height: 50vh;
+                overflow: auto;
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Página de diagnóstico: lamina mallas de prueba con los perfiles reales, sin la UI. -->
+        <h1>Prueba del motor</h1>
+        <p>
+            <select id="calidad">
+                <option value="rapido">Rápido</option>
+                <option value="normal" selected>Normal</option>
+                <option value="detalle">Detalle</option>
+            </select>
+            <label><input type="checkbox" id="soportes" /> Soportes</label>
+        </p>
+        <p>
+            <button data-caso="cubo">Cubo 20 mm</button>
+            <button data-caso="te">"T" con voladizo</button>
+            <button data-caso="esfera">Esfera de 1,2 M triángulos</button>
+            <button data-caso="esferaChica">Esfera chica</button>
+            <button data-caso="tubo">Tubo con agujero</button>
+        </p>
+        <p id="estado">Listo para probar.</p>
+        <pre id="salida"></pre>
+        <script type="module">
+            import { laminar } from './src/motor/motor.js';
+            import {
+                armarConfiguracion,
+                listaImpresoras,
+                buscarImpresora,
+                ponerImpresorasPropias,
+            } from './src/perfiles/perfiles.js';
+            window.impresoras = listaImpresoras().map(i => ({ id: i.id, nombre: i.nombre, estado: i.estado }));
+            window.buscarImpresora = buscarImpresora;
+            // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
+            window.ponerImpresorasPropias = ponerImpresorasPropias;
+            import { maxTriangulos } from './src/config.js';
+            import { esfera, te, tubo } from './src/prueba/mallas.js';
+
+            const estado = document.getElementById('estado');
+            const salida = document.getElementById('salida');
+
+            async function obtenerSTL(caso) {
+                if (caso === 'esfera') return esfera();
+                if (caso === 'esferaChica') return esfera(10, 30); // 20 mm, ~3600 triángulos
+                if (caso === 'tubo') return tubo();
+                if (caso === 'te') return te();
+                return (await fetch('ejemplos/cubo-20mm.stl')).arrayBuffer();
+            }
+
+            // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
+            window.probar = async ({
+                caso = 'cubo',
+                impresoraId = 'creality-ender-3-v3-se',
+                calidad = 'normal',
+                material = 'pla',
+                soportes = false,
+                personal = {},
+                limite,
+                transformacion,
+            } = {}) => {
+                const stl = await obtenerSTL(caso);
+                const { dispositivo, proceso, avisos } = armarConfiguracion({
+                    impresoraId,
+                    calidad,
+                    material,
+                    soportes,
+                    personal,
+                });
+                const inicio = performance.now();
+                const r = await laminar({
+                    stl,
+                    dispositivo,
+                    proceso,
+                    maxTriangulos: limite ?? maxTriangulos(),
+                    transformacion,
+                    alProgresar: (etapa, valor) => (estado.textContent = `${etapa} ${Math.round(valor * 100)}%`),
+                });
+                r.ms = Math.round(performance.now() - inicio);
+                r.avisos = avisos;
+                return r;
+            };
+
+            document.querySelectorAll('[data-caso]').forEach(
+                boton =>
+                    (boton.onclick = async () => {
+                        try {
+                            const r = await window.probar({
+                                caso: boton.dataset.caso,
+                                calidad: document.getElementById('calidad').value,
+                                soportes: document.getElementById('soportes').checked,
+                            });
+                            estado.textContent = `OK en ${r.ms} ms — ${JSON.stringify(r.info)}`;
+                            salida.textContent = r.gcode.split('\n').slice(0, 80).join('\n');
+                        } catch (err) {
+                            estado.textContent = 'Error: ' + err.message;
+                        }
+                    }),
+            );
+        </script>
+    </body>
 </html>

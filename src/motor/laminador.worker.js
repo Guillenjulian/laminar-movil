@@ -43,16 +43,21 @@ function kiri(tarea, datos, alAvanzar = () => {}) {
 // Centra la malla en X/Y y la apoya en Z=0. Kiri ubica el modelo en el
 // centro de la cama cuando la posición es (0,0,0).
 function centrar(v) {
-    let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    let min = [Infinity, Infinity, Infinity],
+        max = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < v.length; i += 3) {
         for (let k = 0; k < 3; k++) {
             if (v[i + k] < min[k]) min[k] = v[i + k];
             if (v[i + k] > max[k]) max[k] = v[i + k];
         }
     }
-    const dx = (min[0] + max[0]) / 2, dy = (min[1] + max[1]) / 2, dz = min[2];
+    const dx = (min[0] + max[0]) / 2,
+        dy = (min[1] + max[1]) / 2,
+        dz = min[2];
     for (let i = 0; i < v.length; i += 3) {
-        v[i] -= dx; v[i + 1] -= dy; v[i + 2] -= dz;
+        v[i] -= dx;
+        v[i + 1] -= dy;
+        v[i + 2] -= dz;
     }
     return { x: max[0] - min[0], y: max[1] - min[1], z: max[2] - min[2] };
 }
@@ -79,8 +84,10 @@ function armarSettings(dispositivo, proceso) {
 function validarTamano(t, d) {
     const mm = n => n.toFixed(1).replace('.', ',');
     if (t.x > d.bedWidth || t.y > d.bedDepth || t.z > d.maxHeight) {
-        throw new Error(`El modelo mide ${mm(t.x)} × ${mm(t.y)} × ${mm(t.z)} mm y no entra en la cama ` +
-            `(${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm).`);
+        throw new Error(
+            `El modelo mide ${mm(t.x)} × ${mm(t.y)} × ${mm(t.z)} mm y no entra en la cama ` +
+                `(${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm).`,
+        );
     }
 }
 
@@ -118,10 +125,18 @@ async function laminar(msg) {
 
     await kiri('clear', {});
     await kiri('sync', {
-        id, group: id, vertices,
-        meta: {}, anno: {},
-        track: { box: { w: tamano.x, h: tamano.y, d: tamano.z }, pos: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 }, rot: { x: 0, y: 0, z: 0 }, top: tamano.z },
+        id,
+        group: id,
+        vertices,
+        meta: {},
+        anno: {},
+        track: {
+            box: { w: tamano.x, h: tamano.y, d: tamano.z },
+            pos: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            rot: { x: 0, y: 0, z: 0 },
+            top: tamano.z,
+        },
     });
     await kiri('rotate', { settings });
     await kiri('slicePre', { settings });
@@ -149,8 +164,8 @@ async function laminar(msg) {
     return {
         gcode,
         info: {
-            tiempo: salida.time,          // segundos estimados
-            filamento: salida.distance,   // mm de filamento
+            tiempo: salida.time, // segundos estimados
+            filamento: salida.distance, // mm de filamento
             capas,
             triangulos,
             tamano,

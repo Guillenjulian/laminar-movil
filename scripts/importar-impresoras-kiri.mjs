@@ -46,25 +46,51 @@ const NOMBRES = {
 
 // Avisos conocidos que se muestran al elegir la impresora.
 const AVISOS = {
-    'Creality.Ender.3': 'El G-code de inicio trae G80 (mallado de Prusa), que la Ender 3 no usa. Revisalo antes de imprimir.',
+    'Creality.Ender.3':
+        'El G-code de inicio trae G80 (mallado de Prusa), que la Ender 3 no usa. Revisalo antes de imprimir.',
 };
 
 // Del proceso de Kiri sacamos lo que ya deciden la calidad, el material y las
 // opciones de la app; nos quedamos con lo propio de la máquina (velocidades,
 // retracción, multiplicadores de extrusión...).
-const DE_LA_APP = /^(processName|sliceHeight|firstSliceHeight|sliceShells|sliceTopLayers|sliceBottomLayers|sliceFillSparse|sliceFillType|outputTemp|outputBedTemp|firstLayerNozzleTemp|firstLayerBedTemp|outputFanSpeed|firstLayerFanSpeed|sliceSupport.*|outputBrim.*|outputRaft.*|firstLayerBrim.*|ranges)$/;
+const DE_LA_APP =
+    /^(processName|sliceHeight|firstSliceHeight|sliceShells|sliceTopLayers|sliceBottomLayers|sliceFillSparse|sliceFillType|outputTemp|outputBedTemp|firstLayerNozzleTemp|firstLayerBedTemp|outputFanSpeed|firstLayerFanSpeed|sliceSupport.*|outputBrim.*|outputRaft.*|firstLayerBrim.*|ranges)$/;
 
 // Claves del dispositivo que usamos.
-const DISPOSITIVO = ['deviceName', 'bedWidth', 'bedDepth', 'maxHeight', 'originCenter', 'bedRound', 'fwRetract',
-    'extrudeAbs', 'deviceZMax', 'gcodeTime', 'gcodePre', 'gcodePost', 'gcodeFan', 'gcodeTrack', 'gcodeLayer', 'gcodeFExt'];
+const DISPOSITIVO = [
+    'deviceName',
+    'bedWidth',
+    'bedDepth',
+    'maxHeight',
+    'originCenter',
+    'bedRound',
+    'fwRetract',
+    'extrudeAbs',
+    'deviceZMax',
+    'gcodeTime',
+    'gcodePre',
+    'gcodePost',
+    'gcodeFan',
+    'gcodeTrack',
+    'gcodeLayer',
+    'gcodeFExt',
+];
 
-const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const slug = t =>
+    t
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
 
 fs.rmSync(DESTINO, { recursive: true, force: true });
 fs.mkdirSync(DESTINO, { recursive: true });
 
-const importadas = [], salteadas = [];
-for (const archivo of fs.readdirSync(CARPETA).filter(f => f.endsWith('.json')).sort()) {
+const importadas = [],
+    salteadas = [];
+for (const archivo of fs
+    .readdirSync(CARPETA)
+    .filter(f => f.endsWith('.json'))
+    .sort()) {
     const base = archivo.replace(/\.json$/, '');
     if (EXCLUIDAS[base]) {
         salteadas.push(`${base}: ${EXCLUIDAS[base]}`);
@@ -94,17 +120,22 @@ for (const archivo of fs.readdirSync(CARPETA).filter(f => f.endsWith('.json')).s
 
     // Si el inicio no usa las temperaturas elegidas, lo avisamos.
     const inicio = (dispositivo.gcodePre || []).join('\n');
-    const sinTemp = [!inicio.includes('{temp}') && 'boquilla', !inicio.includes('{bed_temp}') && 'cama'].filter(Boolean);
-    const avisos = [AVISOS[base], sinTemp.length &&
-        `El G-code de inicio no usa la temperatura elegida de ${sinTemp.join(' ni de ')} (tiene valores fijos o ninguno).`]
-        .filter(Boolean);
+    const sinTemp = [!inicio.includes('{temp}') && 'boquilla', !inicio.includes('{bed_temp}') && 'cama'].filter(
+        Boolean,
+    );
+    const avisos = [
+        AVISOS[base],
+        sinTemp.length &&
+            `El G-code de inicio no usa la temperatura elegida de ${sinTemp.join(' ni de ')} (tiene valores fijos o ninguno).`,
+    ].filter(Boolean);
 
     const perfil = (d.profiles || [])[0] || {};
     const proceso = Object.fromEntries(Object.entries(perfil).filter(([k]) => !DE_LA_APP.test(k)));
     const boquilla = dispositivo.extruders[0].extNozzle || 0.4;
 
     const salida = {
-        _nota: `Importado de Kiri:Moto ${version} (src/kiri/dev/fdm/${archivo}) por scripts/importar-impresoras-kiri.mjs. ` +
+        _nota:
+            `Importado de Kiri:Moto ${version} (src/kiri/dev/fdm/${archivo}) por scripts/importar-impresoras-kiri.mjs. ` +
             `Sin revisar: contrastar con el perfil oficial antes de confiar.${notas.length ? ' Cambios: ' + notas.join('; ') + '.' : ''}`,
         id: 'kiri-' + slug(base),
         nombre,

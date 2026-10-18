@@ -12,7 +12,16 @@ export const TIPOS = [
 ];
 
 // Colores sugeridos para cada filamento (el usuario los puede cambiar).
-export const COLORES_FILAMENTO = ['#f08a24', '#3d8bfd', '#e04f5f', '#2ec4b6', '#f2c94c', '#9b59b6', '#3a3a3a', '#f4f4f4'];
+export const COLORES_FILAMENTO = [
+    '#f08a24',
+    '#3d8bfd',
+    '#e04f5f',
+    '#2ec4b6',
+    '#f2c94c',
+    '#9b59b6',
+    '#3a3a3a',
+    '#f4f4f4',
+];
 
 // Las coordenadas de la vista previa se guardan como enteros de 16 bits:
 // (mm + DESPLAZAMIENTO) × ESCALA. Resolución de 0,02 mm (de sobra para dibujar)

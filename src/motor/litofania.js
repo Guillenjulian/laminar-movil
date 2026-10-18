@@ -30,7 +30,8 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
     const paso = anchoMm / (ancho - 1); // mm entre píxeles vecinos
     // Con marco, agregamos k píxeles de cada lado al espesor máximo.
     const k = marco ? Math.max(1, Math.round(MARCO_MM / paso)) : 0;
-    const W = ancho + 2 * k, H = alto + 2 * k;
+    const W = ancho + 2 * k,
+        H = alto + 2 * k;
 
     // Alturas en una grilla W × H. La fila r = 0 es el frente de la cama (Y = 0),
     // así que la fila 0 de la foto (arriba) va al fondo (Y máximo): vista desde
@@ -49,15 +50,24 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
     const triangulos = 2 * (W - 1) * (H - 1) + borde + 2 * borde;
     const v = new Float32Array(triangulos * 9);
     let o = 0;
-    const punto = (x, y, zz) => { v[o++] = x; v[o++] = y; v[o++] = zz; };
-    const X = i => i * paso, Y = r => r * paso;
+    const punto = (x, y, zz) => {
+        v[o++] = x;
+        v[o++] = y;
+        v[o++] = zz;
+    };
+    const X = i => i * paso,
+        Y = r => r * paso;
     const arriba = (i, r) => punto(X(i), Y(r), z[r * W + i]);
 
     // Superficie de arriba (mira a +Z: antihorario visto desde arriba).
     for (let r = 0; r < H - 1; r++) {
         for (let i = 0; i < W - 1; i++) {
-            arriba(i, r); arriba(i + 1, r); arriba(i + 1, r + 1);
-            arriba(i, r); arriba(i + 1, r + 1); arriba(i, r + 1);
+            arriba(i, r);
+            arriba(i + 1, r);
+            arriba(i + 1, r + 1);
+            arriba(i, r);
+            arriba(i + 1, r + 1);
+            arriba(i, r + 1);
         }
     }
 
@@ -69,17 +79,26 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
     for (let r = H - 1; r > 0; r--) contorno.push([0, r]);
 
     // Base (mira a -Z): abanico desde el centro, en sentido horario visto desde arriba.
-    const cx = X(W - 1) / 2, cy = Y(H - 1) / 2;
+    const cx = X(W - 1) / 2,
+        cy = Y(H - 1) / 2;
     for (let n = 0; n < contorno.length; n++) {
-        const [i1, r1] = contorno[n], [i2, r2] = contorno[(n + 1) % contorno.length];
-        punto(cx, cy, 0); punto(X(i2), Y(r2), 0); punto(X(i1), Y(r1), 0);
+        const [i1, r1] = contorno[n],
+            [i2, r2] = contorno[(n + 1) % contorno.length];
+        punto(cx, cy, 0);
+        punto(X(i2), Y(r2), 0);
+        punto(X(i1), Y(r1), 0);
     }
 
     // Paredes: para cada tramo p -> q del contorno, el exterior queda a la derecha.
     for (let n = 0; n < contorno.length; n++) {
-        const [i1, r1] = contorno[n], [i2, r2] = contorno[(n + 1) % contorno.length];
-        punto(X(i1), Y(r1), 0); punto(X(i2), Y(r2), 0); arriba(i2, r2);
-        punto(X(i1), Y(r1), 0); arriba(i2, r2); arriba(i1, r1);
+        const [i1, r1] = contorno[n],
+            [i2, r2] = contorno[(n + 1) % contorno.length];
+        punto(X(i1), Y(r1), 0);
+        punto(X(i2), Y(r2), 0);
+        arriba(i2, r2);
+        punto(X(i1), Y(r1), 0);
+        arriba(i2, r2);
+        arriba(i1, r1);
     }
 
     return v;

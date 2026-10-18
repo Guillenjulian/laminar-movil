@@ -4,8 +4,15 @@
 
 import fs from 'node:fs';
 import {
-    identidad, multiplicar, rotacion90, escala, rotacionQueApoya,
-    aplicar, medir, esIdentidad, determinante,
+    identidad,
+    multiplicar,
+    rotacion90,
+    escala,
+    rotacionQueApoya,
+    aplicar,
+    medir,
+    esIdentidad,
+    determinante,
 } from '../src/motor/transformar.js';
 import { leerSTL } from '../src/motor/stl.js';
 
@@ -29,12 +36,16 @@ revisar('esIdentidad(identidad())', esIdentidad(identidad()));
 revisar('escala(2)', igualesExacto(escala(2), [2, 0, 0, 0, 2, 0, 0, 0, 2]));
 revisar('escala(2) no es identidad', !esIdentidad(escala(2)));
 revisar('escala(2)·escala(3) = escala(6)', iguales(multiplicar(escala(2), escala(3)), escala(6)));
-const a = [1, 2, 3, 4, 5, 6, 7, 8, 9], b = [9, 8, 7, 6, 5, 4, 3, 2, 1];
+const a = [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    b = [9, 8, 7, 6, 5, 4, 3, 2, 1];
 revisar('multiplicar(a, b) fila por fila', igualesExacto(multiplicar(a, b), [30, 24, 18, 84, 69, 54, 138, 114, 90]));
 // a·b aplica primero b: rotar en Z y después escalar no es lo mismo que al revés con rotaciones distintas
 const zx = multiplicar(rotacion90('x'), rotacion90('z'));
-revisar('multiplicar: primero b, después a', iguales(por(zx, [1, 0, 0]), por(rotacion90('x'), por(rotacion90('z'), [1, 0, 0]))),
-    texto(por(zx, [1, 0, 0])));
+revisar(
+    'multiplicar: primero b, después a',
+    iguales(por(zx, [1, 0, 0]), por(rotacion90('x'), por(rotacion90('z'), [1, 0, 0]))),
+    texto(por(zx, [1, 0, 0])),
+);
 
 console.log('\n▶ rotacion90');
 revisar("rotacion90('z') lleva (1,0,0) a (0,1,0)", igualesExacto(por(rotacion90('z'), [1, 0, 0]), [0, 1, 0]));
@@ -45,25 +56,49 @@ for (const eje of ['x', 'y', 'z']) {
     for (let i = 0; i < 4; i++) m = multiplicar(rotacion90(eje), m);
     revisar(`4 rotaciones en ${eje} = identidad`, igualesExacto(m, identidad()));
     revisar(`rotacion90('${eje}', 4) = identidad`, igualesExacto(rotacion90(eje, 4), identidad()));
-    revisar(`rotacion90('${eje}', -1) = rotacion90('${eje}', 3)`, igualesExacto(rotacion90(eje, -1), rotacion90(eje, 3)));
-    revisar(`rotacion90('${eje}', 2) = dos de 90°`, igualesExacto(rotacion90(eje, 2), multiplicar(rotacion90(eje), rotacion90(eje))));
+    revisar(
+        `rotacion90('${eje}', -1) = rotacion90('${eje}', 3)`,
+        igualesExacto(rotacion90(eje, -1), rotacion90(eje, 3)),
+    );
+    revisar(
+        `rotacion90('${eje}', 2) = dos de 90°`,
+        igualesExacto(rotacion90(eje, 2), multiplicar(rotacion90(eje), rotacion90(eje))),
+    );
     const valores = [1, 2, 3].flatMap(v => rotacion90(eje, v));
-    revisar(`rotacion90('${eje}') sólo usa 0, 1, -1 (sin -0)`, valores.every(v => v === 0 || v === 1 || v === -1) && !valores.some(v => Object.is(v, -0)));
+    revisar(
+        `rotacion90('${eje}') sólo usa 0, 1, -1 (sin -0)`,
+        valores.every(v => v === 0 || v === 1 || v === -1) && !valores.some(v => Object.is(v, -0)),
+    );
 }
 
 console.log('\n▶ rotacionQueApoya');
 const normales = [
-    [0, 0, -1], [0, 0, 1], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0],
-    [1, 2, 3], [-3, 0.5, -2], [0.3, -0.2, 5], [1e-6, 0, 1], [0, 0, -7],
+    [0, 0, -1],
+    [0, 0, 1],
+    [1, 0, 0],
+    [-1, 0, 0],
+    [0, 1, 0],
+    [0, -1, 0],
+    [1, 2, 3],
+    [-3, 0.5, -2],
+    [0.3, -0.2, 5],
+    [1e-6, 0, 1],
+    [0, 0, -7],
 ];
 for (const n of normales) {
     const R = rotacionQueApoya(n);
     const largo = Math.hypot(...n);
-    const abajo = por(R, n.map(v => v / largo));
+    const abajo = por(
+        R,
+        n.map(v => v / largo),
+    );
     const ortonormal = iguales(multiplicar(R, traspuesta(R)), identidad(), 1e-9);
     const det = determinante(R);
-    revisar(`normal ${texto(n)}`, iguales(abajo, [0, 0, -1], 1e-9) && ortonormal && casi(det, 1),
-        `→ ${texto(abajo)}, det ${det.toFixed(6)}${ortonormal ? '' : ', NO ortonormal'}`);
+    revisar(
+        `normal ${texto(n)}`,
+        iguales(abajo, [0, 0, -1], 1e-9) && ortonormal && casi(det, 1),
+        `→ ${texto(abajo)}, det ${det.toFixed(6)}${ortonormal ? '' : ', NO ortonormal'}`,
+    );
 }
 revisar('normal (0,0,-1) da la identidad', esIdentidad(rotacionQueApoya([0, 0, -1])));
 revisar('normal (0,0,1) da 180° en X', igualesExacto(rotacionQueApoya([0, 0, 1]), rotacion90('x', 2)));
@@ -74,12 +109,18 @@ const cubo = leerSTL(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteL
 const original = cubo.slice();
 const m2 = escala(2);
 const medida = medir(m2, cubo);
-revisar('medir con escala 2 → 40 × 40 × 40', casi(medida.x, 40, 1e-4) && casi(medida.y, 40, 1e-4) && casi(medida.z, 40, 1e-4),
-    `${medida.x} × ${medida.y} × ${medida.z}`);
+revisar(
+    'medir con escala 2 → 40 × 40 × 40',
+    casi(medida.x, 40, 1e-4) && casi(medida.y, 40, 1e-4) && casi(medida.z, 40, 1e-4),
+    `${medida.x} × ${medida.y} × ${medida.z}`,
+);
 revisar('medir no toca los vértices', igualesExacto(cubo, original));
 const devuelto = aplicar(m2, cubo);
 revisar('aplicar devuelve el mismo array', devuelto === cubo);
-revisar('aplicar escala en el lugar', cubo.every((v, i) => casi(v, original[i] * 2, 1e-4)));
+revisar(
+    'aplicar escala en el lugar',
+    cubo.every((v, i) => casi(v, original[i] * 2, 1e-4)),
+);
 const r = medir(identidad(), cubo);
 revisar('medida después de aplicar = la de medir', casi(r.x, medida.x, 1e-4) && casi(r.z, medida.z, 1e-4));
 
@@ -94,11 +135,18 @@ const volumen = v => {
 };
 const vol0 = volumen(original);
 const rotado = aplicar(multiplicar(rotacion90('x'), rotacion90('z', 3)), original.slice());
-revisar('rotar conserva el volumen (y el sentido de las caras)', casi(volumen(rotado), vol0, 1e-2), `${vol0.toFixed(1)} → ${volumen(rotado).toFixed(1)}`);
+revisar(
+    'rotar conserva el volumen (y el sentido de las caras)',
+    casi(volumen(rotado), vol0, 1e-2),
+    `${vol0.toFixed(1)} → ${volumen(rotado).toFixed(1)}`,
+);
 const espejo = [-1, 0, 0, 0, 1, 0, 0, 0, 1];
 const espejado = aplicar(espejo, original.slice());
-revisar('espejo (det < 0): las normales siguen hacia afuera', vol0 > 0 && casi(volumen(espejado), vol0, 1e-2),
-    `${vol0.toFixed(1)} → ${volumen(espejado).toFixed(1)}`);
+revisar(
+    'espejo (det < 0): las normales siguen hacia afuera',
+    vol0 > 0 && casi(volumen(espejado), vol0, 1e-2),
+    `${vol0.toFixed(1)} → ${volumen(espejado).toFixed(1)}`,
+);
 
 console.log(fallas ? `\n${fallas} PRUEBA(S) FALLARON` : '\nTODAS LAS PRUEBAS OK');
 process.exit(fallas ? 1 : 0);

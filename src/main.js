@@ -5,8 +5,16 @@ import { TIPOS, COLORES_FILAMENTO } from './motor/tipos-linea.js';
 import { insertarPausas } from './motor/pausas.js';
 import * as transformar from './motor/transformar.js';
 import {
-    listaImpresoras, buscarImpresora, existeImpresora, ponerImpresorasPropias, IMPRESORA_INICIAL,
-    materiales, opciones, armarConfiguracion, valoresDeCalidad, lineasPausa,
+    listaImpresoras,
+    buscarImpresora,
+    existeImpresora,
+    ponerImpresorasPropias,
+    IMPRESORA_INICIAL,
+    materiales,
+    opciones,
+    armarConfiguracion,
+    valoresDeCalidad,
+    lineasPausa,
 } from './perfiles/perfiles.js';
 import { PLANTILLAS_GCODE } from './perfiles/generico.js';
 import { iconoRelleno } from './ui/iconos-relleno.js';
@@ -22,27 +30,27 @@ const $ = id => document.getElementById(id);
 
 const estado = {
     paso: 1,
-    nombre: '',          // nombre del archivo STL
-    stl: null,           // ArrayBuffer original (se copia en cada laminado)
-    vista: null,         // { triangulos, tamano } (tamaño original, sin transformar)
+    nombre: '', // nombre del archivo STL
+    stl: null, // ArrayBuffer original (se copia en cada laminado)
+    vista: null, // { triangulos, tamano } (tamaño original, sin transformar)
     rotacion: transformar.identidad(), // rotaciones del modelo en la cama (matriz 3×3)
-    escala: 1,           // escala uniforme (1 = 100 %)
+    escala: 1, // escala uniforme (1 = 100 %)
     eligiendoCara: false,
     impresoraId: IMPRESORA_INICIAL,
-    propias: [],         // datos de "Mi impresora" (guardados en el celu)
+    propias: [], // datos de "Mi impresora" (guardados en el celu)
     calidad: 'normal',
     material: 'pla',
     soportes: false,
-    personal: {},        // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
-    avanzado: {},        // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
-    resultado: null,     // { gcode, info, archivo, impresoraId }
-    pausas: new Map(),   // capa -> { capa, offset, z }: pausas para cambiar filamento
+    personal: {}, // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
+    avanzado: {}, // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
+    resultado: null, // { gcode, info, archivo, impresoraId }
+    pausas: new Map(), // capa -> { capa, offset, z }: pausas para cambiar filamento
     coloresFilamento: [...COLORES_FILAMENTO], // color de cada filamento (1º, 2º, ...) en la vista previa
-    modoColor: 'tipo',   // vista previa coloreada por 'tipo' de línea o por 'filamento'
-    cancelar: null,      // AbortController del laminado en curso
+    modoColor: 'tipo', // vista previa coloreada por 'tipo' de línea o por 'filamento'
+    cancelar: null, // AbortController del laminado en curso
 };
 
-let visor = null;      // visor del modelo (paso 1)
+let visor = null; // visor del modelo (paso 1)
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
 
 // ---------------------------------------------------------------------------
@@ -94,7 +102,9 @@ window.addEventListener('popstate', e => {
     if (estado.paso === 3) estado.cancelar?.abort();
     mostrar(e.state?.paso || 1, e.state?.hoja);
 });
-document.querySelectorAll('[data-cerrar]').forEach(b => { b.onclick = () => history.back(); });
+document.querySelectorAll('[data-cerrar]').forEach(b => {
+    b.onclick = () => history.back();
+});
 $('atras').onclick = () => history.back();
 history.replaceState({ paso: 1 }, '');
 
@@ -139,7 +149,8 @@ async function cargarArchivo(nombre, buffer, { guardar = true, esStl = false, ge
         $('siguiente').disabled = false;
 
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
-        if (guardar) await almacen.guardarModelo(nombre, buffer).catch(err => console.warn('No se guardó el modelo', err));
+        if (guardar)
+            await almacen.guardarModelo(nombre, buffer).catch(err => console.warn('No se guardó el modelo', err));
     } catch (err) {
         // Si ya había un modelo cargado, queda ése; si no, volvemos a la pantalla inicial.
         $('sinModelo').hidden = !!estado.stl;
@@ -159,15 +170,19 @@ function actualizarAvisoModelo() {
     const avisos = [];
     const noEntra = tamano.x > d.bedWidth || tamano.y > d.bedDepth || tamano.z > d.maxHeight;
     if (noEntra) {
-        avisos.push(`<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
-            'Rotalo o achicalo con los botones de abajo.');
+        avisos.push(
+            `<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
+                'Rotalo o achicalo con los botones de abajo.',
+        );
     }
     $('ajustarCama').hidden = !noEntra;
     const max = maxTriangulos();
     if (triangulos > max) {
-        avisos.push(`<b>Modelo pesado:</b> tiene ${formato.triangulos(triangulos)}. Para que el celu no se quede ` +
-            `sin memoria, antes de laminar lo vamos a simplificar a unos ${formato.triangulos(max)}. ` +
-            'Se pueden perder detalles muy finos.');
+        avisos.push(
+            `<b>Modelo pesado:</b> tiene ${formato.triangulos(triangulos)}. Para que el celu no se quede ` +
+                `sin memoria, antes de laminar lo vamos a simplificar a unos ${formato.triangulos(max)}. ` +
+                'Se pueden perder detalles muy finos.',
+        );
     }
     $('avisoModelo').innerHTML = avisos.join('<br><br>');
     $('avisoModelo').hidden = avisos.length === 0;
@@ -203,13 +218,17 @@ $('otroModelo').onclick = () => {
 async function mostrarRecientes() {
     const lista = await almacen.listarModelos().catch(() => []);
     $('recientes').hidden = lista.length === 0;
-    $('listaRecientes').innerHTML = lista.map(m => `<li>
+    $('listaRecientes').innerHTML = lista
+        .map(
+            m => `<li>
         <button class="reciente" data-id="${m.id}">
             <b>${escapar(m.nombre)}</b>
             <small>${new Date(m.fecha).toLocaleDateString('es-AR')} · ${formato.bytes(m.bytes)}</small>
         </button>
         <button class="borrar" data-borrar="${m.id}" aria-label="Borrar ${escapar(m.nombre)}">×</button>
-    </li>`).join('');
+    </li>`,
+        )
+        .join('');
 }
 
 $('listaRecientes').onclick = async e => {
@@ -253,7 +272,8 @@ function aplicarTransformacion() {
     visor.ponerTransformacion(matrizModelo());
     const pct = Math.round(estado.escala * 1000) / 10;
     $('escala').value = pct;
-    $('datosModelo').textContent = `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
+    $('datosModelo').textContent =
+        `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
     $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
     actualizarAvisoModelo();
 }
@@ -278,7 +298,8 @@ document.querySelectorAll('[data-rotar]').forEach(b => {
 // "Achicar para que entre": la escala más grande que entra en la cama (con un 2 % de margen).
 $('ajustarCama').onclick = () => {
     const d = buscarImpresora(estado.impresoraId).dispositivo;
-    const t = tamanoActual(), s = estado.escala;
+    const t = tamanoActual(),
+        s = estado.escala;
     const factor = Math.min(d.bedWidth / t.x, d.bedDepth / t.y, d.maxHeight / t.z) * 0.98;
     ponerEscala(Math.floor(s * factor * 100) / 100);
 };
@@ -337,11 +358,21 @@ function dibujarOpciones() {
         <button type="button" class="boton chico" id="${imp.estado === 'propio' ? 'editarImpresora' : 'copiarImpresora'}">
             ${imp.estado === 'propio' ? 'Editar' : 'Copiar como mía para ajustarla'}</button>
     </div>`;
-    $('calidades').innerHTML = Object.entries(imp.calidades).map(([id, c]) =>
-        opcion('calidad', id, c.nombre, c.descripcion, id === estado.calidad)).join('');
-    $('materiales').innerHTML = materialesUI.listaMateriales().map(([id, m]) =>
-        opcion('material', id, m.nombre, `${m.proceso.outputTemp}&nbsp;°C · cama ${m.proceso.outputBedTemp}&nbsp;°C`,
-            id === estado.material)).join('');
+    $('calidades').innerHTML = Object.entries(imp.calidades)
+        .map(([id, c]) => opcion('calidad', id, c.nombre, c.descripcion, id === estado.calidad))
+        .join('');
+    $('materiales').innerHTML = materialesUI
+        .listaMateriales()
+        .map(([id, m]) =>
+            opcion(
+                'material',
+                id,
+                m.nombre,
+                `${m.proceso.outputTemp}&nbsp;°C · cama ${m.proceso.outputBedTemp}&nbsp;°C`,
+                id === estado.material,
+            ),
+        )
+        .join('');
     dibujarMaterial();
     $('soportes').checked = estado.soportes;
     dibujarPersonalizar();
@@ -373,19 +404,31 @@ function cambiarPersonal(clave, valor) {
 
 function dibujarPersonalizar() {
     const v = valoresActuales();
-    $('patrones').innerHTML = Object.entries(opciones.patrones).filter(([id]) => !id.startsWith('_')).map(([id, p]) =>
-        `<label class="patron" title="${p.descripcion}">
+    $('patrones').innerHTML = Object.entries(opciones.patrones)
+        .filter(([id]) => !id.startsWith('_'))
+        .map(
+            ([id, p]) =>
+                `<label class="patron" title="${p.descripcion}">
             <input type="radio" name="patron" value="${id}" ${id === v.patron ? 'checked' : ''}>
             ${iconoRelleno(id)}<span>${p.nombre}</span>
-        </label>`).join('');
+        </label>`,
+        )
+        .join('');
     $('densidad').value = Math.round(v.densidad * 100);
     $('densidadValor').textContent = `${Math.round(v.densidad * 100)} %`;
-    $('atajosDensidad').innerHTML = opciones.densidades.map(d =>
-        `<button type="button" class="atajo ${Math.abs(d.valor - v.densidad) < 0.001 ? 'activo' : ''}" data-densidad="${d.valor}">
-            ${d.nombre} <small>${Math.round(d.valor * 100)} %</small></button>`).join('');
-    document.querySelectorAll('#personalizar .contador').forEach(c => { c.querySelector('output').textContent = v[c.dataset.clave]; });
-    $('adhesiones').innerHTML = Object.entries(opciones.adhesiones).map(([id, a]) =>
-        opcion('adhesion', id, a.nombre, a.descripcion, id === v.adhesion)).join('');
+    $('atajosDensidad').innerHTML = opciones.densidades
+        .map(
+            d =>
+                `<button type="button" class="atajo ${Math.abs(d.valor - v.densidad) < 0.001 ? 'activo' : ''}" data-densidad="${d.valor}">
+            ${d.nombre} <small>${Math.round(d.valor * 100)} %</small></button>`,
+        )
+        .join('');
+    document.querySelectorAll('#personalizar .contador').forEach(c => {
+        c.querySelector('output').textContent = v[c.dataset.clave];
+    });
+    $('adhesiones').innerHTML = Object.entries(opciones.adhesiones)
+        .map(([id, a]) => opcion('adhesion', id, a.nombre, a.descripcion, id === v.adhesion))
+        .join('');
 
     const cambiados = Object.keys(estado.personal).length;
     $('personalizar').querySelector('summary').textContent = cambiados
@@ -395,8 +438,10 @@ function dibujarPersonalizar() {
 }
 
 function resumenPersonal(v) {
-    return `${opciones.patrones[v.patron]?.nombre || v.patron} ${Math.round(v.densidad * 100)} % · ` +
-        `${v.paredes} paredes · ${opciones.adhesiones[v.adhesion]?.nombre}`;
+    return (
+        `${opciones.patrones[v.patron]?.nombre || v.patron} ${Math.round(v.densidad * 100)} % · ` +
+        `${v.paredes} paredes · ${opciones.adhesiones[v.adhesion]?.nombre}`
+    );
 }
 
 $('densidad').addEventListener('input', e => {
@@ -406,13 +451,18 @@ $('atajosDensidad').onclick = e => {
     const b = e.target.closest('[data-densidad]');
     if (b) cambiarPersonal('densidad', Number(b.dataset.densidad));
 };
-document.querySelectorAll('#personalizar .contador').forEach(c => c.addEventListener('click', e => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    const clave = c.dataset.clave;
-    const nuevo = Math.min(Number(c.dataset.max), Math.max(Number(c.dataset.min), valoresActuales()[clave] + Number(b.dataset.delta)));
-    cambiarPersonal(clave, nuevo);
-}));
+document.querySelectorAll('#personalizar .contador').forEach(c =>
+    c.addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        const clave = c.dataset.clave;
+        const nuevo = Math.min(
+            Number(c.dataset.max),
+            Math.max(Number(c.dataset.min), valoresActuales()[clave] + Number(b.dataset.delta)),
+        );
+        cambiarPersonal(clave, nuevo);
+    }),
+);
 $('restablecer').onclick = () => {
     estado.personal = {};
     dibujarPersonalizar();
@@ -466,16 +516,31 @@ function dibujarListaImpresoras() {
     const lista = listaImpresoras().filter(i => !q || `${i.marca} ${i.nombre}`.toLowerCase().includes(q));
     const grupos = [];
     for (const i of lista) {
-        const titulo = i.estado === 'propio' ? 'Tus impresoras'
-            : i.estado === 'revisado' ? 'Perfiles armados a mano'
-            : `${i.marca} · importadas de Kiri (sin revisar)`;
+        const titulo =
+            i.estado === 'propio'
+                ? 'Tus impresoras'
+                : i.estado === 'revisado'
+                  ? 'Perfiles armados a mano'
+                  : `${i.marca} · importadas de Kiri (sin revisar)`;
         if (grupos.at(-1)?.titulo !== titulo) grupos.push({ titulo, items: [] });
         grupos.at(-1).items.push(i);
     }
-    $('listaImpresoras').innerHTML = grupos.map(g => `<h3>${escapar(g.titulo)}</h3>` + g.items.map(i =>
-        `<button type="button" class="opcion impresora ${i.id === estado.impresoraId ? 'elegida' : ''}" data-id="${i.id}">
+    $('listaImpresoras').innerHTML =
+        grupos
+            .map(
+                g =>
+                    `<h3>${escapar(g.titulo)}</h3>` +
+                    g.items
+                        .map(
+                            i =>
+                                `<button type="button" class="opcion impresora ${i.id === estado.impresoraId ? 'elegida' : ''}" data-id="${i.id}">
             <span><b>${escapar(i.nombre)}</b><br><small>${detalleImpresora(i)}</small></span>
-        </button>`).join('')).join('') || '<p class="nota">No encontramos esa impresora. Podés agregarla con "Agregar mi impresora".</p>';
+        </button>`,
+                        )
+                        .join(''),
+            )
+            .join('') ||
+        '<p class="nota">No encontramos esa impresora. Podés agregarla con "Agregar mi impresora".</p>';
 }
 
 $('listaImpresoras').onclick = e => {
@@ -513,26 +578,51 @@ function abrirFormulario(datos, titulo) {
 function datosNuevos() {
     const p = PLANTILLAS_GCODE.marlin;
     return {
-        id: 'propia-' + Date.now().toString(36), nombre: '', ancho: 220, profundidad: 220, alto: 250,
-        origenCentro: false, boquilla: 0.4, filamento: 1.75, extrusor: 'directo', retraccion: 0.8,
-        hotendMax: 260, camaMax: 100, velocidad: 60, firmware: 'marlin', inicio: undefined, fin: undefined,
-        _inicio: p.inicio, _fin: p.fin, _pausa: p.pausa,
+        id: 'propia-' + Date.now().toString(36),
+        nombre: '',
+        ancho: 220,
+        profundidad: 220,
+        alto: 250,
+        origenCentro: false,
+        boquilla: 0.4,
+        filamento: 1.75,
+        extrusor: 'directo',
+        retraccion: 0.8,
+        hotendMax: 260,
+        camaMax: 100,
+        velocidad: 60,
+        firmware: 'marlin',
+        inicio: undefined,
+        fin: undefined,
+        _inicio: p.inicio,
+        _fin: p.fin,
+        _pausa: p.pausa,
     };
 }
 
 // Datos del formulario a partir de una impresora existente (para "Copiar como mía").
 function datosDesde(imp) {
-    const d = imp.dispositivo, normal = imp.calidades.normal?.proceso || {};
+    const d = imp.dispositivo,
+        normal = imp.calidades.normal?.proceso || {};
     const retraccion = imp.proceso.outputRetractDist ?? 1.5;
     return {
         id: imp.estado === 'propio' ? imp.id : 'propia-' + Date.now().toString(36),
         nombre: imp.estado === 'propio' ? imp.nombre : `${imp.nombre} (mía)`,
-        ancho: d.bedWidth, profundidad: d.bedDepth, alto: d.maxHeight, origenCentro: !!d.originCenter,
-        boquilla: d.extruders[0].extNozzle, filamento: d.extruders[0].extFilament,
-        extrusor: retraccion > 2 ? 'bowden' : 'directo', retraccion,
-        hotendMax: imp.limites?.hotendMax ?? 260, camaMax: imp.limites?.camaMax ?? 100,
-        velocidad: normal.outputFeedrate ?? 60, firmware: imp.firmware || 'marlin',
-        inicio: d.gcodePre, fin: d.gcodePost, pausa: lineasPausa(imp),
+        ancho: d.bedWidth,
+        profundidad: d.bedDepth,
+        alto: d.maxHeight,
+        origenCentro: !!d.originCenter,
+        boquilla: d.extruders[0].extNozzle,
+        filamento: d.extruders[0].extFilament,
+        extrusor: retraccion > 2 ? 'bowden' : 'directo',
+        retraccion,
+        hotendMax: imp.limites?.hotendMax ?? 260,
+        camaMax: imp.limites?.camaMax ?? 100,
+        velocidad: normal.outputFeedrate ?? 60,
+        firmware: imp.firmware || 'marlin',
+        inicio: d.gcodePre,
+        fin: d.gcodePost,
+        pausa: lineasPausa(imp),
     };
 }
 
@@ -543,7 +633,10 @@ $('nuevaImpresora').onclick = () => {
 };
 $('impresoraElegida').onclick = e => {
     if (e.target.id === 'editarImpresora') {
-        abrirFormulario(estado.propias.find(p => p.id === estado.impresoraId), 'Editar mi impresora');
+        abrirFormulario(
+            estado.propias.find(p => p.id === estado.impresoraId),
+            'Editar mi impresora',
+        );
     } else if (e.target.id === 'copiarImpresora') {
         abrirFormulario(datosDesde(buscarImpresora(estado.impresoraId)), 'Mi impresora');
     }
@@ -551,7 +644,9 @@ $('impresoraElegida').onclick = e => {
 
 // Si no editó el G-code a mano, al cambiar de firmware se pone la plantilla que corresponde.
 for (const c of ['inicio', 'fin', 'pausa']) {
-    form.elements[c].addEventListener('input', e => { e.target.dataset.tocado = '1'; });
+    form.elements[c].addEventListener('input', e => {
+        e.target.dataset.tocado = '1';
+    });
 }
 form.elements.firmware.addEventListener('change', e => {
     const p = PLANTILLAS_GCODE[e.target.value];
@@ -568,20 +663,38 @@ form.addEventListener('submit', async e => {
     e.preventDefault();
     if (!form.checkValidity()) {
         const malo = [...form.elements].find(c => c.validity && !c.validity.valid);
-        $('errorImpresora').textContent = `Revisá "${malo.closest('label')?.firstChild.textContent.trim() || malo.name}": ` +
+        $('errorImpresora').textContent =
+            `Revisá "${malo.closest('label')?.firstChild.textContent.trim() || malo.name}": ` +
             (malo.validationMessage || 'valor inválido');
         $('errorImpresora').hidden = false;
         malo.focus();
         return;
     }
-    const f = form.elements, num = n => Number(f[n].value);
-    const lineas = t => t.split('\n').map(l => l.trimEnd()).filter(Boolean);
+    const f = form.elements,
+        num = n => Number(f[n].value);
+    const lineas = t =>
+        t
+            .split('\n')
+            .map(l => l.trimEnd())
+            .filter(Boolean);
     const datos = {
-        id: form.dataset.id, nombre: f.nombre.value.trim(),
-        ancho: num('ancho'), profundidad: num('profundidad'), alto: num('alto'), origenCentro: f.origenCentro.checked,
-        boquilla: num('boquilla'), filamento: num('filamento'), extrusor: f.extrusor.value, retraccion: num('retraccion'),
-        hotendMax: num('hotendMax'), camaMax: num('camaMax'), velocidad: num('velocidad'), firmware: f.firmware.value,
-        inicio: lineas(f.inicio.value), fin: lineas(f.fin.value), pausa: lineas(f.pausa.value),
+        id: form.dataset.id,
+        nombre: f.nombre.value.trim(),
+        ancho: num('ancho'),
+        profundidad: num('profundidad'),
+        alto: num('alto'),
+        origenCentro: f.origenCentro.checked,
+        boquilla: num('boquilla'),
+        filamento: num('filamento'),
+        extrusor: f.extrusor.value,
+        retraccion: num('retraccion'),
+        hotendMax: num('hotendMax'),
+        camaMax: num('camaMax'),
+        velocidad: num('velocidad'),
+        firmware: f.firmware.value,
+        inicio: lineas(f.inicio.value),
+        fin: lineas(f.fin.value),
+        pausa: lineas(f.pausa.value),
     };
     estado.propias = [...estado.propias.filter(p => p.id !== datos.id), datos];
     await guardarPropias();
@@ -605,7 +718,9 @@ async function guardarPropias() {
 // Las elecciones del paso 2 se recuerdan para la próxima vez.
 function guardarPreferencias() {
     const { impresoraId, calidad, material, soportes, personal, avanzado } = estado;
-    almacen.guardarAjuste('preferencias', { impresoraId, calidad, material, soportes, personal, avanzado }).catch(() => {});
+    almacen
+        .guardarAjuste('preferencias', { impresoraId, calidad, material, soportes, personal, avanzado })
+        .catch(() => {});
 }
 
 async function cargarPreferencias() {
@@ -679,14 +794,20 @@ async function empezarLaminado() {
     try {
         const r = await laminar({
             stl: estado.stl.slice(0), // copia: el original queda para volver a laminar
-            dispositivo, proceso,
+            dispositivo,
+            proceso,
             maxTriangulos: maxTriangulos(),
             transformacion: matrizModelo(),
             alProgresar: ponerProgreso,
             signal: estado.cancelar.signal,
         });
         const base = estado.nombre.replace(/\.(stl|obj|3mf)$/i, '').replace(/[^\w.-]+/g, '_');
-        estado.resultado = { ...r, avisos, archivo: `${base}_${estado.calidad}.gcode`, impresoraId: estado.impresoraId };
+        estado.resultado = {
+            ...r,
+            avisos,
+            archivo: `${base}_${estado.calidad}.gcode`,
+            impresoraId: estado.impresoraId,
+        };
         mostrarResultado();
         irA(4, { reemplazar: true }); // así "atrás" desde el resultado vuelve a la configuración
     } catch (err) {
@@ -729,8 +850,10 @@ function mostrarResultado() {
     const notas = [...avisos];
     if (info.decimado) {
         const d = info.decimado;
-        notas.push(`Simplificamos el modelo de ${formato.triangulos(d.original)} a ${formato.triangulos(d.final)} ` +
-            `para que entre en la memoria del celu (detalle mínimo ≈ ${formato.numero(d.precisionMm, 2)} mm).`);
+        notas.push(
+            `Simplificamos el modelo de ${formato.triangulos(d.original)} a ${formato.triangulos(d.final)} ` +
+                `para que entre en la memoria del celu (detalle mínimo ≈ ${formato.numero(d.precisionMm, 2)} mm).`,
+        );
     }
     $('avisoResultado').innerHTML = notas.join('<br><br>');
     $('avisoResultado').hidden = notas.length === 0;
@@ -771,8 +894,9 @@ async function armarVistaPrevia() {
         capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, pausaCapa: r.pausaCapa, tipos: r.tipos, total };
 
         $('capa').max = total - 1;
-        $('leyenda').innerHTML = TIPOS.slice(0, -1).map(t =>
-            `<li><i style="background: rgb(${t.color.join(',')})"></i>${t.nombre}</li>`).join('');
+        $('leyenda').innerHTML = TIPOS.slice(0, -1)
+            .map(t => `<li><i style="background: rgb(${t.color.join(',')})"></i>${t.nombre}</li>`)
+            .join('');
         $('avisoVista').hidden = !r.incompleta;
         $('avisoVista').textContent = r.incompleta
             ? `El archivo es muy grande para mostrarlo entero en este equipo: la vista llega hasta la capa ${total}. El G-code está completo.`
@@ -795,9 +919,12 @@ function irACapa(n) {
     // botón de pausa según la capa
     const b = $('pausarCapa');
     b.disabled = n === 0;
-    b.textContent = n === 0 ? '⏸ No se puede pausar en la primera capa'
-        : estado.pausas.has(n) ? '✕ Quitar la pausa de esta capa'
-        : '⏸ Pausar acá para cambiar filamento';
+    b.textContent =
+        n === 0
+            ? '⏸ No se puede pausar en la primera capa'
+            : estado.pausas.has(n)
+              ? '✕ Quitar la pausa de esta capa'
+              : '⏸ Pausar acá para cambiar filamento';
 }
 
 // --- Pausas para cambiar filamento ---
@@ -851,20 +978,33 @@ function dibujarPausas() {
     const lista = [...estado.pausas.values()].sort((a, b) => a.capa - b.capa);
     const total = capas?.total || 0;
     // Tramos de capas que van con cada filamento (antes de la 1ª pausa, entre pausas, después).
-    const tramos = [0, ...lista.map(p => p.capa)].map((desde, i, a) => ({ desde, hasta: (a[i + 1] ?? total) - 1, pausa: lista[i - 1] }));
-    $('listaPausas').innerHTML = lista.length ? tramos.map((t, i) => `<li>
+    const tramos = [0, ...lista.map(p => p.capa)].map((desde, i, a) => ({
+        desde,
+        hasta: (a[i + 1] ?? total) - 1,
+        pausa: lista[i - 1],
+    }));
+    $('listaPausas').innerHTML = lista.length
+        ? tramos
+              .map(
+                  (t, i) => `<li>
         <input type="color" value="${colorFilamento(i)}" data-filamento="${i}" aria-label="Color del filamento ${i + 1}">
         <button type="button" class="ir" data-capa="${t.desde}">
             <b>Filamento ${i + 1}</b> · capas ${t.desde + 1}–${t.hasta + 1}
             ${t.pausa ? `<small>⏸ pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}
         </button>
         ${t.pausa ? `<button type="button" class="quitar" data-capa="${t.desde}" aria-label="Quitar la pausa de la capa ${t.desde + 1}">×</button>` : ''}
-    </li>`).join('') + `<li class="nota">La impresora se va a detener al empezar ${lista.length === 1 ? 'esa capa' : 'cada una de esas capas'}
+    </li>`,
+              )
+              .join('') +
+          `<li class="nota">La impresora se va a detener al empezar ${lista.length === 1 ? 'esa capa' : 'cada una de esas capas'}
         para que cambies el filamento (usa <code>${escapar(lineasPausa(buscarImpresora(estado.resultado.impresoraId)).join(' · '))}</code>).
-        Los colores son sólo para la vista previa.</li>` : '';
+        Los colores son sólo para la vista previa.</li>`
+        : '';
     // marcas sobre el deslizador
-    $('marcasPausa').innerHTML = total > 1 ? lista.map(p =>
-        `<i style="left: calc(${p.capa / (total - 1)} * (100% - 24px) + 12px)"></i>`).join('') : '';
+    $('marcasPausa').innerHTML =
+        total > 1
+            ? lista.map(p => `<i style="left: calc(${p.capa / (total - 1)} * (100% - 24px) + 12px)"></i>`).join('')
+            : '';
     if (!lista.length) estado.modoColor = 'tipo';
     actualizarModoColor();
     pintarRecorridos();
@@ -873,8 +1013,9 @@ function dibujarPausas() {
 function actualizarModoColor() {
     const conPausas = estado.pausas.size > 0;
     $('modoColor').hidden = !conPausas;
-    $('modoColor').querySelectorAll('[data-modo]').forEach(b =>
-        b.classList.toggle('activo', b.dataset.modo === estado.modoColor));
+    $('modoColor')
+        .querySelectorAll('[data-modo]')
+        .forEach(b => b.classList.toggle('activo', b.dataset.modo === estado.modoColor));
     $('leyenda').hidden = estado.modoColor !== 'tipo';
 }
 
@@ -888,25 +1029,37 @@ function pintarRecorridos() {
     const cortes = [...estado.pausas.keys()].sort((a, b) => a - b);
     const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
     // tabla [filamento][tipo] -> [r, g, b]
-    const tabla = [0, ...cortes].map((_, f) => TIPOS.map(t => porFilamento
-        ? rgb(colorFilamento(f)).map(v => Math.round(v * t.brillo))
-        : t.color));
+    const tabla = [0, ...cortes].map((_, f) =>
+        TIPOS.map(t => (porFilamento ? rgb(colorFilamento(f)).map(v => Math.round(v * t.brillo)) : t.color)),
+    );
     visorCapas.pintarRecorridos(c => {
         let f = 0;
         for (let capa = 0; capa < total; capa++) {
             if (capa === cortes[f]) f++;
             const fila = tabla[f];
             for (let i = inicioCapa[capa], fin = inicioCapa[capa + 1]; i < fin; i++) {
-                const [r, g, b] = fila[tipos[i]], o = i * 6;
-                c[o] = c[o + 3] = r; c[o + 1] = c[o + 4] = g; c[o + 2] = c[o + 5] = b;
+                const [r, g, b] = fila[tipos[i]],
+                    o = i * 6;
+                c[o] = c[o + 3] = r;
+                c[o + 1] = c[o + 4] = g;
+                c[o + 2] = c[o + 5] = b;
             }
         }
     });
 }
 
-$('capa').addEventListener('input', e => { pararReproduccion(); irACapa(Number(e.target.value)); });
-$('capaMenos').onclick = () => { pararReproduccion(); irACapa(Number($('capa').value) - 1); };
-$('capaMas').onclick = () => { pararReproduccion(); irACapa(Number($('capa').value) + 1); };
+$('capa').addEventListener('input', e => {
+    pararReproduccion();
+    irACapa(Number(e.target.value));
+});
+$('capaMenos').onclick = () => {
+    pararReproduccion();
+    irACapa(Number($('capa').value) - 1);
+};
+$('capaMas').onclick = () => {
+    pararReproduccion();
+    irACapa(Number($('capa').value) + 1);
+};
 $('soloCapa').onchange = () => irACapa(Number($('capa').value));
 
 // "Play": recorre todas las capas en unos 8 segundos (empieza de abajo si está al final).
@@ -974,20 +1127,23 @@ $('otro').onclick = () => {
 
 function registrarServiceWorker() {
     if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
-    navigator.serviceWorker.register('./sw.js').then(registro => {
-        // Si hay una versión nueva esperando, ofrecemos actualizar (no lo hacemos
-        // solos para no cortar un laminado a la mitad).
-        const ofrecer = sw => {
-            if (!sw || !navigator.serviceWorker.controller) return;
-            $('actualizacion').hidden = false;
-            $('actualizar').onclick = () => sw.postMessage('actualizar');
-        };
-        ofrecer(registro.waiting);
-        registro.addEventListener('updatefound', () => {
-            const nuevo = registro.installing;
-            nuevo.addEventListener('statechange', () => nuevo.state === 'installed' && ofrecer(nuevo));
-        });
-    }).catch(err => console.warn('No se pudo registrar el service worker', err));
+    navigator.serviceWorker
+        .register('./sw.js')
+        .then(registro => {
+            // Si hay una versión nueva esperando, ofrecemos actualizar (no lo hacemos
+            // solos para no cortar un laminado a la mitad).
+            const ofrecer = sw => {
+                if (!sw || !navigator.serviceWorker.controller) return;
+                $('actualizacion').hidden = false;
+                $('actualizar').onclick = () => sw.postMessage('actualizar');
+            };
+            ofrecer(registro.waiting);
+            registro.addEventListener('updatefound', () => {
+                const nuevo = registro.installing;
+                nuevo.addEventListener('statechange', () => nuevo.state === 'installed' && ofrecer(nuevo));
+            });
+        })
+        .catch(err => console.warn('No se pudo registrar el service worker', err));
 
     let recargando = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
