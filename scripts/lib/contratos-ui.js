@@ -23,7 +23,7 @@ export const CONTRATOS = {
             guardarPropias: 0,
             cargarPreferencias: 0,
         },
-        importa: [PERFILES, 'almacen', 'motor/transformar', 'motor/tipos-linea', 'ui/avanzado'],
+        importa: [PERFILES, 'perfiles/soportes', 'almacen', 'motor/transformar', 'motor/tipos-linea', 'ui/avanzado'],
     },
     'ui/navegacion': {
         exports: {

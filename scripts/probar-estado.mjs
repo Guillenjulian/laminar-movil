@@ -3,12 +3,22 @@
 // estado.js importa JSON de perfiles y Node solo no lo resuelve.
 // Cubre: sin pieza (valores iniciales, el setter no hace nada), con pieza (lee y escribe en la activa,
 // también con la segunda activa), `activa` null o inexistente (la primera) y `piezasParaMotor`.
+import assert from 'node:assert/strict';
 import * as transformar from '../src/motor/transformar.js';
 
 const R = transformar.rotacion90('x'); // rotación no simétrica
 const buf = () => new Uint8Array([1, 2, 3, 4]).buffer;
 const vista = { triangulos: 1, tamano: { x: 1, y: 2, z: 3 } };
 const mismo = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/** Igualdad profunda sin importar el orden de las claves. */
+const igual = (a, b) => {
+    try {
+        assert.deepStrictEqual(a, b);
+        return true;
+    } catch {
+        return false;
+    }
+};
 
 /** Sin pieza: getters con valores iniciales, setters sin efecto, matrizModelo = identidad. */
 function sinPieza(e, chequear) {
@@ -79,6 +89,52 @@ function paraMotor(e, chequear) {
     m[0].posiciones[0].x = 99;
     chequear(q.posiciones[0].x === 0, 'piezasParaMotor: las posiciones se copian');
     e.estado.piezas = [];
+}
+
+/** Zonas sin soporte (ADR 0004): `crearPieza` las trae vacías, `piezasParaMotor` las copia en profundidad. */
+function bloqueos(e, chequear) {
+    const q = e.crearPieza({ nombre: 'q', stl: buf(), vista });
+    chequear(
+        Array.isArray(q.bloqueos) && q.bloqueos.length === 0 && q.firmaBloqueos === null,
+        'crearPieza: bloqueos [] y firmaBloqueos null',
+    );
+    chequear(e.estado.ultimoIdBloqueo === 0 && e.estado.soportes === 'no', 'estado: ultimoIdBloqueo 0 y soportes "no"');
+    q.bloqueos.push({ id: 1, forma: 'esfera', centro: { x: 1, y: 2, z: 3 }, radio: 5 });
+    e.estado.piezas = [q];
+    const m = e.piezasParaMotor();
+    chequear(mismo(m[0].bloqueos, q.bloqueos), 'piezasParaMotor: lleva los bloqueos de la pieza');
+    m[0].bloqueos[0].centro.x = 99;
+    m[0].bloqueos[0].radio = 40;
+    chequear(q.bloqueos[0].centro.x === 1 && q.bloqueos[0].radio === 5, 'piezasParaMotor: bloqueos en copia profunda');
+    q.bloqueos = undefined;
+    chequear(mismo(e.piezasParaMotor()[0].bloqueos, []), 'piezasParaMotor: una pieza sin bloqueos manda []');
+    e.estado.piezas = [];
+}
+
+/** `armarConfiguracion` con el tipo: true y 'normal' dan exactamente el proceso de siempre con true (ADR 0004). */
+function configuracionSoportes(p, chequear) {
+    for (const impresoraId of ['creality-ender-3-v3-se', 'prusa-mk4', 'bambu-lab-a1']) {
+        for (const calidad of ['normal', 'rapida']) {
+            const base = { impresoraId, calidad, personal: {} };
+            const sin = p.armarConfiguracion({ ...base, soportes: false }).proceso;
+            const hoy = { ...sin, sliceSupportType: 'automatic' }; // lo que armaba la app con `true`
+            const mismoProceso = (tipo, esperado) =>
+                igual(p.armarConfiguracion({ ...base, soportes: tipo }).proceso, esperado);
+            const donde = `${impresoraId}/${calidad}`;
+            chequear(
+                mismoProceso(true, hoy) && mismoProceso('normal', hoy),
+                `soportes true y 'normal' = proceso de hoy (${donde})`,
+            );
+            chequear(
+                mismoProceso('no', sin) && mismoProceso(undefined, sin),
+                `soportes false y 'no' = sin soportes (${donde})`,
+            );
+            chequear(
+                mismoProceso('arbol', { ...hoy, sliceSupportTree: true }),
+                `soportes 'arbol' suma sliceSupportTree (${donde})`,
+            );
+        }
+    }
 }
 
 /** Pieza cúbica de `lado` mm (escala opcional) para las pruebas de acomodo. */
@@ -214,5 +270,7 @@ export async function probarEstado(chequear, cargar) {
     sinPieza(e, chequear);
     conPiezas(e, chequear);
     paraMotor(e, chequear);
+    bloqueos(e, chequear);
+    configuracionSoportes(await cargar('/src/perfiles/perfiles.js'), chequear);
     acomodo(e, await cargar('/src/ui/acomodo.js'), chequear);
 }
