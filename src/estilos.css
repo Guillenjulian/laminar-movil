@@ -237,6 +237,60 @@ h2:first-child {
     margin: 0;
 }
 
+/* --- Piezas del paso 1 (chips y "Agregar pieza") --- */
+.piezas {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.piezas li {
+    display: flex;
+    max-width: 100%;
+}
+.chip,
+.chip-quitar {
+    min-height: 44px;
+    border: 1px solid var(--borde);
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: inherit;
+    cursor: pointer;
+}
+.chip {
+    min-width: 0;
+    max-width: 14em;
+    padding: 6px 12px;
+    border-radius: var(--radio) 0 0 var(--radio);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.chip[aria-pressed='true'] {
+    border-color: var(--acento);
+    background: color-mix(in srgb, var(--acento) 18%, transparent);
+    font-weight: 600;
+}
+.chip-quitar {
+    width: 44px;
+    flex: none;
+    border-left: 0;
+    border-radius: 0 var(--radio) var(--radio) 0;
+    color: var(--suave);
+    font-size: 1.4rem;
+}
+.agregar-pieza {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.agregar-pieza .boton {
+    margin-top: 0;
+}
+
 /* --- Avisos --- */
 .aviso {
     margin: 12px 0;

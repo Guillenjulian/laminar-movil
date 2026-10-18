@@ -20,3 +20,6 @@ export function maxSegmentosVista() {
     if (gb && gb >= 8) return 6_000_000;
     return 3_000_000;
 }
+
+// Máximo de piezas distintas en la cama (ADR 0003, sección 6).
+export const MAX_PIEZAS = 8;

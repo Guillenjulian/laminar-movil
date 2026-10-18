@@ -64,6 +64,7 @@
                         <p class="ayuda-gestos">1 dedo: girar · 2 dedos: zoom · doble toque: centrar</p>
                     </div>
                     <div class="ficha">
+                        <ul class="piezas" id="listaPiezas" aria-label="Piezas" hidden></ul>
                         <p class="nombre" id="nombreModelo"></p>
                         <p id="datosModelo"></p>
                         <div class="aviso" id="avisoModelo" hidden></div>
@@ -104,6 +105,14 @@
                             <p class="aviso" id="ayudaCara" hidden>
                                 Tocá la cara del modelo que querés apoyar sobre la cama.
                             </p>
+                        </div>
+
+                        <div class="agregar-pieza" id="agregarPieza" hidden>
+                            <button type="button" class="boton chico" id="agregarArchivo">Agregar pieza</button>
+                            <button type="button" class="boton chico" id="agregarEjemplo">
+                                Agregar cubo de ejemplo
+                            </button>
+                            <input type="file" id="archivoPieza" accept=".stl,.obj,.3mf" hidden />
                         </div>
 
                         <button class="boton chico" id="otroModelo">Elegir otro modelo</button>

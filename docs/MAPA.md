@@ -32,8 +32,9 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único (con `piezas`, ADR 0003), `crearPieza`, `piezaActiva`, `matrizPieza`, `matrizModelo`, `copiasTotales`, `piezasParaMotor`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
-| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `ajuste-modelo`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
+| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` y las piezas extra `piezas-ui` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `ajuste-modelo`, `piezas-ui`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
 | `src/ui/ajuste-modelo.js` | Ajuste de la pieza activa (ADR 0003): escala, rotaciones de 90°, apoyar cara, ajustar a la cama, restablecer y avisos (no entra, modelo pesado); `crearAjuste` | `estado`, `util-dom`, `formato`, `motor/transformar`, `perfiles/perfiles`, `config` |
+| `src/ui/piezas-ui.js` | Varias piezas en el paso 1 (ADR 0003, T8): chips de `#listaPiezas` (desde 2 piezas), "Agregar pieza" (archivo o cubo de ejemplo; no con torre ni litofanía; tope `MAX_PIEZAS`), quitar y elegir la pieza activa (chip o toque en el visor); `crearPiezas`. Todavía sin copias ni acomodo | `estado`, `util-dom`, `config` |
 | `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación: 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
 | `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda) y su tarjeta; cablea el formulario de "Mi impresora" | `estado`, `navegacion`, `util-dom`, `formulario-impresora`, `perfiles/perfiles` |
 | `src/ui/formulario-impresora.js` | Formulario de "Mi impresora": crear, copiar un perfil como propio, editar y borrar (`iniciarFormularioImpresora`); avisa con el callback `elegir(id)` | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
@@ -55,7 +56,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
 | `src/ui/cambios.js` | Sección "Cambios por altura" del paso 2 (ADR 0002): agregar, editar y quitar cambios (relleno, temperatura, velocidad, ventilador desde cierta altura en mm), errores de `validarCambios`, ayuda de Velocidad, aviso "sin valor: se ignora" y resumen en el `<summary>`. Deshabilitada con altura variable | `perfiles/cambios`, `util-dom` |
 | `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
-| `src/config.js` | Límites que dependen de la memoria del equipo (triángulos, tramos de la vista previa) | — |
+| `src/config.js` | Límites que dependen de la memoria del equipo (triángulos, tramos de la vista previa) y `MAX_PIEZAS` | — |
 | `src/sw.js` | Service worker (offline). `vite.config.js` le inyecta la lista de archivos | — |
 | `src/estilos*.css` | Estilos: base + uno por área (formatos, materiales, avanzado) | — |
 
@@ -66,10 +67,11 @@ Nivel 6   main.js ──► (todos los de abajo)
 Nivel 5   paso4-resultado ──► vista-capas, paso2-config
 Nivel 4   paso2-config ──► impresoras
 Nivel 3   impresoras ──► formulario-impresora
-Nivel 2   paso1-modelo ──► ajuste-modelo, recientes
+Nivel 2   paso1-modelo ──► ajuste-modelo, piezas-ui, recientes
 Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
           vista-capas ──► pausas-ui
 Nivel 1   pausas-ui ──► estado, util-dom
+Nivel 1   piezas-ui ──► estado, util-dom, config
 Nivel 1   ajuste-modelo ──► estado, util-dom, formato, motor/transformar, perfiles, config
 Nivel 1   visor ──► visor-cara, visor-recorridos, visor-cama (hojas, nivel 0)
 Nivel 1   navegacion ──► estado

@@ -40,11 +40,16 @@ export const CONTRATOS = {
             'almacen',
             'ui/recientes',
             'ui/ajuste-modelo',
+            'ui/piezas-ui',
         ),
     },
     'ui/ajuste-modelo': {
         exports: { crearAjuste: 1 },
         importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/transformar', PERFILES, 'config'],
+    },
+    'ui/piezas-ui': {
+        exports: { crearPiezas: 1 },
+        importa: ['ui/estado', 'ui/util-dom', 'config'],
     },
     'ui/torres': {
         exports: { prepararTorre: 1 },

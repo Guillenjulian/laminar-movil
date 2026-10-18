@@ -19,6 +19,7 @@ import { estado, crearPieza } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
 import { crearAjuste } from './ajuste-modelo.js';
+import { crearPiezas } from './piezas-ui.js';
 
 export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
@@ -26,6 +27,12 @@ let visor = null; // visor del modelo (se crea al cargar el primer modelo)
 let litofania = null; // hoja "Litofanía desde una foto" (se crea en iniciarPaso1)
 let torres = null; // hoja "Torre de calibración" (se crea en iniciarPaso1)
 const ajuste = crearAjuste({ visor: () => visor, alCambiar: programarGuardado, torres: () => torres });
+const piezas = crearPiezas({
+    visor: () => visor,
+    ajuste,
+    leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
+    elegirOtro: elegirOtroModelo,
+});
 
 /**
  * Cablea #archivo, #foto, #otroModelo, #ejemplo, #siguiente, la lista de recientes, escala,
@@ -50,6 +57,7 @@ export function iniciarPaso1() {
     $('botonTorre').onclick = torres.abrir;
     conectarSubida();
     ajuste.conectar();
+    piezas.conectar();
 }
 
 /**
@@ -172,8 +180,10 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     });
     estado.piezas = [pieza];
     estado.activa = pieza.id;
+    pieza.idVisor = 0; // la malla va con id 0 (ajuste-modelo aún no usa ids; T10)
     $('nombreModelo').textContent = nombre;
     ajuste.cancelarCara();
     ajuste.aplicar();
+    piezas.dibujar();
     $('siguiente').disabled = false;
 }
