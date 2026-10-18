@@ -15,6 +15,7 @@ import { probarConfig } from './app/paso2-config.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
 import { probarAvanzado } from './app/avanzado.mjs';
+import { probarCambios } from './app/cambios.mjs';
 import { probarVistaCapas } from './app/vista-capas.mjs';
 import { probarPausas } from './app/pausas.mjs';
 import { probarDescarga } from './app/descarga.mjs';
@@ -33,6 +34,7 @@ const AREAS = [
     probarLaminarCubo,
     probarMateriales,
     probarAvanzado,
+    probarCambios,
     probarVistaCapas,
     probarPausas,
     probarDescarga,

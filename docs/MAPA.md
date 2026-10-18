@@ -140,6 +140,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Paso 3: cancelar, personalizar, laminar el cubo | `scripts/app/paso3-laminar.mjs` |
 | Materiales y costo | `scripts/app/materiales.mjs` |
 | Avanzado (jarrón, costura, velocidad) | `scripts/app/avanzado.mjs` |
+| Cambios por altura (agregar, quitar, altura variable) | `scripts/app/cambios.mjs` |
 | Vista previa por capas | `scripts/app/vista-capas.mjs` |
 | Pausas / filamentos | `scripts/app/pausas.mjs` |
 | Descarga del G-code | `scripts/app/descarga.mjs` |

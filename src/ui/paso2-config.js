@@ -172,7 +172,13 @@ function conectarEleccion() {
  *  los atajos de densidad y #restablecer; crea la sección Avanzado (crearAvanzado con
  *  { estado, alCambiar: guardarPreferencias }). Llamar una vez. @returns {void} */
 export function iniciarPaso2() {
-    avanzado = crearAvanzado({ estado, alCambiar: guardarPreferencias });
+    avanzado = crearAvanzado({
+        estado,
+        alCambiar: () => {
+            guardarPreferencias();
+            cambios?.dibujar();
+        },
+    });
     cambios = crearCambios({ estado, alCambiar: () => {} });
     conectarPersonalizar();
     conectarEleccion();
