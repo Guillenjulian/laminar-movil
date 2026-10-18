@@ -99,6 +99,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 |---|---|
 | `motor.js` | API para la interfaz: `laminar` (una pieza o varias con `piezas`, ADR 0003), `leerParaVista`, `leerRecorridos`, `convertirAStl`, `litofaniaAStl`, `torreAStl`. Un worker por tarea, cancelable con `AbortSignal` |
 | `laminador.worker.js` | `prepararPiezas` → un widget de Kiri por copia (cada uno con su `track.pos`) → slice por widget, un solo prepare y export → G-code. `info.copias` y `info.tamano` del conjunto |
+| `md5.js` | `Md5` (incremental: `agregar`, `hex`) y `md5Hex`: MD5 de RFC 1321 propio y sin imports, para el `.gcode.md5` del `.gcode.3mf` de Bambu (ADR 0005; WebCrypto no tiene MD5) |
 | `vista.worker.js` | Lee el STL para mostrarlo (cuenta, mide y simplifica sólo para dibujar) |
 | `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración → STL binario |
 | `recorridos.worker.js` | Worker de la vista previa: recibe el G-code, llama a `leer` y devuelve los recorridos (re-exporta `leer`, que usan las pruebas en Node) |
@@ -154,7 +155,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Comando | Qué prueba | Dónde |
 |---|---|---|
 | `npm run test:transformar` | Matrices (Node) | `scripts/probar-transformar.mjs` |
-| `npm run test:formatos` | OBJ, STL, 3MF, errores de archivos rotos y litofanía (Node) | `scripts/probar-formatos.mjs` (orquestador) + `scripts/formatos/*.mjs` (`obj-stl`, `3mf`, `errores`, `litofania`, `ayudas`, `ayudas-3mf`) |
+| `npm run test:formatos` | OBJ, STL, 3MF, errores de archivos rotos, litofanía y MD5 (Node) | `scripts/probar-formatos.mjs` (orquestador) + `scripts/formatos/*.mjs` (`obj-stl`, `3mf`, `errores`, `litofania`, `md5`, `ayudas`, `ayudas-3mf`) |
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
 | `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y posiciones inválidas | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:recorridos` | Lector de G-code de la vista previa (Node, G-codes sintéticos): cuantizado exacto, tipos y colores de Kiri, unión de tramos, `pausaCapa` (con y sin subida de Z), modo espiral, detección de capa (altura variable), tope e `incompleta`, crecimiento de arrays con más de 65536 tramos | `scripts/probar-recorridos.mjs` + `scripts/recorridos/*.mjs` |

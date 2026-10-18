@@ -7,6 +7,7 @@ import { probarObj, probarStl } from './formatos/obj-stl.mjs';
 import { probar3mf } from './formatos/3mf.mjs';
 import { probarErrores } from './formatos/errores.mjs';
 import { probarLitofania } from './formatos/litofania.mjs';
+import { probarMd5 } from './formatos/md5.mjs';
 
 let fallas = 0;
 function revisar(nombre, condicion, detalle = '') {
@@ -19,6 +20,7 @@ probarStl({ revisar, obj });
 await probar3mf({ revisar });
 await probarErrores({ revisar });
 await probarLitofania({ revisar });
+probarMd5({ revisar });
 
 console.log(fallas ? `\n${fallas} PRUEBA(S) FALLARON` : '\nTODAS LAS PRUEBAS OK');
 process.exit(fallas ? 1 : 0);
