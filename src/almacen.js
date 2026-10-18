@@ -83,8 +83,10 @@ export async function guardarModelo(nombre, stl) {
     const lista = await listarModelos();
     const repetido = lista.find(m => m.nombre === nombre && m.bytes === stl.byteLength);
     if (repetido) {
-        await transaccion(['modelos'], 'readwrite', s => {
-            s.modelos.put({ ...repetido, fecha: Date.now() });
+        // Se relee dentro de la transacción: así no pisa una transformación guardada en el medio.
+        await transaccion(['modelos'], 'readwrite', async s => {
+            const actual = (await pedir(s.modelos.get(repetido.id))) ?? repetido;
+            s.modelos.put({ ...actual, fecha: Date.now() });
         });
         return;
     }
@@ -119,10 +121,10 @@ export function normalizarTransformacion(registro) {
  * @returns {Promise<void>}
  */
 export async function guardarTransformacion(nombre, bytes, { rotacion, escala }) {
-    const modelo = (await listarModelos()).find(m => m.nombre === nombre && m.bytes === bytes);
-    if (!modelo) return;
-    await transaccion(['modelos'], 'readwrite', s => {
-        s.modelos.put({ ...modelo, rotacion: [...rotacion], escala });
+    // Lee y escribe en una sola transacción, para no pisar otro cambio del mismo registro (ej. la fecha).
+    await transaccion(['modelos'], 'readwrite', async s => {
+        const modelo = (await pedir(s.modelos.getAll())).find(m => m.nombre === nombre && m.bytes === bytes);
+        if (modelo) s.modelos.put({ ...modelo, rotacion: [...rotacion], escala });
     });
 }
 

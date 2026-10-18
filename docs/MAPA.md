@@ -32,7 +32,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
-| `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config` |
+| `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config`, `recientes` |
+| `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación: 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
 | `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda), su tarjeta y "Mi impresora" (formulario, copiar, editar, borrar) | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
 | `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
 | `src/ui/paso3-laminar.js` | Lanza el laminado, muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `config` |
@@ -105,7 +106,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Clave | Qué guarda | Se persiste |
 |---|---|---|
 | `nombre`, `stl`, `vista` | Modelo cargado (ArrayBuffer original y tamaño) | sí, en recientes |
-| `rotacion`, `escala` | Transformación del modelo | sí, en recientes (debounce 500 ms) |
+| `rotacion`, `escala` | Transformación del modelo | sí, en recientes (500 ms o al salir) |
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
 | `resultado` | `{ gcode, info, archivo, impresoraId }` del último laminado | no |

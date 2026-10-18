@@ -16,9 +16,12 @@ import * as almacen from '../almacen.js';
 import { crearVisor } from './visor.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import * as formato from './formato.js';
-import { $, escapar } from './util-dom.js';
+import { $ } from './util-dom.js';
 import { estado, matrizModelo } from './estado.js';
+import { iniciarRecientes, mostrarRecientes, programarGuardado } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
+
+export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
 let visor = null; // visor del modelo (se crea al cargar el primer modelo)
 let litofania = null; // hoja "Litofanía desde una foto" (se crea en iniciarPaso1)
@@ -69,26 +72,6 @@ export function elegirOtroModelo() {
     mostrarRecientes();
 }
 
-/**
- * Relee los modelos guardados y dibuja la lista de recientes.
- * @returns {Promise<void>}
- */
-export async function mostrarRecientes() {
-    const lista = await almacen.listarModelos().catch(() => []);
-    $('recientes').hidden = lista.length === 0;
-    $('listaRecientes').innerHTML = lista
-        .map(
-            m => `<li>
-        <button class="reciente" data-id="${m.id}">
-            <b>${escapar(m.nombre)}</b>
-            <small>${new Date(m.fecha).toLocaleDateString('es-AR')} · ${formato.bytes(m.bytes)}</small>
-        </button>
-        <button class="borrar" data-borrar="${m.id}" aria-label="Borrar ${escapar(m.nombre)}">×</button>
-    </li>`,
-        )
-        .join('');
-}
-
 /** Cablea la subida: archivo, foto, otro modelo, ejemplo, recientes y "Siguiente". */
 function conectarSubida() {
     $('archivo').onchange = alElegirArchivo;
@@ -99,24 +82,7 @@ function conectarSubida() {
         const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
         await cargarArchivo('cubo-20mm.stl', await r.arrayBuffer());
     };
-    $('listaRecientes').onclick = async e => {
-        const boton = e.target.closest('button');
-        if (!boton) return;
-        if (boton.dataset.borrar) {
-            await almacen.borrarModelo(Number(boton.dataset.borrar));
-            mostrarRecientes();
-            return;
-        }
-        const id = Number(boton.dataset.id);
-        const modelo = (await almacen.listarModelos()).find(m => m.id === id);
-        const stl = await almacen.leerModelo(id);
-        if (modelo && stl) {
-            await cargarArchivo(modelo.nombre, stl, {
-                esStl: true,
-                transformacion: almacen.normalizarTransformacion(modelo),
-            });
-        }
-    };
+    iniciarRecientes((nombre, stl, transformacion) => cargarArchivo(nombre, stl, { esStl: true, transformacion }));
 }
 
 /** Handler de #archivo y #foto: lee el archivo elegido y lo carga. */
@@ -237,21 +203,7 @@ function aplicarTransformacion() {
         `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
     $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
     actualizarAvisoModelo();
-    programarGuardadoTransformacion();
-}
-
-let temporizador = null;
-
-/**
- * Guarda rotación y escala en el reciente 500 ms después del último cambio (sin escribir en
- * IndexedDB en cada toque). Captura los valores al programar, así un cambio de modelo no mezcla.
- */
-function programarGuardadoTransformacion() {
-    const { nombre, stl, rotacion, escala } = estado;
-    clearTimeout(temporizador);
-    temporizador = setTimeout(() => {
-        almacen.guardarTransformacion(nombre, stl.byteLength, { rotacion, escala }).catch(() => {});
-    }, 500);
+    programarGuardado();
 }
 
 /** Cambia la escala (entre 0,01 y 20) y reaplica la transformación; ignora valores no positivos. */

@@ -26,7 +26,21 @@ export const CONTRATOS = {
     },
     'ui/paso1-modelo': {
         exports: { iniciarPaso1: 0, alCambiarImpresora: 0, elegirOtroModelo: 0, mostrarRecientes: 0 },
-        importa: conBase(VISOR, 'ui/litofania', FORMATO, MOTOR, 'motor/transformar', PERFILES, 'almacen', 'config'),
+        importa: conBase(
+            VISOR,
+            'ui/litofania',
+            FORMATO,
+            MOTOR,
+            'motor/transformar',
+            PERFILES,
+            'almacen',
+            'config',
+            'ui/recientes',
+        ),
+    },
+    'ui/recientes': {
+        exports: { iniciarRecientes: 1, mostrarRecientes: 0, programarGuardado: 0, guardarPendiente: 0 },
+        importa: ['almacen', 'ui/estado', 'ui/navegacion', 'ui/util-dom', FORMATO],
     },
     'ui/impresoras': {
         exports: { iniciarImpresoras: 1, dibujarImpresoraElegida: 0 },

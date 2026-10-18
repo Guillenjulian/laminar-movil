@@ -39,28 +39,36 @@ async function abrirReciente({ page: pagina, ok: revisar, captura }) {
     revisar('abrir un reciente', true);
 }
 
-// Rota y escala el cubo, lo vuelve a abrir desde recientes y espera la misma escala y medidas.
-// Al final restablece (y espera el guardado) para dejar el cubo sin transformar.
-async function recordarTransformacion({ page: pagina, ok: revisar }) {
+// Con la T (no simétrica): rota 90° en Z y escala 150 %, sale del paso 1 (guarda sin esperar los
+// 500 ms), recarga y la abre desde recientes: tienen que volver la escala y las medidas con X/Y
+// intercambiadas. Después borra la T de recientes y deja abierto el cubo.
+async function recordarTransformacion({ page: pagina, ok: revisar, elegirArchivo, stlTe }) {
     const leer = async () => [await pagina.inputValue('#escala'), await pagina.textContent('#datosModelo')];
-    const esperarGuardado = () => pagina.waitForTimeout(900); // el guardado espera 500 ms
-    await pagina.tap('[data-rotar="x"]');
+    await elegirArchivo(stlTe);
+    await pagina.tap('[data-rotar="z"]');
     await pagina.fill('#escala', '150');
     await pagina.locator('#escala').blur();
     const antes = await leer();
-    await esperarGuardado();
+    await pagina.tap('#siguiente'); // salir del paso 1 guarda de inmediato
+    await pagina.waitForTimeout(200);
+    await pagina.goBack();
     await pagina.reload();
     await pagina.waitForSelector('#recientes:not([hidden])');
-    await pagina.tap('.reciente:has-text("cubo-20mm.stl")');
+    await pagina.tap('.reciente:has-text("te.stl")');
     await pagina.waitForFunction(() => document.getElementById('datosModelo').textContent.includes('mm'));
     const despues = await leer();
     revisar(
-        'el reciente vuelve con su escala y medidas',
-        antes[0] === '150' && despues.join() === antes.join() && !(await pagina.isHidden('#restablecerModelo')),
+        'el reciente vuelve con su rotación y escala',
+        antes[0] === '150' && antes[1].startsWith('15,0 × 75,0 × 34,5 mm') && despues.join() === antes.join(),
         `${antes} -> ${despues}`,
     );
-    await pagina.tap('#restablecerModelo');
-    await esperarGuardado();
+    await pagina.tap('#otroModelo');
+    await pagina.tap('[data-borrar]:near(.reciente:has-text("te.stl"))');
+    await pagina.waitForFunction(
+        () => ![...document.querySelectorAll('.reciente b')].some(b => b.textContent === 'te.stl'),
+    );
+    await pagina.tap('.reciente:has-text("cubo-20mm.stl")');
+    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'cubo-20mm.stl');
 }
 
 async function recordarAjustes({ page: pagina, ok: revisar }) {
