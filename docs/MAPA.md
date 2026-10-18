@@ -64,6 +64,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/visor.js` | Visor three.js: cama, una malla por pieza (por `id`, 0 si no se dice: `ponerModelo`, `ponerTransformacion`, `ponerCopias`, `tamanoModelo`, `quitarModelo`, `resaltarPieza`), ciclo de dibujo (sólo cuando algo cambia). Delega en `visor-cara` y `visor-recorridos` (ADR 0003, T5) | three, `visor-cara`, `visor-recorridos`, `visor-cama` |
 | `src/ui/visor-cara.js` | Elegir cara con un toque ("apoyar cara"): detección del toque, triángulo resaltado, avisa normal e `id` de la pieza (`elegirCara`, `alTocarPieza`) y el punto tocado en el marco de la pieza, el de `centrar()` (`alTocarPunto`, `puntoEnMarcoPieza`; ADR 0004) | three |
 | `src/ui/visor-bloqueos.js` | Marcas de las zonas sin soporte (ADR 0004, T3): una esfera translúcida por zona y por copia, con geometría y material compartidos (el radio es la escala); `crearMarcasBloqueo`: `poner(bloqueos, posiciones)` y `quitar()` (libera). Todavía no lo usa `visor.js` (lo conecta T6) | three |
+| `src/ui/bloqueos-ui.js` | Panel "Zona sin soporte" del paso 1 (ADR 0004, T5): modo "marcar" (`aria-pressed`), stepper de radio (2 a 40 mm, 8 por defecto), lista de zonas de la pieza activa con chips quitables, tope `MAX_BLOQUEOS`, aviso al vaciar si cambia la firma `[rotacion, escala]` y marcas en el visor; el visor, `avisar` y `nuevoId` llegan por `ctx`. Guarda `Pieza.bloqueos` y `Pieza.firmaBloqueos`. Todavía no lo cablea `paso1-modelo.js` (T6); `crearBloqueosUI` | `estado`, `util-dom`, `motor/bloqueos` |
+| `src/ui/soportes-tipo-ui.js` | Selector `#tipoSoportes` del paso 2 (ADR 0004, T5): No / Normal / Árbol con ayuda, guarda `estado.soportes` con `normalizarSoportes` y avisa `alCambiar`; muestra "N zonas sin soporte" en `#tipoSoportesZonas` si el tipo no es 'no'. Exporta `textoZonasSinSoporte(n)` y `zonasVigentes()` para el paso 4. Todavía no lo cablea `paso2-config.js` (T6); `crearTipoSoportes` | `estado`, `util-dom`, `perfiles/soportes` |
 | `src/ui/visor-cama.js` | La cama del visor: plano, grilla cada 10 mm y marca del origen; `reemplazarCama` libera la anterior | three |
 | `src/ui/visor-recorridos.js` | Recorridos del G-code capa por capa: `ponerRecorridos`, `mostrarCapa`, `pintarRecorridos`, `atenuarAbajo`, `quitarRecorridos`, `esfera` | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
@@ -96,6 +98,8 @@ Nivel 2   formulario-impresora   vista-capas   paso3-laminar   ──► navegac
 Nivel 0   aviso-vista (sin imports)
 Nivel 1   pausas-ui ──► estado, util-dom
 Nivel 1   copias-ui ──► estado, util-dom, config, motor/piezas
+Nivel 1   soportes-tipo-ui ──► estado, util-dom, perfiles/soportes
+Nivel 2   bloqueos-ui ──► estado, util-dom, motor/bloqueos (el visor entra por `ctx`)
 Nivel 1   ajuste-modelo ──► estado, util-dom, formato, motor/transformar, perfiles, config
 Nivel 1   visor-carga ──► visor (import() dinámico: chunk aparte)
 Nivel 1   visor ──► visor-cara, visor-recorridos, visor-cama (hojas, nivel 0)
@@ -209,6 +213,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Paso 1: OBJ, 3MF, litofanía | `scripts/app/paso1-formatos.mjs` |
 | Paso 1: varias piezas (agregar, activar, escalar, quitar, laminar dos cubos, tope, torre) | `scripts/app/piezas.mjs` |
 | Paso 1: copias (stepper, acomodo, aviso "no entran", recientes) | `scripts/app/copias.mjs` |
+| Paso 1: zonas sin soporte (modo marcar, radio, chip, quitar, aviso al cambiar la escala) y Paso 2: selector de tipo de soporte (todavía sin registrar en `probar-app.mjs`: T6) | `scripts/app/bloqueos.mjs`, `scripts/app/soportes-tipo.mjs` |
 | Paso 1: dos piezas con giro de 45° (apoyar cara) acomodadas con la huella real | `scripts/app/piezas-extra.mjs` |
 | Paso 2: calidad, atrás/adelante | `scripts/app/paso2-config.mjs` |
 | Paso 3: cancelar, personalizar, laminar el cubo | `scripts/app/paso3-laminar.mjs` |
