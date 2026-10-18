@@ -49,6 +49,7 @@ export const CONTRATOS = {
             'ui/recientes',
             'ui/ajuste-modelo',
             'ui/piezas-ui',
+            'ui/bloqueos-ui',
         ),
     },
     'ui/acomodo': {
@@ -94,6 +95,7 @@ export const CONTRATOS = {
             'ui/cambios',
             'ui/materiales',
             'ui/iconos-relleno',
+            'ui/soportes-tipo-ui',
             PERFILES,
             'perfiles/torres',
         ],
@@ -133,8 +135,10 @@ export const CONTRATOS = {
             'ui/materiales',
             'ui/entrega',
             'ui/entrega-ui',
+            'ui/soportes-tipo-ui',
             PERFILES,
             'perfiles/cambios',
+            'perfiles/soportes',
         ),
     },
     'ui/entrega': {

@@ -130,6 +130,39 @@
                             </p>
                         </div>
 
+                        <!-- Zonas sin soporte de la pieza activa (ADR 0004; sólo modelos) -->
+                        <div class="zonas-sin-soporte" id="bloqueosPanel" hidden>
+                            <button type="button" class="boton" id="bloqueoMarcar" aria-pressed="false">
+                                Marcar zona sin soporte
+                            </button>
+                            <div class="fila-escala" role="group" aria-labelledby="bloqueoRadioEtiqueta">
+                                <span id="bloqueoRadioEtiqueta">Radio de la zona</span>
+                                <button
+                                    type="button"
+                                    class="boton-capa"
+                                    id="bloqueoRadioMenos"
+                                    aria-label="Achicar el radio de la zona"
+                                >
+                                    −
+                                </button>
+                                <output id="bloqueoRadioNum" class="copias-num" for="bloqueoRadioMenos bloqueoRadioMas">
+                                    8
+                                </output>
+                                <span>mm</span>
+                                <button
+                                    type="button"
+                                    class="boton-capa"
+                                    id="bloqueoRadioMas"
+                                    aria-label="Agrandar el radio de la zona"
+                                >
+                                    +
+                                </button>
+                            </div>
+                            <ul class="piezas" id="bloqueoLista" aria-label="Zonas sin soporte"></ul>
+                            <p class="aviso" id="bloqueoAyuda" aria-live="polite"></p>
+                            <p class="aviso" id="bloqueoNota"></p>
+                        </div>
+
                         <div class="agregar-pieza" id="agregarPieza" hidden>
                             <button type="button" class="boton chico" id="agregarArchivo">Agregar pieza</button>
                             <button type="button" class="boton chico" id="agregarEjemplo">
@@ -160,13 +193,9 @@
                 <div class="opciones" id="materiales"></div>
                 <div id="tarjetaMaterial"></div>
 
-                <label class="interruptor">
-                    <span>
-                        <b>Soportes</b><br />
-                        <small>Para partes que quedan "en el aire". Tarda más y gasta más filamento.</small>
-                    </span>
-                    <input type="checkbox" id="soportes" />
-                </label>
+                <h2 id="tipoSoportesEtiqueta">Soportes</h2>
+                <div class="opciones" id="tipoSoportes" role="radiogroup" aria-labelledby="tipoSoportesEtiqueta"></div>
+                <p class="aviso" id="tipoSoportesZonas" role="status"></p>
 
                 <!-- Ajustes finos: todo a la vista dentro de un único desplegable (sin submenús) -->
                 <details class="personalizar" id="personalizar">

@@ -44,7 +44,7 @@ function infoBambu(imp) {
         metros: info.filamento / 1000,
         boquilla: ext.extNozzle,
         filamento: { tipo: mat.nombre, color: '#FFFFFF', trayInfoIdx: mat.bambu || 'GFL99' },
-        soportes: estado.soportes,
+        soportes: !estado.torre && estado.soportes !== 'no', // 'no' es texto: sería verdadero
     };
 }
 

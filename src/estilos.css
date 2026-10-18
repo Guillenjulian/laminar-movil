@@ -359,7 +359,9 @@ h2:first-child {
 }
 
 .aviso-entran:empty,
-#avisoVista:empty {
+#avisoVista:empty,
+#tipoSoportesZonas:empty,
+#bloqueoAyuda:empty {
     margin: 0;
     padding: 0;
     border: 0;
@@ -1054,4 +1056,28 @@ input[type='range'] {
     gap: 8px;
     max-width: 640px;
     margin: 0 auto;
+}
+
+/* --- Soportes (paso 2) y zonas sin soporte (paso 1), ADR 0004 --- */
+.opcion-soporte small {
+    display: block;
+    margin: 4px 14px 0;
+    color: var(--suave);
+}
+.zonas-sin-soporte {
+    margin-bottom: 12px;
+}
+.zonas-sin-soporte .fila-escala {
+    margin-top: 8px;
+}
+.zonas-sin-soporte .fila-escala > span:first-child {
+    flex: 1;
+    font-weight: 600;
+}
+.zonas-sin-soporte .boton[aria-pressed='true'] {
+    border-color: var(--acento);
+    background: color-mix(in srgb, var(--acento) 18%, transparent);
+}
+.zonas-sin-soporte .piezas {
+    margin: 8px 0;
 }

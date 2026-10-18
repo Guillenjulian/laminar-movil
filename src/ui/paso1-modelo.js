@@ -20,6 +20,7 @@ import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
 import { crearAjuste } from './ajuste-modelo.js';
 import { crearPiezas } from './piezas-ui.js';
+import { crearBloqueosUI } from './bloqueos-ui.js';
 
 export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
@@ -31,6 +32,7 @@ const ajuste = crearAjuste({
     alCambiar: () => {
         programarGuardado();
         piezas.reacomodar();
+        bloqueos.sincronizar(); // después de acomodar: si cambió la pieza, vacía las zonas y lo avisa (ADR 0004)
     },
     torres: () => torres,
 });
@@ -41,6 +43,15 @@ const piezas = crearPiezas({
     leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
     elegirOtro: elegirOtroModelo,
     guardar: almacen.guardarModelo, // las piezas agregadas también van a recientes
+    alReacomodar: () => bloqueos.dibujar(), // cambió la pieza activa, las copias o sus posiciones: las marcas siguen
+});
+// Panel "Zona sin soporte" (ADR 0004): sólo modelos; el aviso va a la región viva del panel.
+const bloqueos = crearBloqueosUI({
+    visor: () => visor,
+    avisar: msg => {
+        $('bloqueoAyuda').textContent = msg;
+    },
+    nuevoId: () => ++estado.ultimoIdBloqueo,
 });
 
 /**
@@ -67,6 +78,7 @@ export function iniciarPaso1() {
     conectarSubida();
     ajuste.conectar();
     piezas.conectar();
+    bloqueos.conectar();
 }
 
 /**
@@ -94,6 +106,7 @@ export function elegirOtroModelo() {
     estado.activa = null;
     estado.torre = null;
     visor?.quitarModelo();
+    bloqueos.dibujar(); // sin pieza: esconde el panel y saca las marcas
     $('conModelo').hidden = true;
     $('sinModelo').hidden = false;
     $('siguiente').disabled = true;
@@ -213,5 +226,6 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     ajuste.cancelarCara();
     ajuste.aplicar();
     piezas.dibujar();
+    bloqueos.dibujar(); // el panel sólo se ve con un modelo (no con torre ni litofanía)
     $('siguiente').disabled = false;
 }

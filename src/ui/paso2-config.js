@@ -10,6 +10,7 @@ import { acomodarPiezas } from './acomodo.js';
 import { $ } from './util-dom.js';
 import { crearAvanzado } from './avanzado.js';
 import { crearCambios } from './cambios.js';
+import { crearTipoSoportes } from './soportes-tipo-ui.js';
 import * as materialesUI from './materiales.js';
 import { iconoRelleno } from './iconos-relleno.js';
 import { buscarImpresora, opciones, valoresDeCalidad } from '../perfiles/perfiles.js';
@@ -19,6 +20,8 @@ import { armarTorre } from '../perfiles/torres.js';
 let avanzado = null;
 /** Sección Cambios por altura; se crea dentro de iniciarPaso2. */
 let cambios = null;
+/** Selector del tipo de soporte (ADR 0004); se crea dentro de iniciarPaso2. */
+let tipoSoportes = null;
 
 /** HTML de una opción de radio.
  *  @param {string} grupo @param {string} valor @param {string} titulo @param {string} detalle
@@ -51,7 +54,7 @@ export function dibujarOpciones() {
         )
         .join('');
     dibujarMaterial();
-    $('soportes').checked = estado.soportes;
+    tipoSoportes?.dibujar();
     dibujarPersonalizar();
     avanzado?.dibujar();
     cambios?.dibujar();
@@ -196,11 +199,11 @@ function conectarPersonalizar() {
     };
 }
 
-/** Cablea el `change` de la pantalla: calidad, material, soportes, patrón, adhesión y densidad.
+/** Cablea el `change` de la pantalla: calidad, material, patrón, adhesión y densidad (el tipo de soporte, su selector).
  *  @returns {void} */
 function conectarEleccion() {
     document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e => {
-        const { name, value, checked } = e.target;
+        const { name, value } = e.target;
         if (name === 'calidad') {
             estado.calidad = value;
             dibujarPersonalizar();
@@ -209,7 +212,6 @@ function conectarEleccion() {
             estado.material = value;
             dibujarMaterial();
         }
-        if (e.target.id === 'soportes') estado.soportes = checked;
         if (name === 'patron') return cambiarPersonal('patron', value);
         if (name === 'adhesion') return cambiarPersonal('adhesion', value);
         if (e.target.id === 'densidad') return cambiarPersonal('densidad', Number(value) / 100);
@@ -217,7 +219,7 @@ function conectarEleccion() {
     });
 }
 
-/** Cablea los cambios de calidad/material/soportes/patrón/adhesión/densidad, los contadores,
+/** Cablea los cambios de calidad/material/patrón/adhesión/densidad, los contadores,
  *  los atajos de densidad y #restablecer; crea la sección Avanzado (crearAvanzado con
  *  { estado, alCambiar: guardarPreferencias }). `irAPaso1` es el callback de
  *  "Ir al paso 1" (lo inyecta main; paso2 no importa navegacion). Llamar una vez.
@@ -232,6 +234,8 @@ export function iniciarPaso2({ irAPaso1 } = {}) {
         },
     });
     cambios = crearCambios({ estado, alCambiar: () => {} });
+    tipoSoportes = crearTipoSoportes({ alCambiar: guardarPreferencias });
+    tipoSoportes.conectar();
     conectarPersonalizar();
     conectarEleccion();
 }
