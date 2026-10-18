@@ -13,6 +13,7 @@ import { buscarChromium } from './lib/chromium.mjs';
 import { insertarPausas } from '../src/motor/pausas.js';
 import { probarCambios } from './motor/cambios.mjs';
 import { probarTorres } from './motor/torres.mjs';
+import { probarPiezasKiri } from './motor/piezas-kiri.mjs';
 
 // El lector de la vista previa es un worker: lo cargamos en Node simulando `self`.
 globalThis.self ??= {};
@@ -605,6 +606,7 @@ try {
 
     await probarCambios({ laminar, revisar }); // cambios por altura (ADR 0002)
     await probarTorres({ laminar, revisar, pagina }); // torres de calibración (ADR 0002)
+    await probarPiezasKiri({ revisar, pagina }); // varias piezas con track.pos (ADR 0003, T0)
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());
