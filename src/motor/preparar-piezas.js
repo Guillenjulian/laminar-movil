@@ -2,7 +2,7 @@
 // y la replica por copia. No importa Kiri y no toca el DOM: se prueba en Node.
 //
 //   prepararPiezas  piezas -> widgets (uno por copia, cada uno con su `pos` en la cama)
-//   centrar         centra una malla en X/Y y la apoya en Z=0 (TODO T6: el worker usa esta)
+//   centrar         centra una malla en X/Y y la apoya en Z=0 (la usa el worker)
 
 import { leerSTL } from './stl.js';
 import { decimar } from './decimar.js';
@@ -14,7 +14,7 @@ export const TOLERANCIA_COPIA_MM = 0.5;
 
 /**
  * Centra la malla en X/Y y la apoya en Z=0 (modifica `v`). Kiri ubica el modelo en el centro de la cama
- * cuando la posición es (0,0,0). TODO T6: el worker usa esta en vez de su copia local.
+ * cuando la posición es (0,0,0).
  * @param {Float32Array} v vértices [x,y,z, ...]
  * @returns {{x:number, y:number, z:number}} medidas de la caja
  */

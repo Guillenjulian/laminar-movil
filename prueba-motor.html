@@ -88,10 +88,20 @@
                 transformacion,
                 cambios,
                 stlBase64, // un STL ya armado (lo usan las pruebas que necesitan una malla propia)
+                piezas: pedidas, // varias piezas (ADR 0003): [{ caso | stlBase64, transformacion?, posiciones }]
             } = {}) => {
-                const stl = stlBase64
-                    ? Uint8Array.from(atob(stlBase64), c => c.charCodeAt(0)).buffer
-                    : await obtenerSTL(caso);
+                const leerPieza = async p =>
+                    p.stlBase64 ? Uint8Array.from(atob(p.stlBase64), c => c.charCodeAt(0)).buffer : obtenerSTL(p.caso);
+                const stl = pedidas ? null : await leerPieza({ stlBase64, caso });
+                const piezas = pedidas
+                    ? await Promise.all(
+                          pedidas.map(async p => ({
+                              stl: await leerPieza(p),
+                              transformacion: p.transformacion,
+                              posiciones: p.posiciones,
+                          })),
+                      )
+                    : undefined;
                 const { dispositivo, proceso, avisos } = armarConfiguracion({
                     impresoraId,
                     calidad,
@@ -107,6 +117,7 @@
                     proceso,
                     maxTriangulos: limite ?? maxTriangulos(),
                     transformacion,
+                    piezas,
                     alProgresar: (etapa, valor) => (estado.textContent = `${etapa} ${Math.round(valor * 100)}%`),
                 });
                 r.ms = Math.round(performance.now() - inicio);

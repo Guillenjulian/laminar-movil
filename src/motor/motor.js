@@ -38,17 +38,37 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
     });
 }
 
-// Lamina un STL. Devuelve { gcode, info }.
-// Ojo: `stl` se transfiere al worker (sin copiarlo) y queda vacío acá.
-// `transformacion` (opcional): matriz 3×3 de 9 números, fila por fila, con la
-// escala y rotación del modelo (ver transformar.js). El worker la aplica antes
-// de centrar el modelo en la cama.
-export async function laminar({ stl, dispositivo, proceso, maxTriangulos, transformacion, alProgresar, signal }) {
+/**
+ * Lamina una o varias piezas. Devuelve `{ gcode, info }` (`info.copias`: widgets laminados).
+ * Ojo: el `stl` de cada pieza se transfiere al worker (sin copiarlo) y queda vacío acá.
+ * @param {object} opciones
+ * @param {ArrayBuffer} [opciones.stl] formato viejo: una pieza en el centro (se ignora si viene `piezas`)
+ * @param {number[]} [opciones.transformacion] matriz 3×3 de 9 números, fila por fila (ver transformar.js)
+ * @param {{stl:ArrayBuffer, transformacion?:number[], posiciones:{x:number,y:number}[]}[]} [opciones.piezas]
+ *   varias piezas, cada una con una posición (centro en mm, relativo al centro de la cama) por copia
+ * @param {object} opciones.dispositivo perfil de la impresora
+ * @param {object} opciones.proceso configuración del proceso
+ * @param {number} [opciones.maxTriangulos] tope de triángulos del conjunto, copias incluidas
+ * @param {(etapa:string, valor:number)=>void} [opciones.alProgresar] avance
+ * @param {AbortSignal} [opciones.signal] para cancelar
+ * @returns {Promise<{gcode:string, info:object}>}
+ */
+export async function laminar({
+    stl,
+    dispositivo,
+    proceso,
+    maxTriangulos,
+    transformacion,
+    piezas,
+    alProgresar,
+    signal,
+}) {
     const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
+    const lista = piezas || [{ stl, transformacion, posiciones: [{ x: 0, y: 0 }] }];
     const r = await correr(
         worker,
-        { tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos, transformacion },
-        [stl],
+        { tipo: 'laminar', piezas: lista, dispositivo, proceso, maxTriangulos },
+        lista.map(p => p.stl),
         { alProgresar, signal },
     );
     return { gcode: r.gcode, info: r.info };
