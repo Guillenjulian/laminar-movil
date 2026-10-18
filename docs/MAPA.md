@@ -196,6 +196,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Vista previa por capas | `scripts/app/vista-capas.mjs` |
 | Pausas / filamentos | `scripts/app/pausas.mjs` |
 | Descarga del G-code | `scripts/app/descarga.mjs` |
+| Descarga del .gcode.3mf de la Bambu A1 (entradas, M400 U1, MD5, cache de pausas) y vuelta al .gcode de la Ender | `scripts/app/descarga-bambu.mjs` |
 | Cambios por altura en el G-code (M104 a 10 mm) | `scripts/app/cambios-gcode.mjs` |
 | Impresoras (buscar, propia, copiar) | `scripts/app/impresoras.mjs` |
 | Recientes y ajustes guardados | `scripts/app/recientes.mjs` |

@@ -22,6 +22,7 @@ import { probarCambiosGcode } from './app/cambios-gcode.mjs';
 import { probarVistaCapas } from './app/vista-capas.mjs';
 import { probarPausas } from './app/pausas.mjs';
 import { probarDescarga } from './app/descarga.mjs';
+import { probarDescargaBambu } from './app/descarga-bambu.mjs';
 import { probarImpresoras } from './app/impresoras.mjs';
 import { probarRecientes } from './app/recientes.mjs';
 import { probarTransformar } from './app/transformar.mjs';
@@ -46,6 +47,7 @@ const AREAS = [
     probarVistaCapas,
     probarPausas,
     probarDescarga,
+    probarDescargaBambu,
     probarCambiosGcode,
     probarImpresoras,
     probarRecientes,
