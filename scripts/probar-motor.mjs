@@ -25,6 +25,7 @@ import { probarPerfilesRevisados } from './motor/perfiles-revisados.mjs';
 import { probarBambuPerfiles } from './motor/bambu-perfiles.mjs';
 import { probarPiezas } from './motor/piezas.mjs';
 import { probarPiezasExtra } from './motor/piezas-extra.mjs';
+import { probarSoportesGanchos } from './motor/soportes-ganchos.mjs';
 
 const modoDev = process.argv.includes('--dev');
 const servidor = modoDev
@@ -75,6 +76,7 @@ try {
     await probarBambuPerfiles(ctx); // 4 perfiles Bambu Lab y salidaDe (ADR 0005)
     await probarPiezas(ctx); // varias piezas con track.pos (ADR 0003)
     await probarPiezasExtra(ctx); // cama centrada, progreso y cancelación con 3 copias
+    await probarSoportesGanchos(ctx); // ganchos de soportes con puente de mentira (ADR 0004, T0)
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());

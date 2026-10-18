@@ -84,7 +84,12 @@
                 const piezas = [];
                 for (const p of pedidas) {
                     const stl = p.mismoQue === undefined ? await aBuffer(p) : piezas[p.mismoQue].stl;
-                    piezas.push({ stl, transformacion: p.transformacion, posiciones: p.posiciones });
+                    piezas.push({
+                        stl,
+                        transformacion: p.transformacion,
+                        posiciones: p.posiciones,
+                        bloqueos: p.bloqueos,
+                    });
                 }
                 return piezas;
             }
