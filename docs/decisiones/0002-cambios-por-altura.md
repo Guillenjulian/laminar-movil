@@ -6,7 +6,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado (CTO, 2026-10-18). Decisiones del CTO: la torre oculta escala y rotación (v1); se suma la suite `test:cambios`.
 
 ## Contexto
 
