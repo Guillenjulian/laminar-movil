@@ -90,6 +90,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `impresoras/kiri/*.json` | 50 importadas de Kiri (`estado: importado`). **Generados**: no editar a mano |
 | `materiales.json` · `opciones.json` | Materiales (temperaturas, densidad, avisos) · patrones, densidades, adhesiones |
 | `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `valoresDeAvanzado()`, `avanzadoAProceso()`, `COSTURAS` |
+| `cambios.js` | Cambios por altura (ADR 0002), funciones puras sin imports: `validarCambios`, `cambiosARangos` (mm → `process.ranges` de Kiri), `resumenCambios`, `avisosPostLaminado` |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
 | `LEEME.md` | Referencia de todas las claves |
 
@@ -116,6 +117,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:transformar` | Matrices (Node) | `scripts/probar-transformar.mjs` |
 | `npm run test:formatos` | OBJ, 3MF y litofanía (Node) | `scripts/probar-formatos.mjs` |
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
+| `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` |
 | `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, 50 impresoras, malla pesada | `scripts/probar-motor.mjs` + `prueba-motor.html` |
 | `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` (orquestador) + `scripts/app/*.mjs` + `scripts/lib/` |
