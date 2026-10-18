@@ -23,11 +23,10 @@ import * as almacen from '../almacen.js';
  */
 export const estado = {
     paso: 1,
-    nombre: '', // nombre del archivo STL
-    stl: null, // ArrayBuffer original (se copia en cada laminado)
-    vista: null, // { triangulos, tamano } (tamaño original, sin transformar)
-    rotacion: transformar.identidad(), // rotaciones del modelo en la cama (matriz 3×3)
-    escala: 1, // escala uniforme (1 = 100 %)
+    // nombre, stl, vista, rotacion y escala son accesores de la pieza activa (se definen abajo).
+    piezas: [], // Pieza[] (ADR 0003, sección 1); vacío = sin modelo
+    activa: null, // id de la pieza que editan escala, rotación y "apoyar cara" (null = la primera)
+    entra: true, // resultado del último acomodo en la cama (true si no hay piezas)
     eligiendoCara: false,
     impresoraId: IMPRESORA_INICIAL,
     propias: [], // datos de "Mi impresora" (guardados en el celu)
@@ -46,12 +45,105 @@ export const estado = {
 };
 
 /**
- * Matriz 3×3 final del modelo: primero las rotaciones, después la escala.
- * @returns {number[][]}
+ * Una pieza de la cama (ADR 0003, sección 1).
+ * @typedef {object} Pieza
+ * @property {number} id secuencial desde 1, nunca se reutiliza en la sesión
+ * @property {string} nombre nombre del archivo
+ * @property {ArrayBuffer} stl STL original (se copia en cada laminado)
+ * @property {{triangulos:number, tamano:{x:number,y:number,z:number}}} vista
+ * @property {number[]} rotacion matriz 3×3 en 9 números
+ * @property {number} escala uniforme, 0,01 a 20
+ * @property {number} copias entero >= 1
+ * @property {'modelo'|'litofania'|'torre'} origen
+ * @property {{x:number,y:number}[]} posiciones centro de cada copia en mm (no se persiste)
+ */
+
+let ultimoId = 0;
+
+/**
+ * Crea una pieza con id nuevo, una copia y posición `{0,0}`.
+ * @param {{nombre:string, stl:ArrayBuffer, vista:object, transformacion?:{rotacion:number[], escala:number}, origen?:string}} d
+ * @returns {Pieza}
+ */
+export function crearPieza(d) {
+    const { rotacion, escala } = d.transformacion ?? {};
+    return {
+        id: ++ultimoId,
+        nombre: d.nombre,
+        stl: d.stl,
+        vista: d.vista,
+        rotacion: rotacion ? [...rotacion] : transformar.identidad(),
+        escala: escala ?? 1,
+        copias: 1,
+        origen: d.origen ?? 'modelo',
+        posiciones: [{ x: 0, y: 0 }],
+    };
+}
+
+/**
+ * La pieza de `estado.activa` (o la primera si es null o ya no existe).
+ * @returns {Pieza|null}
+ */
+export function piezaActiva() {
+    return estado.piezas.find(p => p.id === estado.activa) ?? estado.piezas[0] ?? null;
+}
+
+/**
+ * Matriz 3×3 de una pieza: primero las rotaciones, después la escala.
+ * @param {Pieza} p
+ * @returns {number[]}
+ */
+export function matrizPieza(p) {
+    return transformar.multiplicar(transformar.escala(p.escala), p.rotacion);
+}
+
+/**
+ * Matriz 3×3 final de la pieza activa.
+ * @returns {number[]}
  */
 export function matrizModelo() {
-    return transformar.multiplicar(transformar.escala(estado.escala), estado.rotacion);
+    return matrizPieza(piezaActiva());
 }
+
+/**
+ * Suma de `copias` de todas las piezas.
+ * @returns {number}
+ */
+export function copiasTotales() {
+    return estado.piezas.reduce((suma, p) => suma + p.copias, 0);
+}
+
+/**
+ * Arma el argumento `piezas` de `laminar`: copia cada `stl`, matriz de 9 números y posiciones.
+ * @returns {{stl:ArrayBuffer, transformacion:number[], posiciones:{x:number,y:number}[]}[]}
+ */
+export function piezasParaMotor() {
+    return estado.piezas.map(p => ({
+        stl: p.stl.slice(0),
+        transformacion: matrizPieza(p),
+        posiciones: p.posiciones.map(q => ({ ...q })),
+    }));
+}
+
+/** Define un accesor de `estado` sobre la pieza activa (sin pieza: `inicial()` y el setter no hace nada). */
+function accesor(clave, inicial) {
+    return {
+        enumerable: true,
+        get: () => piezaActiva()?.[clave] ?? inicial(),
+        set: valor => {
+            const p = piezaActiva();
+            if (p) p[clave] = valor;
+        },
+    };
+}
+
+Object.defineProperties(estado, {
+    nombre: accesor('nombre', () => ''),
+    stl: accesor('stl', () => null),
+    vista: accesor('vista', () => null),
+    rotacion: accesor('rotacion', transformar.identidad),
+    escala: accesor('escala', () => 1),
+});
 
 /**
  * Valores de relleno/paredes/adhesión actuales: los de la calidad pisados por `estado.personal`.

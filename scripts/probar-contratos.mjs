@@ -12,6 +12,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTRATOS } from './lib/contratos-ui.js';
+import { probarEstado } from './probar-estado.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(RAIZ, 'src');
@@ -177,6 +178,7 @@ const vite = await createServer({
 try {
     await chequearModulos(vite);
     chequearGrafo();
+    await probarEstado(chequear, ruta => vite.ssrLoadModule(ruta));
 } finally {
     await vite.close();
 }

@@ -30,9 +30,10 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
 | `src/main.js` | Punto de entrada: inicializa los módulos de `src/ui/` en orden (ver ADR 0001) | `almacen` y los módulos de `src/ui/` que inicializa (ver grafo abajo) |
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
-| `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
+| `src/ui/estado.js` | Objeto `estado` único (con `piezas`, ADR 0003), `crearPieza`, `piezaActiva`, `matrizPieza`, `matrizModelo`, `copiasTotales`, `piezasParaMotor`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
-| `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config`, `recientes` |
+| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `ajuste-modelo`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
+| `src/ui/ajuste-modelo.js` | Ajuste de la pieza activa (ADR 0003): escala, rotaciones de 90°, apoyar cara, ajustar a la cama, restablecer y avisos (no entra, modelo pesado); `crearAjuste` | `estado`, `util-dom`, `formato`, `motor/transformar`, `perfiles/perfiles`, `config` |
 | `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación: 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
 | `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda) y su tarjeta; cablea el formulario de "Mi impresora" | `estado`, `navegacion`, `util-dom`, `formulario-impresora`, `perfiles/perfiles` |
 | `src/ui/formulario-impresora.js` | Formulario de "Mi impresora": crear, copiar un perfil como propio, editar y borrar (`iniciarFormularioImpresora`); avisa con el callback `elegir(id)` | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
@@ -65,9 +66,11 @@ Nivel 6   main.js ──► (todos los de abajo)
 Nivel 5   paso4-resultado ──► vista-capas, paso2-config
 Nivel 4   paso2-config ──► impresoras
 Nivel 3   impresoras ──► formulario-impresora
+Nivel 2   paso1-modelo ──► ajuste-modelo, recientes
 Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
           vista-capas ──► pausas-ui
 Nivel 1   pausas-ui ──► estado, util-dom
+Nivel 1   ajuste-modelo ──► estado, util-dom, formato, motor/transformar, perfiles, config
 Nivel 1   visor ──► visor-cara, visor-recorridos, visor-cama (hojas, nivel 0)
 Nivel 1   navegacion ──► estado
           pausas-ui ──► estado, util-dom
@@ -119,8 +122,8 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 
 | Clave | Qué guarda | Se persiste |
 |---|---|---|
-| `nombre`, `stl`, `vista` | Modelo cargado (ArrayBuffer original y tamaño) | sí, en recientes |
-| `rotacion`, `escala` | Transformación del modelo | sí, en recientes (500 ms o al salir) |
+| `piezas`, `activa`, `entra` | `Pieza[]` (id, nombre, stl, vista, rotacion, escala, copias, origen, posiciones; ADR 0003), id de la pieza activa (`null` = la primera) y si entran en la cama. Se carga con `estado.piezas = [crearPieza({...})]; estado.activa = id` | recientes guarda nombre, stl, rotación y escala |
+| `nombre`, `stl`, `vista`, `rotacion`, `escala` | Accesores de la pieza activa (sin pieza: `''`, `null`, `null`, identidad, `1`, y el setter no hace nada: cargar un modelo exige crear la pieza antes) | sí, en recientes (500 ms o al salir) |
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
 | `resultado` | `{ gcode, info, archivo, impresoraId, capas, cambios }` del último laminado (`capas`: alturas de capa usadas; `cambios`: los efectivos y validados, o los de la torre) | no |
@@ -189,6 +192,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `laminador.worker.js` (`centrar`) |
 | Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
 | Un botón del paso 1 no responde | `iniciarPaso1()` en `src/ui/paso1-modelo.js` |
+| Escala, rotación, apoyar cara o los avisos del modelo fallan | `crearAjuste()` en `src/ui/ajuste-modelo.js` |
+| Un modelo cargado no aparece en `estado` (los accesores no escriben) | `montarModelo()` en `src/ui/paso1-modelo.js` y `crearPieza()` en `src/ui/estado.js` |
 | Un botón del paso 2 no responde o una opción no se redibuja | `iniciarPaso2()` y `dibujarOpciones()` en `src/ui/paso2-config.js` |
 | Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
 | Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |

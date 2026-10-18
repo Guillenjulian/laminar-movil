@@ -13,6 +13,11 @@ export const CONTRATOS = {
         exports: {
             estado: 'valor',
             matrizModelo: 0,
+            crearPieza: 1,
+            piezaActiva: 0,
+            matrizPieza: 1,
+            copiasTotales: 0,
+            piezasParaMotor: 0,
             valoresActuales: 0,
             guardarPreferencias: 0,
             guardarPropias: 0,
@@ -37,7 +42,12 @@ export const CONTRATOS = {
             'almacen',
             'config',
             'ui/recientes',
+            'ui/ajuste-modelo',
         ),
+    },
+    'ui/ajuste-modelo': {
+        exports: { crearAjuste: 1 },
+        importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/transformar', PERFILES, 'config'],
     },
     'ui/torres': {
         exports: { prepararTorre: 1 },
