@@ -178,14 +178,26 @@ async function probarImpresoraChica({ page: pagina, ok: revisar, visible }) {
     );
     await pagina.tap('#cambiarImpresora');
     await pagina.fill('#buscarImpresora', 'prusa mini');
-    await pagina.tap('[data-id="kiri-prusa-mini"]');
+    const url = pagina.url();
+    // Toque rápido: elige la Prusa mini y toca "Ir al paso 1" sin esperar a que se cierre la hoja.
+    await pagina.evaluate(() => {
+        document.querySelector('[data-id="kiri-prusa-mini"]').click();
+        document.getElementById('irPaso1').click();
+    });
+    await pagina.waitForTimeout(500);
+    revisar(
+        'impresora chica: "Ir al paso 1" tocado sin esperar a que cierre la hoja deja en el paso 1, dentro de la app',
+        (await visible('#conModelo')) && !(await visible('#hojaImpresoras')) && pagina.url() === url,
+        pagina.url(),
+    );
+    await pagina.goForward(); // paso 2 con la Prusa mini elegida
     revisar(
         'impresora chica: el paso 2 avisa que no entran y Laminar queda deshabilitado',
         (await visible('#avisoEntranPaso2')) &&
-            /^Con esta impresora no entran todas las piezas/.test(await pagina.textContent('#textoEntranPaso2')) &&
+            /^Con esta impresora no entran todas las piezas/.test(await pagina.textContent('#avisoEntranPaso2')) &&
             (await pagina.getAttribute('#avisoEntranPaso2', 'role')) === 'status' &&
             (await pagina.isDisabled('#laminar')),
-        await pagina.textContent('#textoEntranPaso2'),
+        await pagina.textContent('#avisoEntranPaso2'),
     );
     await pagina.tap('#irPaso1');
     revisar(

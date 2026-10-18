@@ -10,7 +10,7 @@
 import * as almacen from './almacen.js';
 import * as materialesUI from './ui/materiales.js';
 import { cargarPreferencias } from './ui/estado.js';
-import { iniciarNavegacion, mostrar, alMostrarPaso } from './ui/navegacion.js';
+import { iniciarNavegacion, mostrar, alMostrarPaso, irAPaso1 } from './ui/navegacion.js';
 import { iniciarImpresoras } from './ui/impresoras.js';
 import { iniciarPaso2, dibujarOpciones } from './ui/paso2-config.js';
 import { iniciarPaso1, alCambiarImpresora, elegirOtroModelo, mostrarRecientes } from './ui/paso1-modelo.js';
@@ -25,11 +25,11 @@ iniciarPaso1();
 const preciosListos = materialesUI.iniciarMateriales();
 iniciarImpresoras({
     alElegir: () => {
-        alCambiarImpresora(); // reacomoda: paso 2 lee estado.entra al dibujar
         dibujarOpciones();
+        alCambiarImpresora();
     },
 });
-iniciarPaso2({ irAPaso1: () => history.back() });
+iniciarPaso2({ irAPaso1 });
 // Al entrar al paso 2 se redibuja: el modelo nuevo (y su torre, si es una) cambia lo que muestra.
 alMostrarPaso(paso => paso === 2 && dibujarOpciones());
 iniciarPaso3({ alTerminar: mostrarResultado });

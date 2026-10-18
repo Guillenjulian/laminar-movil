@@ -63,15 +63,16 @@ export function dibujarOpciones() {
  *  junto a la tarjeta de impresora y deshabilita Laminar. Con una pieza y una copia no cambia nada (el aviso es el
  *  de ajuste-modelo en el paso 1 y el error del paso 3). Re-acomoda desde `estado`, así que sirve también al
  *  entrar al paso. @returns {void} */
-export function dibujarAvisoEntran() {
+function dibujarAvisoEntran() {
     const sola = estado.piezas.length === 1 && estado.piezas[0].copias === 1;
     const { entra, fuera } = acomodarPiezas();
     const bloquea = !entra && !sola;
     const texto = bloquea
         ? `Con esta impresora no entran todas las piezas (${fuera.length} ${fuera.length === 1 ? 'copia queda afuera' : 'copias quedan afuera'}): volvé al paso 1 para achicarlas, bajar copias o quitar piezas.`
         : '';
-    if ($('textoEntranPaso2').textContent !== texto) $('textoEntranPaso2').textContent = texto; // no re-anunciar
-    $('avisoEntranPaso2').hidden = !bloquea;
+    // La región viva (role=status) queda siempre en el DOM y sólo cambia su texto; el botón va afuera.
+    if ($('avisoEntranPaso2').textContent !== texto) $('avisoEntranPaso2').textContent = texto; // no re-anunciar
+    $('irPaso1').hidden = !bloquea;
     $('laminar').disabled = bloquea;
 }
 

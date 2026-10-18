@@ -327,8 +327,10 @@ h2:first-child {
     border-color: var(--error-borde);
 }
 
-.aviso-entran p {
-    margin: 0 0 8px;
+.aviso-entran:empty {
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
 
 /* --- Modelos recientes --- */

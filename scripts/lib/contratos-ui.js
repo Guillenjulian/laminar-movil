@@ -26,7 +26,15 @@ export const CONTRATOS = {
         importa: [PERFILES, 'almacen', 'motor/transformar', 'motor/tipos-linea', 'ui/avanzado'],
     },
     'ui/navegacion': {
-        exports: { iniciarNavegacion: 0, mostrar: 1, irA: 1, abrirHoja: 1, cerrarHojas: 0, alMostrarPaso: 1 },
+        exports: {
+            iniciarNavegacion: 0,
+            mostrar: 1,
+            irA: 1,
+            abrirHoja: 1,
+            cerrarHojas: 0,
+            alMostrarPaso: 1,
+            irAPaso1: 0,
+        },
         importa: ['ui/estado', 'ui/util-dom'],
     },
     'ui/paso1-modelo': {
@@ -76,7 +84,7 @@ export const CONTRATOS = {
         importa: conBase(PERFILES, 'perfiles/generico'),
     },
     'ui/paso2-config': {
-        exports: { iniciarPaso2: 0, dibujarOpciones: 0, dibujarAvisoEntran: 0, resumenPersonal: 1 },
+        exports: { iniciarPaso2: 0, dibujarOpciones: 0, resumenPersonal: 1 },
         importa: [
             'ui/estado',
             'ui/acomodo',
