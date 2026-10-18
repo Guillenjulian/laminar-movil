@@ -6,6 +6,8 @@
   Revisados hasta ahora: Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE y K1; Elegoo Neptune 4;
   Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06. Si el revisado es el mismo modelo que uno
   importado, `"reemplaza": ["id-del-importado"]` lo saca de la lista (K1 y Kobra 2).
+  **Pendientes de validar con la impresora real:** Kobra 3 (firmware y G-code de inicio),
+  Ender 3 V2 (`M600` según el firmware instalado) y K1 / Ender 3 V3 KE (macros `START_PRINT` / `END_PRINT`).
 - `impresoras/kiri/*.json`: 50 perfiles **importados de Kiri:Moto** (`"estado": "importado"`),
   generados por `npm run importar:impresoras`. No los edites a mano (el importador los
   regenera): si querés mejorar uno, copialo a `impresoras/` con otro `id` y revisalo ahí.
