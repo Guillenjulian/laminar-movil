@@ -16,7 +16,10 @@ import { validarCambios, cambiosARangos } from './cambios.js';
 const archivos = import.meta.glob('./impresoras/**/*.json', { eager: true, import: 'default' });
 const todas = Object.values(archivos).map(i => ({ estado: 'revisado', ...i }));
 // Un revisado puede tapar a su equivalente importado (`reemplaza: [ids]`) para que el modelo no salga dos veces.
-const tapadas = new Set(todas.flatMap(i => (i.estado === 'revisado' && i.reemplaza) || []));
+const reemplazos = new Map(
+    todas.flatMap(i => (i.estado === 'revisado' ? i.reemplaza || [] : []).map(viejo => [viejo, i.id])),
+);
+const tapadas = new Set(reemplazos.keys());
 const incluidas = todas.filter(i => !tapadas.has(i.id));
 
 export const IMPRESORA_INICIAL = 'creality-ender-3-v3-se';
@@ -41,8 +44,14 @@ export function listaImpresoras() {
 
 export { materiales, opciones };
 
+// Id que corresponde hoy a uno guardado: el de un importado tapado devuelve el de su revisado; otro id, el mismo.
+export function idVigente(id) {
+    return reemplazos.get(id) ?? id;
+}
+
 export function existeImpresora(id) {
-    return listaImpresoras().some(i => i.id === id);
+    const vigente = idVigente(id);
+    return listaImpresoras().some(i => i.id === vigente);
 }
 
 // G-code que se inserta para pausar en una capa (cambio de filamento).
@@ -52,7 +61,8 @@ export function lineasPausa(imp) {
 
 export function buscarImpresora(id) {
     const lista = listaImpresoras();
-    return lista.find(i => i.id === id) || lista.find(i => i.id === IMPRESORA_INICIAL) || lista[0];
+    const vigente = idVigente(id);
+    return lista.find(i => i.id === vigente) || lista.find(i => i.id === IMPRESORA_INICIAL) || lista[0];
 }
 
 // Saca las claves que empiezan con "_" (son comentarios dentro del JSON).

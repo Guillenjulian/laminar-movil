@@ -10,6 +10,7 @@ import * as transformar from '../motor/transformar.js';
 import {
     buscarImpresora,
     existeImpresora,
+    idVigente,
     ponerImpresorasPropias,
     IMPRESORA_INICIAL,
     materiales,
@@ -191,7 +192,7 @@ export async function cargarPreferencias() {
     const p = await almacen.leerAjuste('preferencias').catch(() => null);
     if (!p) return;
     // Sólo usamos lo que todavía existe (puede haber cambiado algún perfil).
-    if (existeImpresora(p.impresoraId)) estado.impresoraId = p.impresoraId;
+    if (existeImpresora(p.impresoraId)) estado.impresoraId = idVigente(p.impresoraId);
     if (buscarImpresora(estado.impresoraId).calidades[p.calidad]) estado.calidad = p.calidad;
     if (materiales[p.material]) estado.material = p.material;
     estado.soportes = !!p.soportes;

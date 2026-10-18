@@ -4,7 +4,7 @@
     "nombre": "Elegoo Neptune 4",
     "marca": "Elegoo",
     "estado": "revisado",
-    "aviso": "Klipper: el nivelado de la cama (BED_MESH_CALIBRATE) lo hace el inicio del perfil.",
+    "aviso": "Klipper: el nivelado de la cama (BED_MESH_CALIBRATE) lo hace el inicio del perfil. Sin confirmar en el equipo real: M84 X Y E al final y los nombres de macro PAUSE y BED_MESH_CALIBRATE.",
     "adhesion": "falda",
     "_nota_perfil": "Inicio explícito (sin macros propias de Elegoo, cuyo nombre varía según la versión de firmware). Usa BED_MESH_CALIBRATE de Klipper estándar. Volumen 225x225x265 y 300 °C según el fabricante. Velocidades conservadoras.",
     "pausa": ["PAUSE"],

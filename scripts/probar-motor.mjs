@@ -424,7 +424,7 @@ try {
         }
     }
     // Pausa en impresoras con otros marcadores de capa / extrusión absoluta.
-    for (const id of ['kiri-prusa-i3-mk3s', 'kiri-creality-ender-5', 'kiri-anycubic-kobra']) {
+    for (const id of ['kiri-prusa-i3-mk3s', 'kiri-creality-ender-5', 'kiri-anycubic-kobra', 'kiri-anycubic-chiron']) {
         const r = await pagina.evaluate(o => window.probar(o), { caso: 'cubo', impresoraId: id, calidad: 'rapido' });
         const p = probarPausa(r.gcode, 20);
         revisar(`pausa en ${id}`, p.ok, p.detalle);

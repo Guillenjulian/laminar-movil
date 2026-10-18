@@ -8,7 +8,7 @@
   importado, `"reemplaza": ["id-del-importado"]` lo saca de la lista (K1 y Kobra 2).
   **Pendientes de validar con la impresora real:** Kobra 3 (firmware y G-code de inicio),
   Ender 3 V2 (`M600` según el firmware instalado) y K1 / Ender 3 V3 KE (macros `START_PRINT` / `END_PRINT`).
-- `impresoras/kiri/*.json`: 50 perfiles **importados de Kiri:Moto** (`"estado": "importado"`),
+- `impresoras/kiri/*.json`: 50 perfiles **importados de Kiri:Moto** (la app lista 48: la K1 y la Kobra 2 las tapan sus revisados) (`"estado": "importado"`),
   generados por `npm run importar:impresoras`. No los edites a mano (el importador los
   regenera): si querés mejorar uno, copialo a `impresoras/` con otro `id` y revisalo ahí.
 - Impresoras **propias** (`"estado": "propio"`): las crea cada usuario con "Agregar mi
@@ -54,6 +54,7 @@ Después, las temperaturas (también las de cada rango) se recortan a `limites.h
 | `marca` | Para agrupar y buscar. |
 | `estado` | `revisado`, `importado` o `propio` (ver arriba). |
 | `aviso` | Opcional: texto que se muestra al elegirla (ej. un problema conocido). |
+| `reemplaza` | Opcional (sólo revisados): ids de importados que este perfil tapa. Si el usuario tenía guardado uno de esos ids, la app lo pasa al revisado (`idVigente`). |
 | `adhesion` | Adhesión por defecto: `nada`, `falda`, `borde` o `balsa`. |
 | `pausa` | G-code para pausar en una capa (cambio de filamento). Por defecto `["M600"]`; en Klipper, `["PAUSE"]`. |
 | `limites.hotendMax`, `limites.camaMax` | Temperaturas máximas en °C. |

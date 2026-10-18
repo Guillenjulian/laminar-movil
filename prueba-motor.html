@@ -51,10 +51,14 @@
                 armarConfiguracion,
                 listaImpresoras,
                 buscarImpresora,
+                idVigente,
+                existeImpresora,
                 ponerImpresorasPropias,
             } from './src/perfiles/perfiles.js';
             window.impresoras = listaImpresoras().map(i => ({ id: i.id, nombre: i.nombre, estado: i.estado }));
             window.buscarImpresora = buscarImpresora;
+            window.idVigente = idVigente;
+            window.existeImpresora = existeImpresora;
             // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
             window.ponerImpresorasPropias = ponerImpresorasPropias;
             import { maxTriangulos } from './src/config.js';

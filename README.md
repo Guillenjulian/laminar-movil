@@ -44,7 +44,7 @@ Además:
 Impresoras:
 
 - **Creality Ender 3 V3 SE**: perfil armado a mano.
-- **50 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
+- **48 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
   marcadas "sin revisar".
 - **Mi impresora**: cada usuario puede cargar la suya (medidas, boquilla, Marlin/Klipper, G-code)
   o copiar una existente para ajustarla. Se guarda en el celu.
