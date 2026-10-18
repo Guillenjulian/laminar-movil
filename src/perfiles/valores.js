@@ -16,6 +16,15 @@ export function lineasPausa(imp) {
 }
 
 /**
+ * Contenedor de salida de la impresora (ADR 0005).
+ * @param {object} imp perfil de impresora (`salida`)
+ * @returns {'gcode'|'gcode.3mf'} `'gcode'` si el perfil no dice nada o dice cualquier otra cosa
+ */
+export function salidaDe(imp) {
+    return imp?.salida === 'gcode.3mf' ? 'gcode.3mf' : 'gcode';
+}
+
+/**
  * Proceso de la impresora con el de la calidad encima (si la calidad no existe, la normal).
  * @param {object} imp perfil de impresora (`proceso`, `calidades`)
  * @param {string} calidad `rapido`, `normal` o `detalle`

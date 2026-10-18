@@ -16,7 +16,7 @@ export {
     existeImpresora,
     buscarImpresora,
 } from './catalogo.js';
-export { lineasPausa, valoresDeCalidad, esBowden, valoresDeAvanzado } from './valores.js';
+export { lineasPausa, salidaDe, valoresDeCalidad, esBowden, valoresDeAvanzado } from './valores.js';
 export { materiales, opciones };
 
 // Saca las claves que empiezan con "_" (son comentarios dentro del JSON).

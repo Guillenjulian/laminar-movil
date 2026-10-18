@@ -30,8 +30,8 @@ const version = JSON.parse(fs.readFileSync(path.join(origen, 'package.json'))).v
 
 // Impresoras que no importamos y por qué.
 const EXCLUIDAS = {
-    'Bambu.A1': 'Bambu Lab espera archivos .gcode.3mf, no G-code plano',
-    'Bambu.P1S': 'Bambu Lab espera archivos .gcode.3mf, no G-code plano',
+    'Bambu.A1': 'perfil revisado a mano en src/perfiles/impresoras/bambu-lab-a1.json (salida .gcode.3mf, ADR 0005)',
+    'Bambu.P1S': 'perfil revisado a mano en src/perfiles/impresoras/bambu-lab-p1s.json (salida .gcode.3mf, ADR 0005)',
     'taz.lulzbot.747': 'su G-code es de otro modelo (LulzBot Sidekick, copiado de Cura) y tiene temperaturas fijas',
     'Makerbot.Replicator2': 'usa G-code propio de Makerbot (y en la práctica archivos .x3g)',
     'Any.Generic.Marlin': 'plantilla con cama genérica de Kiri (para eso está "Mi impresora")',

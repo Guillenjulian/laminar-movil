@@ -22,6 +22,7 @@ import { probarCambios } from './motor/cambios.mjs';
 import { probarTorres } from './motor/torres.mjs';
 import { probarPiezasKiri } from './motor/piezas-kiri.mjs';
 import { probarPerfilesRevisados } from './motor/perfiles-revisados.mjs';
+import { probarBambuPerfiles } from './motor/bambu-perfiles.mjs';
 import { probarPiezas } from './motor/piezas.mjs';
 import { probarPiezasExtra } from './motor/piezas-extra.mjs';
 
@@ -71,6 +72,7 @@ try {
     await probarTorres(ctx); // torres de calibración (ADR 0002)
     await probarPiezasKiri(ctx); // varias piezas con track.pos (ADR 0003, T0)
     await probarPerfilesRevisados(ctx); // 8 impresoras populares revisadas
+    await probarBambuPerfiles(ctx); // 4 perfiles Bambu Lab y salidaDe (ADR 0005)
     await probarPiezas(ctx); // varias piezas con track.pos (ADR 0003)
     await probarPiezasExtra(ctx); // cama centrada, progreso y cancelación con 3 copias
 } finally {

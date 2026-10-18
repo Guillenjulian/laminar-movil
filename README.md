@@ -46,7 +46,8 @@ Además:
 Impresoras:
 
 - **Perfiles revisados a mano** (con pruebas automáticas): Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE
-  y K1; Elegoo Neptune 4; Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06.
+  y K1; Elegoo Neptune 4; Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06; Bambu Lab A1, A1 mini, P1S y X1C (salen como
+  `.gcode.3mf`, sin validar con la impresora).
 - **48 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
   marcadas "sin revisar".
 - **Mi impresora**: cada usuario puede cargar la suya (medidas, boquilla, Marlin/Klipper, G-code)
@@ -139,8 +140,8 @@ Las claves son las de Kiri:Moto y están explicadas en español en
 prende nunca el ventilador de capa. Los materiales se agregan en `src/perfiles/materiales.json`.
 
 Las 50 importadas se regeneran con `npm run importar:impresoras` (usa el clon de grid-apps de
-`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Bambu Lab,
-Makerbot) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
+`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Makerbot; las
+Bambu Lab tienen perfil revisado propio) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
 
 ## Cómo está armado
 

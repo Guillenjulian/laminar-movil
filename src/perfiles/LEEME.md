@@ -4,9 +4,9 @@
   solos**: para sumar una impresora, copiá `creality-ender-3-v3-se.json`, cambiale `id` y
   `nombre`, ajustá los valores y listo (no hay que tocar código).
   Revisados hasta ahora: Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE y K1; Elegoo Neptune 4;
-  Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06. Si el revisado es el mismo modelo que uno
+  Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06; Bambu Lab A1, A1 mini, P1S y X1C. Si el revisado es el mismo modelo que uno
   importado, `"reemplaza": ["id-del-importado"]` lo saca de la lista (K1 y Kobra 2).
-  **Pendientes de validar con la impresora real:** Kobra 3 (firmware y G-code de inicio),
+  **Pendientes de validar con la impresora real:** las cuatro Bambu Lab (inicio plano y `M400 U1`), Kobra 3 (firmware y G-code de inicio),
   Ender 3 V2 (`M600` según el firmware instalado) y K1 / Ender 3 V3 KE (macros `START_PRINT` / `END_PRINT`).
 - `impresoras/kiri/*.json`: 50 perfiles **importados de Kiri:Moto** (la app lista 48: la K1 y la Kobra 2 las tapan sus revisados) (`"estado": "importado"`),
   generados por `npm run importar:impresoras`. No los edites a mano (el importador los
@@ -22,7 +22,7 @@
   El precio del rollo lo carga cada usuario en el paso 2 y queda en el celu.
 - `opciones.json`: patrones de relleno, atajos de densidad y tipos de adhesión.
 
-El importador **saltea** las Bambu Lab (usan `.gcode.3mf`), las de cinta, la Makerbot
+El importador **saltea** las Bambu Lab (usan `.gcode.3mf`; tienen perfil revisado a mano), las de cinta, la Makerbot
 Replicator 2 (G-code propio), la LulzBot 747 (su G-code es de otro modelo) y las dos
 plantillas genéricas. A las que traen el G-code de inicio sin `{temp}` o `{bed_temp}` les
 agrega un aviso que se ve en la app.
@@ -56,7 +56,9 @@ Después, las temperaturas (también las de cada rango) se recortan a `limites.h
 | `aviso` | Opcional: texto que se muestra al elegirla (ej. un problema conocido). |
 | `reemplaza` | Opcional (sólo revisados): ids de importados que este perfil tapa. Si el usuario tenía guardado uno de esos ids, la app lo pasa al revisado (`idVigente`). |
 | `adhesion` | Adhesión por defecto: `nada`, `falda`, `borde` o `balsa`. |
-| `pausa` | G-code para pausar en una capa (cambio de filamento). Por defecto `["M600"]`; en Klipper, `["PAUSE"]`. |
+| `pausa` | G-code para pausar en una capa (cambio de filamento). Por defecto `["M600"]`; en Klipper, `["PAUSE"]`; en Bambu Lab, `["M400 U1"]`. |
+| `salida` | Opcional: contenedor de la descarga, `"gcode"` (por defecto) o `"gcode.3mf"` (ZIP de Bambu). Lo lee `salidaDe(imp)`; cualquier otro valor cuenta como `"gcode"`. |
+| `modeloBambu` | Sólo con `salida: "gcode.3mf"`: `{ id, nombre }` (el `printer_model_id` de Bambu: A1 `N2S`, A1 mini `N1`, P1S `C12`, X1C `BL-P001`). |
 | `limites.hotendMax`, `limites.camaMax` | Temperaturas máximas en °C. |
 | `dispositivo` | La máquina (claves de Kiri:Moto, ver abajo). |
 | `proceso` | Valores de laminado comunes a todas las calidades. |
