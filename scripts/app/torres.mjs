@@ -72,15 +72,15 @@ async function descargar(pagina) {
     return fs.readFileSync(await descarga.path(), 'utf8');
 }
 
-// Un M104 por bloque, con la temperatura de cada bloque y en orden. Se ignoran el precalentado del inicio
-// (S150 de la plantilla) y los de apagar (S0): la torre son los últimos M104.
+// El bloque 1 va en el arranque (antes del primer ;LAYER:, junto al precalentado): los M104 (sin S0) que
+// aparecen después del primer ;LAYER: tienen que ser exactamente los de los bloques 2..N, en orden.
 function revisarGcode({ ok: revisar }, gcode, valores) {
-    const m104 = [...gcode.matchAll(/^M104 S(\d+)/gm)].map(m => Number(m[1])).filter(t => t > 0);
-    const sinRepetir = m104.filter((t, i) => i === 0 || t !== m104[i - 1]);
+    const despues = gcode.slice(gcode.indexOf(';LAYER:'));
+    const m104 = [...despues.matchAll(/^M104 S(\d+)/gm)].map(m => Number(m[1])).filter(t => t > 0);
     revisar(
-        'torre: el G-code descargado tiene un M104 por bloque, en orden',
-        sinRepetir.slice(-valores.length).join() === valores.join(),
-        `M104 ${sinRepetir.join(' → ')} (esperado ${valores.join(' → ')})`,
+        'torre: el G-code descargado tiene exactamente un M104 por bloque, en orden',
+        m104.join() === valores.slice(1).join(),
+        `M104 después de ;LAYER: ${m104.join(' → ')} (esperado ${valores.slice(1).join(' → ')})`,
     );
 }
 
