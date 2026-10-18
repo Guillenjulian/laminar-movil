@@ -232,7 +232,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
-- ESLint 9.x está deprecado: migrar a ESLint 10.
 - `npm run lint`: 0 errores y 0 warnings.
 - Piezas y copias (ADR 0003):
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
