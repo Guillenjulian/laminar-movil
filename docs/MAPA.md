@@ -39,7 +39,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/paso3-laminar.js` | Lanza el laminado, muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `config` |
 | `src/ui/paso4-resultado.js` | Resumen del resultado, avisos y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles` |
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción) y pausas de filamento | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config` |
-| `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Todavía no lo usa `main.js` (R4 pendiente, ver sección 6) | `util-dom` |
+| `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
 | `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
@@ -170,7 +170,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | "Atrás" sale de la app o no cierra la hoja; el paso no cambia | `iniciarNavegacion()` y `mostrar()` en `src/ui/navegacion.js` |
 | Las preferencias o "Mi impresora" no se guardan o no vuelven al abrir | `cargarPreferencias`, `guardarPreferencias` y `guardarPropias` en `src/ui/estado.js` |
 | El precio del rollo no se guarda | `iniciarMateriales()` en `src/ui/materiales.js` |
-| El aviso "Hay una versión nueva" no aparece | `src/ui/actualizacion.js`, y `registrarServiceWorker()` en `src/main.js` (todavía duplicada) |
+| El aviso "Hay una versión nueva" no aparece | `src/ui/actualizacion.js` |
 
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
@@ -178,4 +178,3 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - `src/ui/impresoras.js` (288 líneas) está cerca del límite: plan B = `formulario-impresora.js` (ADR 0001).
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
-- R4 pendiente (ADR 0001): `actualizacion.js` todavía no lo usa `main.js`, que conserva su propia `registrarServiceWorker`.

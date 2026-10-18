@@ -16,7 +16,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Cambiado
 
-- `main.js` dividido en 10 módulos de `src/ui/` (de 1007 a 68 líneas).
+- `main.js` dividido en 10 módulos de `src/ui/` (de 1007 a 48 líneas).
 - `probar-app.mjs` dividido por área en `scripts/app/`, con helpers en `scripts/lib/`.
 - Código formateado con Prettier.
 
