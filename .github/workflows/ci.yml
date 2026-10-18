@@ -68,6 +68,9 @@ jobs:
             - name: Test piezas
               run: npm run test:piezas
 
+            - name: Test recorridos
+              run: npm run test:recorridos
+
             - name: Test motor
               run: npm run test:motor
 

@@ -17,6 +17,7 @@
         "test:torres": "node scripts/probar-torres.mjs",
         "test:cambios": "node scripts/probar-cambios.mjs",
         "test:piezas": "node scripts/probar-piezas.mjs",
+        "test:recorridos": "node scripts/probar-recorridos.mjs",
         "test:contratos": "CONTRATOS_ESTRICTO=1 node scripts/probar-contratos.mjs",
         "iconos": "python3 scripts/generar-iconos.py",
         "importar:impresoras": "node scripts/importar-impresoras-kiri.mjs",
