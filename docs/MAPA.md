@@ -107,6 +107,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `recorridos-tramos.js` · `recorridos-lista.js` | Piezas de `leer`, puras: `Tramos` (guarda y une los tramos, lleva caja y capas) y `Lista` (array tipado que crece), `q` (cuantizado), `tipoDe`, `valor` |
 | `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
 | `bambu-xml.js` | Textos XML/config de un `.gcode.3mf` de Bambu (ADR 0005): `armarContentTypes`, `armarRels`, `armarModelo`, `armarModelSettings`, `armarSliceInfo`, `escaparXml` y el typedef `InfoBambu`. Puro, sin imports |
+| `bambu-3mf.js` | `armarGcode3mf` (G-code + info → `Blob` .gcode.3mf con jszip: MD5 de los mismos bytes UTF-8, DEFLATE 1, `alProgreso`) y `ENTRADAS` (nombres de las entradas del ZIP). ADR 0005 |
 | `formatos-3mf.js` | Lector de 3MF (`leer3MF`, `leerXML3MF`); `formatos.js` lo re-exporta |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |
 | `piezas.js` | Varias piezas o copias (ADR 0003): `acomodar` (estantes en la cama), `repartirTriangulos` y `validarCantidad`; funciones puras, sin imports |
@@ -158,6 +159,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:transformar` | Matrices (Node) | `scripts/probar-transformar.mjs` |
 | `npm run test:formatos` | OBJ, STL, 3MF, errores de archivos rotos, litofanía y MD5 (Node) | `scripts/probar-formatos.mjs` (orquestador) + `scripts/formatos/*.mjs` (`obj-stl`, `3mf`, `errores`, `litofania`, `md5`, `ayudas`, `ayudas-3mf`) |
 | `npm run test:formatos` | OBJ, STL, 3MF, errores de archivos rotos, litofanía y textos XML de Bambu (Node) | `scripts/probar-formatos.mjs` (orquestador) + `scripts/formatos/*.mjs` (`obj-stl`, `3mf`, `errores`, `litofania`, `bambu-xml`, `ayudas`, `ayudas-3mf`) |
+| `npm run test:formatos` | OBJ, STL, 3MF, errores de archivos rotos, litofanía, MD5, textos XML y armado del .gcode.3mf de Bambu (Node) | `scripts/probar-formatos.mjs` (orquestador) + `scripts/formatos/*.mjs` (`obj-stl`, `3mf`, `errores`, `litofania`, `md5`, `bambu-xml`, `bambu-3mf`, `ayudas`, `ayudas-3mf`) |
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
 | `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y posiciones inválidas | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:recorridos` | Lector de G-code de la vista previa (Node, G-codes sintéticos): cuantizado exacto, tipos y colores de Kiri, unión de tramos, `pausaCapa` (con y sin subida de Z), modo espiral, detección de capa (altura variable), tope e `incompleta`, crecimiento de arrays con más de 65536 tramos | `scripts/probar-recorridos.mjs` + `scripts/recorridos/*.mjs` |
