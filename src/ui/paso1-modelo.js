@@ -97,7 +97,13 @@ function conectarSubida() {
     $('foto').onchange = alElegirArchivo;
     $('otroModelo').onclick = elegirOtroModelo;
     $('siguiente').onclick = () => irA(2);
-    $('ejemplo').onclick = async () => cargarArchivo('cubo-20mm.stl', await bufferEjemplo());
+    $('ejemplo').onclick = async () => {
+        try {
+            await cargarArchivo('cubo-20mm.stl', await bufferEjemplo());
+        } catch (err) {
+            alert('No pudimos leer el archivo: ' + err.message);
+        }
+    };
     iniciarRecientes((nombre, stl, transformacion) => cargarArchivo(nombre, stl, { esStl: true, transformacion }));
 }
 

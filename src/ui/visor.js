@@ -135,6 +135,7 @@ function ponerModelo(v, vertices, id) {
     v.escena.add(malla);
     v.piezas.set(id, { malla, copias: [], tamano: null, posiciones: [], rojo: null });
     aplicarTinte(v);
+    contarPiezas(v);
     ponerTransformacion(v, null, id); // arranca sin girar ni escalar (y reencuadra)
 }
 
@@ -228,6 +229,12 @@ function quitarPieza(v, id) {
     p.malla.material.dispose();
     v.piezas.delete(id);
     if (id === v.activa) v.activa = null;
+    contarPiezas(v);
+}
+
+// Deja la cantidad de piezas en el canvas (data-piezas): lo leen las pruebas.
+function contarPiezas(v) {
+    v.renderer.domElement.dataset.piezas = String(v.piezas.size);
 }
 
 // Tinte suave a la activa; con una sola pieza (o ninguna activa) no tiñe.

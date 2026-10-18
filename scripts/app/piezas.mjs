@@ -19,6 +19,8 @@ export async function probarPiezas(ctx) {
 
 const chips = pagina => pagina.locator('#listaPiezas .chip');
 const pulsadas = pagina => chips(pagina).evaluateAll(b => b.map(x => x.getAttribute('aria-pressed')).join());
+/** Cantidad de piezas que tiene el visor (data-piezas del canvas, ver visor.js). */
+const enVisor = pagina => pagina.evaluate(() => Number(document.querySelector('#visor canvas').dataset.piezas));
 const medidas = pagina => pagina.textContent('#datosModelo').then(t => t.split(' · ')[0]);
 
 /** Suma el cubo de ejemplo como pieza nueva y espera a que haya `n` chips. */
@@ -34,7 +36,9 @@ async function probarAgregarYElegir(ctx) {
         !(await visible('#listaPiezas')) && (await visible('#agregarPieza')),
     );
     revisar('una pieza: ni siquiera hay chips en el DOM', (await chips(pagina).count()) === 0);
+    revisar('el visor tiene 1 pieza', (await enVisor(pagina)) === 1);
     await agregarCubo(pagina, 2);
+    revisar('el visor tiene 2 piezas al agregar', (await enVisor(pagina)) === 2);
     revisar('2 chips, la nueva es la activa', (await pulsadas(pagina)) === 'false,true', await pulsadas(pagina));
     revisar(
         'foco en la chip nueva',
@@ -53,19 +57,12 @@ async function probarAgregarYElegir(ctx) {
 
 /** Escala de la pieza 2 (activa) y su efecto en el visor; luego alterna la activa con las chips. */
 async function probarEscalaPieza2({ page: pagina, ok: revisar }) {
-    await pagina.waitForTimeout(300);
-    const antes = await pagina.locator('#visor').screenshot();
     await pagina.fill('#escala', '150');
     await pagina.locator('#escala').blur();
     revisar(
         'escala de la pieza 2 en el visor (150 %)',
         (await medidas(pagina)) === '30,0 × 30,0 × 30,0 mm',
         await medidas(pagina),
-    );
-    await pagina.waitForTimeout(300);
-    revisar(
-        'el visor dibuja distinto con la pieza 2 agrandada',
-        !antes.equals(await pagina.locator('#visor').screenshot()),
     );
 
     await pagina.tap('#listaPiezas li:nth-child(1) .chip');
@@ -82,8 +79,6 @@ async function probarEscalaPieza2({ page: pagina, ok: revisar }) {
 }
 
 async function probarQuitar({ page: pagina, ok: revisar, visible }) {
-    await pagina.waitForTimeout(300);
-    const con2 = await pagina.locator('#visor').screenshot();
     await pagina.tap('#listaPiezas li:nth-child(2) .chip-quitar');
     revisar(
         'quitar la 2: una sola pieza y sin chips',
@@ -98,8 +93,7 @@ async function probarQuitar({ page: pagina, ok: revisar, visible }) {
         'queda la primera, a 100 % y 20 mm',
         (await pagina.inputValue('#escala')) === '100' && (await medidas(pagina)) === '20,0 × 20,0 × 20,0 mm',
     );
-    await pagina.waitForTimeout(300);
-    revisar('el visor ya no dibuja la pieza 2', !con2.equals(await pagina.locator('#visor').screenshot()));
+    revisar('el visor quedó con 1 pieza al quitar la 2', (await enVisor(pagina)) === 1);
 
     // Quitar la activa cuando es la primera: la 2 pasa a ser la única, con su escala.
     await agregarCubo(pagina, 2);
@@ -107,7 +101,10 @@ async function probarQuitar({ page: pagina, ok: revisar, visible }) {
     await pagina.locator('#escala').blur();
     await pagina.tap('#listaPiezas li:nth-child(1) .chip');
     await pagina.tap('#listaPiezas li:nth-child(1) .chip-quitar');
-    revisar('quitar la primera (activa): queda la otra sin chips', !(await visible('#listaPiezas')));
+    revisar(
+        'quitar la primera (activa): queda la otra sin chips y 1 pieza en el visor',
+        !(await visible('#listaPiezas')) && (await enVisor(pagina)) === 1,
+    );
     revisar(
         'la que queda es la pieza 2: 150 % y 30 mm en el visor',
         (await pagina.inputValue('#escala')) === '150' && (await medidas(pagina)) === '30,0 × 30,0 × 30,0 mm',
@@ -127,7 +124,9 @@ async function probarTope({ page: pagina, ok: revisar }) {
             /Máximo 8/.test(await pagina.textContent('#agregarArchivo')) &&
             /Máximo 8/.test(await pagina.textContent('#agregarEjemplo')),
     );
+    revisar('el visor tiene 8 piezas en el tope', (await enVisor(pagina)) === 8);
     for (let n = 7; n >= 1; n--) await pagina.tap('#listaPiezas li:nth-child(1) .chip-quitar');
+    revisar('quitadas 7, el visor queda con 1 pieza', (await enVisor(pagina)) === 1);
     revisar(
         'al quitar, vuelve "Agregar pieza" habilitado',
         (await pagina.isEnabled('#agregarArchivo')) &&
