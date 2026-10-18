@@ -610,7 +610,7 @@ try {
     await probarTorres({ laminar, revisar, pagina }); // torres de calibración (ADR 0002)
     await probarPiezasKiri({ revisar, pagina }); // varias piezas con track.pos (ADR 0003, T0)
     await probarPerfilesRevisados({ laminar, revisar, pagina }); // 8 impresoras populares revisadas
-    await probarPiezas({ laminar, revisar }); // varias piezas con track.pos (ADR 0003)
+    await probarPiezas({ laminar, revisar, pagina }); // varias piezas con track.pos (ADR 0003)
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());

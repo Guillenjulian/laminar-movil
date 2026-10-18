@@ -126,8 +126,7 @@ async function laminar(msg) {
     progreso('leyendo', 0);
     const piezas = piezasDe(msg);
     const r = prepararPiezas(piezas, dispositivo, maxTriangulos, v => progreso('reduciendo', v));
-    piezas.forEach(p => (p.stl = null)); // soltar los archivos originales lo antes posible
-    msg.stl = null;
+    msg.stl = null; // prepararPiezas ya soltó el `stl` de cada pieza
     const settings = armarSettings(dispositivo, proceso);
     await subirWidgets(r.widgets, settings);
     const capas = await laminarWidgets(r.widgets.length, settings);

@@ -68,7 +68,7 @@ export async function laminar({
     const r = await correr(
         worker,
         { tipo: 'laminar', piezas: lista, dispositivo, proceso, maxTriangulos },
-        lista.map(p => p.stl),
+        [...new Set(lista.map(p => p.stl))], // piezas que comparten el buffer: se transfiere una sola vez
         { alProgresar, signal },
     );
     return { gcode: r.gcode, info: r.info };

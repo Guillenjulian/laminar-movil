@@ -63,6 +63,7 @@ function validarCopia(t, pos, d) {
 // Lee y transforma una pieza (antes de decimar y de centrar: así se mide el modelo ya transformado).
 function leerPieza(p) {
     const vertices = leerSTL(p.stl);
+    p.stl = null; // el archivo original ya no hace falta: se suelta antes de decimar
     if (p.transformacion && !esIdentidad(p.transformacion)) aplicar(p.transformacion, vertices);
     return vertices;
 }
@@ -101,9 +102,9 @@ function cajaDelConjunto(cajas, centros) {
 
 /**
  * Lee, transforma, decima y centra cada pieza y la replica por copia.
+ * **Consume `p.stl`**: lo pone en `null` apenas lo lee, así el archivo y la malla no conviven en memoria.
  * Cada pieza se decima una sola vez; cada copia lleva su propio `Float32Array`, nunca compartido (la última
- * copia usa la malla de la pieza y las anteriores un `slice`). Quien llama suelta los `stl` (por ejemplo
- * `piezas.forEach(p => (p.stl = null))`) al volver o antes, para no retener el archivo y la malla a la vez.
+ * copia usa la malla de la pieza y las anteriores un `slice`).
  * @param {{stl:ArrayBuffer, transformacion?:number[], posiciones:{x:number,y:number}[]}[]} piezas
  * @param {object} dispositivo perfil (bedWidth, bedDepth, maxHeight)
  * @param {number} maxTriangulos tope del conjunto, copias incluidas
@@ -115,6 +116,8 @@ function cajaDelConjunto(cajas, centros) {
  * @throws {Error} en español si una pieza no entra sola o una copia se sale de la cama
  */
 export function prepararPiezas(piezas, dispositivo, maxTriangulos, alReducir) {
+    if (!piezas.length) throw new Error('No hay piezas para laminar.');
+    if (piezas.some(p => !p.posiciones?.length)) throw new Error('Cada pieza necesita al menos una copia.');
     const copias = piezas.map(p => p.posiciones.length);
     const mallas = piezas.map(leerPieza);
     const decimado = decimarTodas(mallas, copias, maxTriangulos, alReducir);

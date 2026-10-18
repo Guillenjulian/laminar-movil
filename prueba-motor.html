@@ -76,40 +76,34 @@
                 return (await fetch('ejemplos/cubo-20mm.stl')).arrayBuffer();
             }
 
+            const aBuffer = p =>
+                p.stlBase64 ? Uint8Array.from(atob(p.stlBase64), c => c.charCodeAt(0)).buffer : obtenerSTL(p.caso);
+
+            // Las piezas del pedido con su ArrayBuffer. `mismoQue: i` reusa el buffer de la pieza i (el mismo objeto).
+            async function leerPiezas(pedidas) {
+                const piezas = [];
+                for (const p of pedidas) {
+                    const stl = p.mismoQue === undefined ? await aBuffer(p) : piezas[p.mismoQue].stl;
+                    piezas.push({ stl, transformacion: p.transformacion, posiciones: p.posiciones });
+                }
+                return piezas;
+            }
+
+            const configurar = ({ impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', ...resto }) =>
+                armarConfiguracion({ impresoraId, calidad, material: 'pla', soportes: false, personal: {}, ...resto });
+
             // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
             window.probar = async ({
                 caso = 'cubo',
-                impresoraId = 'creality-ender-3-v3-se',
-                calidad = 'normal',
-                material = 'pla',
-                soportes = false,
-                personal = {},
                 limite,
                 transformacion,
-                cambios,
                 stlBase64, // un STL ya armado (lo usan las pruebas que necesitan una malla propia)
-                piezas: pedidas, // varias piezas (ADR 0003): [{ caso | stlBase64, transformacion?, posiciones }]
+                piezas: pedidas, // varias piezas (ADR 0003): [{ caso | stlBase64 | mismoQue, transformacion?, posiciones }]
+                ...config
             } = {}) => {
-                const leerPieza = async p =>
-                    p.stlBase64 ? Uint8Array.from(atob(p.stlBase64), c => c.charCodeAt(0)).buffer : obtenerSTL(p.caso);
-                const stl = pedidas ? null : await leerPieza({ stlBase64, caso });
-                const piezas = pedidas
-                    ? await Promise.all(
-                          pedidas.map(async p => ({
-                              stl: await leerPieza(p),
-                              transformacion: p.transformacion,
-                              posiciones: p.posiciones,
-                          })),
-                      )
-                    : undefined;
-                const { dispositivo, proceso, avisos } = armarConfiguracion({
-                    impresoraId,
-                    calidad,
-                    material,
-                    soportes,
-                    personal,
-                    cambios,
-                });
+                const piezas = pedidas && (await leerPiezas(pedidas));
+                const stl = pedidas ? null : await aBuffer({ stlBase64, caso });
+                const { dispositivo, proceso, avisos } = configurar(config);
                 const inicio = performance.now();
                 const r = await laminar({
                     stl,
@@ -123,6 +117,33 @@
                 r.ms = Math.round(performance.now() - inicio);
                 r.avisos = avisos;
                 return r;
+            };
+
+            // Manda el mensaje del formato VIEJO ({ stl, transformacion }) directo al worker, sin pasar por motor.js.
+            window.probarViejo = async ({ caso = 'cubo', stlBase64, limite, ...config } = {}) => {
+                const stl = await aBuffer({ stlBase64, caso });
+                const { dispositivo, proceso } = configurar(config);
+                const worker = new Worker(new URL('./src/motor/laminador.worker.js', import.meta.url), {
+                    type: 'module',
+                });
+                return new Promise((ok, mal) => {
+                    worker.onmessage = e => {
+                        const m = e.data;
+                        if (m.tipo === 'progreso') return;
+                        worker.terminate();
+                        if (m.tipo === 'listo') ok({ gcode: m.gcode, info: m.info });
+                        else mal(new Error(m.mensaje));
+                    };
+                    worker.onerror = e => mal(new Error(e.message));
+                    const msg = {
+                        tipo: 'laminar',
+                        stl,
+                        dispositivo,
+                        proceso,
+                        maxTriangulos: limite ?? maxTriangulos(),
+                    };
+                    worker.postMessage(msg, [stl]);
+                });
             };
 
             // Torre de calibración: su configuración (perfiles/torres.js importa JSON, que Node no carga sin más).
