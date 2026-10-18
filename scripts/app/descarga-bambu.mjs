@@ -30,11 +30,12 @@ const md5De = datos => createHash('md5').update(datos).digest('hex').toUpperCase
 export async function probarDescargaBambu(ctx) {
     await elegirYLaminar(ctx, 'bambu-lab-a1');
     await revisarSinPausas(ctx);
+    await revisarOtroMaterial(ctx);
     await marcarPausa(ctx, 10);
     await revisarUnaPausa(ctx);
     await marcarPausa(ctx, 30);
     await revisarDosPausas(ctx);
-    await revisarOtroMaterial(ctx);
+    await ctx.page.goBack();
     await elegirYLaminar(ctx, 'creality-ender-3-v3-se');
     await revisarEnder(ctx);
     await ctx.page.goBack();
@@ -140,7 +141,8 @@ async function revisarDosPausas(ctx) {
     revisar('Bambu con dos pausas: el MD5 sigue coincidiendo', md5 === md5De(gcode));
 }
 
-// Otro material y a laminar de nuevo: el archivo no puede ser el del resultado anterior (slice_info con PETG, sin pausas).
+// Otro material y a laminar de nuevo, con las mismas pausas (ninguna): el archivo no puede ser el del resultado
+// anterior (slice_info con PETG). Al final vuelve a PLA y relamina, para que sigan las pausas con el cubo de siempre.
 async function revisarOtroMaterial(ctx) {
     const { page: pagina, ok: revisar } = ctx;
     await pagina.goBack();
@@ -151,9 +153,11 @@ async function revisarOtroMaterial(ctx) {
     const { zip, gcode } = await abrir(bytes);
     const info = await zip.file(ENTRADAS.sliceInfo).async('string');
     revisar('Bambu con PETG: slice_info con type="PETG"', /type="PETG"/.test(info) && !/type="PLA"/.test(info));
-    revisar('Bambu con PETG: sin las pausas del resultado anterior', !gcode.includes('M400 U1'));
+    revisar('Bambu con PETG: sigue sin pausas', !gcode.includes('M400 U1'));
     await pagina.goBack();
     await pagina.tap('label.opcion:has(input[value="pla"])');
+    await pagina.tap('#laminar');
+    await ctx.esperarResultado();
 }
 
 /** Cuenta los `File` con contenido que arma la app (los vacíos de canShare no cuentan), sin tocar el código de la app:
