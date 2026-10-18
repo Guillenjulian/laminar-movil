@@ -79,7 +79,15 @@ export const CONTRATOS = {
     },
     'ui/paso4-resultado': {
         exports: { iniciarPaso4: 1, mostrarResultado: 0 },
-        importa: conBase('ui/vista-capas', 'ui/paso2-config', FORMATO, 'ui/materiales', 'motor/pausas', PERFILES),
+        importa: conBase(
+            'ui/vista-capas',
+            'ui/paso2-config',
+            FORMATO,
+            'ui/materiales',
+            'motor/pausas',
+            PERFILES,
+            'perfiles/cambios',
+        ),
     },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

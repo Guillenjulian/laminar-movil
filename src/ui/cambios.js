@@ -13,7 +13,16 @@ const MAX_CAMBIOS = 8;
 const PROPIEDADES = {
     relleno: { texto: 'Relleno', unidad: '%', factor: 100, min: 0, max: 100, paso: 5, inicial: 0.2 },
     tempBoquilla: { texto: 'Temperatura', unidad: '°C', factor: 1, min: 150, max: 300, paso: 5, inicial: 210 },
-    velocidad: { texto: 'Velocidad', unidad: '%', factor: 1, min: 50, max: 150, paso: 5, inicial: 100 },
+    velocidad: {
+        texto: 'Velocidad',
+        unidad: '%',
+        factor: 1,
+        min: 50,
+        max: 150,
+        paso: 5,
+        inicial: 100,
+        ayuda: 'porcentaje de la velocidad configurada; el tope de caudal de la impresora puede limitarla',
+    },
     ventilador: { texto: 'Ventilador', unidad: '%', factor: 1, min: 0, max: 100, paso: 5, inicial: 100 },
 };
 
@@ -42,11 +51,13 @@ function filaPropiedad(i, c, clave, apagado) {
     const activa = c[clave] !== undefined;
     const valor = verValor(c, clave);
     const sinValor = apagado || !activa ? 'disabled' : '';
-    return `<div class="cambio-prop">
+    const ayuda = p.ayuda ? `<small>${p.ayuda}</small>` : '';
+    const vacio = activa && !apagado && valor === '' ? '' : 'hidden';
+    return `<div class="cambio-bloque"><div class="cambio-prop">
         <label><input type="checkbox" data-i="${i}" data-on="${clave}" ${activa ? 'checked' : ''} ${apagado ? 'disabled' : ''}> ${p.texto}</label>
         <span><input type="number" inputmode="decimal" aria-label="${p.texto} (${p.unidad})" data-i="${i}" data-k="${clave}"
             min="${p.min}" max="${p.max}" step="${p.paso}" value="${valor}" ${sinValor}> ${p.unidad}</span>
-    </div>`;
+    </div>${ayuda}<small data-sinvalor ${vacio}>sin valor: se ignora</small></div>`;
 }
 
 /** Texto accesible de "Quitar". @param {number|string} desde altura (mm) o '' @returns {string} */
@@ -125,6 +136,16 @@ function editarCampo(c, campo) {
     numero.value = verValor(c, campo.dataset.on);
 }
 
+/** Muestra "sin valor: se ignora" junto a las propiedades tildadas con el campo vacío.
+ *  @returns {void} */
+function marcarSinValor() {
+    for (const fila of $('cambLista').querySelectorAll('.cambio-bloque')) {
+        const campo = fila.querySelector('[data-k]');
+        const tildada = fila.querySelector('[data-on]').checked;
+        fila.querySelector('[data-sinvalor]').hidden = !tildada || campo.disabled || campo.value.trim() !== '';
+    }
+}
+
 /**
  * Arma la sección. Dibuja desde `estado.cambios` y `estado.avanzado`; `alCambiar` se llama tras cada edición.
  * Agregar y quitar redibujan la lista y dejan el foco en un campo cercano; editar sólo actualiza errores y resumen.
@@ -143,6 +164,7 @@ export function crearCambios({ estado, alCambiar = () => {} }) {
         const c = estado.cambios[e.target.dataset.i];
         if (!c) return;
         editarCampo(c, e.target);
+        marcarSinValor();
         dibujarResumen(estado);
         alCambiar();
     });
