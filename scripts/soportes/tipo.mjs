@@ -16,6 +16,8 @@ export default async function ({ revisar }) {
         [null, 'no'],
         ['cualquiera', 'no'],
         [1, 'no'],
+        ['ARBOL', 'no'], // no se hace toLowerCase
+        [' arbol', 'no'], // ni trim
     ];
     for (const [entrada, esperado] of tabla) {
         revisar(`normalizarSoportes(${String(J(entrada))}) -> '${esperado}'`, normalizarSoportes(entrada) === esperado);

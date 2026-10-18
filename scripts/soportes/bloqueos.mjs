@@ -25,10 +25,11 @@ const cuadrado = l => [
     { x: l, y: l },
     { x: -l, y: l },
 ];
-// Resta de mentira sólo para la prueba: el círculo cae entero adentro de la sombra, así que restar es agregar un
-// agujero (anillo invertido) y el área con signo queda cuadrado − círculo. La resta real es POLY.subtract del puente.
-const restarAgujero = (sombra, secciones) => [...sombra, ...secciones.map(s => [...s].reverse())];
-const areaTotal = polis => polis.reduce((s, p) => s + area(p), 0);
+// Resta de mentira sólo para la prueba: el círculo cae entero adentro de la sombra, así que restar es agregarlo
+// como otro anillo (Kiri resta con even-odd: el sentido de giro no importa). La resta real es POLY.subtract del puente.
+const restarAgujero = (sombra, secciones) => [...sombra, ...secciones];
+// Área even-odd con anillos anidados: el primero menos los demás, sin depender del sentido de giro.
+const areaTotal = polis => Math.abs(area(polis[0])) - polis.slice(1).reduce((t, p) => t + Math.abs(area(p)), 0);
 
 function probarValidar(revisar) {
     console.log('\n▶ validarBloqueos');
@@ -50,15 +51,48 @@ function probarValidar(revisar) {
     revisar('corta en MAX_BLOQUEOS', validarBloqueos(muchos).length === MAX_BLOQUEOS);
 }
 
+function probarVarias(revisar) {
+    // z, radio y centro distintos; la tercera no cruza z=4 y no debe correr a las demás.
+    const bs = [esfera(1, 0, 0, 4, 6), esfera(2, 30, -10, 8, 7), esfera(3, -20, 5, 40, 5), esfera(4, 12, 12, 1, 5)];
+    const secs = seccionBloqueos(bs, 4);
+    const cosPi = Math.cos(Math.PI / 16);
+    const esperado = [
+        { cx: 0, cy: 0, r: 6 },
+        { cx: 30, cy: -10, r: Math.sqrt(49 - 16) },
+        { cx: 12, cy: 12, r: Math.sqrt(25 - 9) },
+    ];
+    revisar('2+ esferas: una por cada que cruza z (la lejana no aporta)', secs.length === esperado.length);
+    esperado.forEach((e, i) => {
+        const c = secs[i];
+        const cen = c && { x: c.reduce((t, p) => t + p.x, 0) / c.length, y: c.reduce((t, p) => t + p.y, 0) / c.length };
+        const ok =
+            c !== undefined &&
+            Math.abs(cen.x - e.cx) < 1e-9 &&
+            Math.abs(cen.y - e.cy) < 1e-9 &&
+            c.every(p => Math.abs(Math.hypot(p.x - e.cx, p.y - e.cy) - e.r / cosPi) < 1e-9);
+        revisar(`esfera ${i + 1}: centro (${e.cx}, ${e.cy}) y radio ${e.r.toFixed(3)}`, ok);
+    });
+}
+
 function probarSeccion(revisar) {
     console.log('\n▶ seccionBloqueos y bloqueaPunto');
     const b = [esfera(1, 10, 20, 5, 8)];
+    const cosPi = Math.cos(Math.PI / 16);
     for (const dz of [0, 3, -6]) {
-        const [c] = seccionBloqueos(b, 5 + dz);
+        const c = seccionBloqueos(b, 5 + dz)[0];
         const esperado = Math.sqrt(64 - dz * dz);
-        const ok = c.every(p => Math.abs(Math.hypot(p.x - 10, p.y - 20) - esperado) < 1e-9);
-        revisar(`dz=${dz}: todos los puntos a radio √(r²−dz²)=${esperado.toFixed(3)}`, ok && c.length === 16);
+        // Circunscripto: vértices a esperado/cos(π/16), puntos medios de los lados justo a `esperado`.
+        const vert = c?.every(p => Math.abs(Math.hypot(p.x - 10, p.y - 20) - esperado / cosPi) < 1e-9);
+        const med = c?.every((p, i) => {
+            const q = c[(i + 1) % c.length];
+            return Math.abs(Math.hypot((p.x + q.x) / 2 - 10, (p.y + q.y) / 2 - 20) - esperado) < 1e-9;
+        });
+        revisar(
+            `dz=${dz}: lados tangentes al radio √(r²−dz²)=${esperado.toFixed(3)}`,
+            c !== undefined && c.length === 16 && vert && med,
+        );
     }
+    probarVarias(revisar);
     revisar('vacía si |dz| >= r', seccionBloqueos(b, 13).length === 0 && seccionBloqueos(b, -3).length === 0);
     revisar('sin bloqueos -> []', seccionBloqueos([], 5).length === 0 && seccionBloqueos(undefined, 5).length === 0);
     const dentro = bloqueaPunto(b, { x: 10, y: 20, z: 5 });
@@ -71,13 +105,14 @@ function probarResta(revisar) {
     const sombra = [cuadrado(30)];
     const una = [esfera(1, 0, 0, 5, 10)];
     const resultado = areaTotal(sinBloqueos(sombra, 5, una, restarAgujero));
-    const circ = area(seccionBloqueos(una, 5)[0]);
+    const circ = Math.abs(area(seccionBloqueos(una, 5)[0]));
     revisar('cuadrado − círculo en el medio deja el área esperada', Math.abs(resultado - (3600 - circ)) < 1e-6);
-    // Discretización: 16 lados inscriptos dan 97,45 % del círculo ideal, o sea 2,6 % de error contra π·r².
-    const errRel = Math.abs(resultado - (3600 - Math.PI * 100)) / (Math.PI * 100);
+    // Circunscripto: la zona nunca es más chica que la esfera; con 16 lados es 16·tan(π/16)/π − 1 ≈ 1,3 % más grande.
+    const ideal = Math.PI * 100;
+    const exceso = (circ - ideal) / ideal;
     revisar(
-        `...y contra el círculo ideal, dentro de la discretización (2,6 %): ${(errRel * 100).toFixed(2)} %`,
-        errRel < 0.026,
+        `...la zona no queda más chica que la esfera (exceso ${(exceso * 100).toFixed(2)} %, tope 1,4 %)`,
+        exceso >= 0 && exceso < 0.014,
     );
     const dos = sinBloqueos(sombra, 5, [esfera(1, -15, 0, 5, 5), esfera(2, 15, 0, 5, 5)], restarAgujero);
     revisar('varias esferas se restan todas', dos.length === 3);

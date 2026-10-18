@@ -40,8 +40,9 @@ export function validarBloqueos(datos) {
 }
 
 /**
- * Círculo de `lados` vértices inscripto en el radio (los vértices caen justo sobre el radio), antihorario.
- * Por ser inscripto, su área es (lados/2)·r²·sen(2π/lados): con 16 lados, ~97,5 % del círculo ideal.
+ * Polígono regular de `lados` vértices CIRCUNSCRIPTO al círculo de radio `r`: los vértices están a r/cos(π/lados)
+ * y los puntos medios de los lados caen justo en `r`. Así la zona bloqueada nunca queda más chica que la esfera
+ * (decisión del CTO). Su área es lados·r²·tan(π/lados): con 16 lados, ~1,3 % más que el círculo ideal. Antihorario.
  * @param {{x:number, y:number}} c
  * @param {number} r
  * @param {number} lados
@@ -49,14 +50,15 @@ export function validarBloqueos(datos) {
  */
 function circulo(c, r, lados) {
     const paso = (2 * Math.PI) / lados;
+    const rv = r / Math.cos(Math.PI / lados);
     return Array.from({ length: lados }, (_, i) => ({
-        x: c.x + r * Math.cos(i * paso),
-        y: c.y + r * Math.sin(i * paso),
+        x: c.x + rv * Math.cos(i * paso),
+        y: c.y + rv * Math.sin(i * paso),
     }));
 }
 
 /**
- * Secciones de los bloqueos a la altura `z`: un círculo de radio √(R² − dz²) por esfera que la cruza.
+ * Secciones de los bloqueos a la altura `z`: un círculo (polígono circunscripto) de radio √(R² − dz²) por esfera que la cruza.
  * Si |dz| ≥ R la esfera no cruza el plano (a lo sumo lo toca en un punto) y no aporta nada.
  * @param {Bloqueo[]|undefined} bloqueos
  * @param {number} z  mm
