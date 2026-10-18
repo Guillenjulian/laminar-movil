@@ -379,7 +379,7 @@ proporcionalmente más lento y el progreso mezcla piezas. Tres suites cambian (`
 
 | # | Riesgo | Cómo se cubre |
 |---|---|---|
-| R1 | El `track.pos` de Kiri no se aplica igual a falda, balsa o soportes | T6 lo mide en el Kiri real (4 copias con soportes y balsa) antes de seguir con la UI; si hace falta, se desplazan los vértices en `prepararPiezas` en vez de usar `pos` |
+| R1 | El `track.pos` de Kiri no se aplica igual a falda, balsa o soportes | **Cerrado por T0:** `scripts/motor/piezas-kiri.mjs` lo mide en el Kiri real (2 copias en (±40, ±30) con falda, borde, balsa, soportes y retracción) y pasa: se usa `pos` y no hace falta el plan B. Pendiente: no hay prueba con `originCenter` ni cama de cinta |
 | R2 | Memoria y tiempo con muchas copias | Presupuesto global de triángulos, `maxCopias()` por RAM, cancelar como hoy, progreso global; el celu más flojo queda en 6 copias |
 | R3 | Los estantes dejan mal aprovechada la cama con piezas muy desparejas | Es un acomodo "razonable", no óptimo; el usuario puede rotar/escalar o quitar. Si molesta, se cambia el algoritmo detrás de la misma firma de `acomodar` |
 | R4 | La decimación achica la huella y el visor mostraba otra posición | La separación de 10 mm lo absorbe (la celda de decimado es de décimas de mm); el worker valida contra la cama con tolerancia |
