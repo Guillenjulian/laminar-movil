@@ -1,8 +1,15 @@
-// Punto de entrada: cablea los módulos de src/ui/ (ver docs/decisiones/0001-dividir-main.md).
+// Punto de entrada: sólo cablea los módulos de src/ui/ y arranca la app (ver docs/decisiones/0001-dividir-main.md).
+//
+// Flujo de arranque, en este orden:
+// 1. Listeners: cada iniciarX() engancha sus controles. Van ANTES del await para que los botones
+//    respondan aunque la lectura de preferencias tarde.
+// 2. Preferencias: await cargarPreferencias(). Es el único await, y todo lo que depende de las
+//    preferencias se dibuja después.
+// 3. Primer dibujo: opciones, pantalla 1 y modelos recientes.
+// 4. Tareas de fondo: pedir almacenamiento persistente y registrar el service worker (sólo en el build).
 
 import * as almacen from './almacen.js';
 import * as materialesUI from './ui/materiales.js';
-import { $ } from './ui/util-dom.js';
 import { cargarPreferencias } from './ui/estado.js';
 import { iniciarNavegacion, mostrar } from './ui/navegacion.js';
 import { iniciarImpresoras } from './ui/impresoras.js';
@@ -11,7 +18,9 @@ import { iniciarPaso1, alCambiarImpresora, elegirOtroModelo, mostrarRecientes } 
 import { iniciarPaso3 } from './ui/paso3-laminar.js';
 import { iniciarPaso4, mostrarResultado } from './ui/paso4-resultado.js';
 import { iniciarVistaCapas } from './ui/vista-capas.js';
+import { registrarServiceWorker } from './ui/actualizacion.js';
 
+// 1. Listeners.
 iniciarNavegacion();
 iniciarPaso1();
 materialesUI.iniciarMateriales();
@@ -26,43 +35,14 @@ iniciarPaso3({ alTerminar: mostrarResultado });
 iniciarPaso4({ alOtroModelo: elegirOtroModelo });
 iniciarVistaCapas();
 
-// ---------------------------------------------------------------------------
-// App instalable y offline: registrar el service worker (sólo en el build;
-// en `npm run dev` molestaría porque guarda versiones viejas).
-
-function registrarServiceWorker() {
-    if (!('serviceWorker' in navigator) || !import.meta.env.PROD) return;
-    navigator.serviceWorker
-        .register('./sw.js')
-        .then(registro => {
-            // Si hay una versión nueva esperando, ofrecemos actualizar (no lo hacemos
-            // solos para no cortar un laminado a la mitad).
-            const ofrecer = sw => {
-                if (!sw || !navigator.serviceWorker.controller) return;
-                $('actualizacion').hidden = false;
-                $('actualizar').onclick = () => sw.postMessage('actualizar');
-            };
-            ofrecer(registro.waiting);
-            registro.addEventListener('updatefound', () => {
-                const nuevo = registro.installing;
-                nuevo.addEventListener('statechange', () => nuevo.state === 'installed' && ofrecer(nuevo));
-            });
-        })
-        .catch(err => console.warn('No se pudo registrar el service worker', err));
-
-    let recargando = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!recargando && !$('actualizacion').hidden) {
-            recargando = true;
-            location.reload();
-        }
-    });
-}
-
-// ---------------------------------------------------------------------------
+// 2. Preferencias.
 await cargarPreferencias();
+
+// 3. Primer dibujo.
 dibujarOpciones();
 mostrar(1);
 mostrarRecientes();
+
+// 4. Tareas de fondo.
 almacen.pedirAlmacenamientoPersistente();
 registrarServiceWorker();
