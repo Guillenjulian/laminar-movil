@@ -22,8 +22,14 @@ function serviceWorker() {
                     if (f.isDirectory()) recorrer(ruta);
                     else {
                         const rel = path.relative(salida, ruta).split(path.sep).join('/');
-                        // La página de diagnóstico no hace falta offline.
-                        if (rel === 'sw.js' || rel.startsWith('prueba-motor') || rel.includes('pruebaMotor')) continue;
+                        // La página de diagnóstico (y su worker de pruebas) no hace falta offline.
+                        if (
+                            rel === 'sw.js' ||
+                            rel.startsWith('prueba-motor') ||
+                            rel.includes('pruebaMotor') ||
+                            rel.includes('prueba-piezas')
+                        )
+                            continue;
                         archivos.push(rel === 'index.html' ? './' : rel);
                         hash.update(rel).update(fs.readFileSync(ruta));
                     }
