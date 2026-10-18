@@ -235,4 +235,3 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - Piezas y copias (ADR 0003):
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
   - No hay prueba de piezas con cama de cinta (R1 del ADR 0003 lo deja pendiente).
-  - El progreso de "laminando" con 3 copias no llega a 1 (medido 0,87 y 0,94 según la corrida; el último tramo del último widget no se avisa; la etapa "exportando" sí cierra en 1). Está anotado en `scripts/motor/piezas-extra.mjs`; no se tocó `src/`.

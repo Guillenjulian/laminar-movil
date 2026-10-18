@@ -103,6 +103,7 @@ async function laminarWidgets(n, settings) {
             if (d.update) progreso('laminando', (k + d.update) / n);
             if (d.slices) capas = Math.max(capas, d.slices);
         });
+        progreso('laminando', (k + 1) / n); // Kiri no siempre avisa el último tramo de cada widget
     }
     await kiri('slicePost', { settings });
     return capas;
