@@ -26,7 +26,7 @@ async function buscarYElegir({ page: pagina, ok: revisar, visible, captura }) {
     const prusas = await pagina.$$eval('#listaImpresoras [data-id] b', bs => bs.map(b => b.textContent));
     revisar(
         'buscar filtra la lista',
-        total > 40 && prusas.length === 3 && prusas.every(n => /Prusa/.test(n)),
+        total > 40 && prusas.join('|') === 'Prusa MK4|Prusa i3 MK2S|Prusa i3 MK3S+|Prusa mini',
         `${total} → ${prusas.join(', ')}`,
     );
     await captura('2-impresoras');
