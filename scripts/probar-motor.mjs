@@ -100,7 +100,7 @@ function revisar(nombre, condicion, detalle = '') {
 async function laminar(opciones) {
     const r = await pagina.evaluate(o => window.probar(o), opciones);
     console.log(
-        `\n▶ ${JSON.stringify(opciones)} — ${r.ms} ms, ${r.info.capas} capas, ` +
+        `\n▶ ${JSON.stringify(opciones, (_k, v) => (typeof v === 'string' && v.length > 80 ? `<${v.length} caracteres>` : v))} — ${r.ms} ms, ${r.info.capas} capas, ` +
             `${Math.round(r.info.tiempo / 60)} min, ${(r.info.filamento / 1000).toFixed(2)} m`,
     );
     if (process.env.GUARDAR_GCODE) {

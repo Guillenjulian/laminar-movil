@@ -6,64 +6,19 @@
 // El piso de la capa i (i >= 1) es la Z de la capa i-1; el offset de la balsa se mide contra la corrida base.
 
 import { insertarPausas } from '../../src/motor/pausas.js';
+import { porCapa, filamento, lineasM104, sinFecha, FECHA, fPorFeature, redondear } from './gcode-capas.mjs';
+
+export { porCapa }; // otras pruebas (torres) lo importan de acá
 
 // El lector de la vista previa es un worker: se carga en Node simulando `self` (igual que probar-motor.mjs).
 globalThis.self ??= {};
 const { leer: leerRecorridos } = await import('../../src/motor/recorridos.worker.js');
 
 const EPS = 1e-6;
+const CAPA_10MM = 50; // con capas de 0,2 mm la capa 50 es la primera con piso >= 10 mm
 const CUBO = { caso: 'cubo', personal: { adhesion: 'nada' } };
 
-/**
- * Recorre el G-code y lo ordena por capa de Kiri (`;LAYER:n`).
- * @param {string[]} lineas líneas del G-code
- * @returns {{ capas: object[], extrusiones: object[] }} capas con su Z y sus M104/M106/retracciones;
- *   extrusiones con capa, Z, F vigente y feature
- */
-export function porCapa(lineas) {
-    const capas = [];
-    const extrusiones = [];
-    let capa = null;
-    let z = 0;
-    let f = 0;
-    let feature = '';
-    lineas.forEach((l, i) => {
-        const n = l.match(/^;LAYER:(\d+)/);
-        if (n) {
-            capa = { n: +n[1], ini: i, z: NaN, filamento: 0, m104: [], m106: [], retracciones: [] };
-            capas.push(capa);
-            return;
-        }
-        if (!capa) return;
-        if (l.startsWith('; feature')) feature = l.slice(10).trim();
-        const mz = l.match(/^G[01] .*?Z(-?[\d.]+)/);
-        if (mz) {
-            z = +mz[1];
-            if (Number.isNaN(capa.z)) capa.z = z;
-        }
-        f = +(l.match(/ F([\d.]+)/)?.[1] ?? f);
-        const t = l.match(/^M104 S(\d+)/);
-        if (t) capa.m104.push({ i, temp: +t[1] });
-        const v = l.match(/^M106 S(\d+)/);
-        if (v) capa.m106.push({ i, valor: +v[1] });
-        const r = l.match(/^G1 E-([\d.]+).*; e-retract/)?.[1];
-        if (r) capa.retracciones.push(+r);
-        const e = l.match(/^G1 .*[XY].* E([\d.]+)/);
-        if (e) {
-            capa.filamento += +e[1];
-            extrusiones.push({ i, capa: capa.n, z, f, feature, e: +e[1] });
-        }
-    });
-    return { capas, extrusiones };
-}
-
-const filamento = (capas, desde, hasta) =>
-    capas.filter(c => c.n >= desde && c.n <= hasta).reduce((s, c) => s + c.filamento, 0);
-const lineasM104 = (lineas, temp) => lineas.map((l, i) => (l.startsWith(`M104 S${temp}`) ? i : -1)).filter(i => i >= 0);
-// Kiri escribe la fecha en la línea 2: lo único que cambia entre dos corridas iguales.
-const sinFecha = g => g.replace(/^; \w{3} \w{3} \d+ \d{4} .*$/m, '');
-const redondear = n => Math.round(n * 1000) / 1000;
-// STL binario (en base64) de dos pilares de 5 x 5 x 20 mm separados 30 mm: Kiri retrae al viajar de uno al otro.
+// STL binario (en base64) de dos pilares de 5 x 5 x 20 mm con 25 mm de hueco entre ellos: Kiri retrae al viajar de uno al otro.
 function dosPilares() {
     const tris = [];
     for (const x0 of [-17.5, 12.5]) {
@@ -77,21 +32,14 @@ function dosPilares() {
     return b.toString('base64');
 }
 
-// F más alto por feature en una capa (mm/min).
-function fPorFeature(extrusiones, capa) {
-    const m = {};
-    for (const x of extrusiones.filter(x => x.capa === capa)) m[x.feature] = Math.max(m[x.feature] || 0, x.f);
-    return m;
-}
-
 /**
- * Casos 1-9 de la sección 7 del ADR 0002 más tres extras (retracción, cambios contiguos, alturas de capa).
+ * Casos 1-9 de la sección 7 del ADR 0002 más extras (retracción, cambios contiguos, alturas de capa).
  * @param {{ laminar: Function, revisar: Function }} ctx `laminar(opciones)` devuelve `{ gcode, g, info, avisos }`;
  *   `revisar(nombre, condicion, detalle)` registra el resultado
  * @returns {Promise<void>}
  */
 export async function probarCambios({ laminar, revisar }) {
-    console.log('\n▶ Cambios por altura contra Kiri (ADR 0002, casos 1-9)');
+    console.log('\n▶ Cambios por altura contra Kiri (ADR 0002, casos 1-9 + extras)');
     const base = await laminar({ ...CUBO });
     const con = (cambios, extra = {}) => laminar({ ...CUBO, ...extra, cambios });
     const c = { laminar, revisar, con, base, B: porCapa(base.g.lineas) };
@@ -108,16 +56,20 @@ export async function probarCambios({ laminar, revisar }) {
 async function probarTemperatura({ con, revisar, base }) {
     const vacio = await con([]);
     revisar(
-        'caso 1 regresión: cambios [] da el mismo G-code que sin cambios',
-        sinFecha(vacio.gcode) === sinFecha(base.gcode),
+        'caso 1 regresión: cambios [] da el mismo G-code que sin cambios (salvo la fecha, que ambos traen)',
+        FECHA.test(vacio.gcode) && FECHA.test(base.gcode) && sinFecha(vacio.gcode) === sinFecha(base.gcode),
     );
-    revisar('caso 1 regresión: no hay M104 de más', base.g.lineas.filter(l => l.startsWith('M104')).length === 3);
     const t = await con([{ desdeMm: 10, tempBoquilla: 215 }]);
     const T = porCapa(t.g.lineas);
     const iT = lineasM104(t.g.lineas, 215);
     const antes = T.extrusiones.filter(x => x.i < iT[0]).at(-1);
     const despues = T.extrusiones.find(x => x.i > iT[0]);
     revisar('caso 2 temperatura: M104 S215 aparece una sola vez', iT.length === 1, `(${iT.length})`);
+    const m104 = l => l.filter(x => x.startsWith('M104')).length;
+    revisar(
+        'caso 2 temperatura: sin cambios hay 3 M104 (150, 200, 0) y con el cambio 4',
+        m104(base.g.lineas) === 3 && m104(t.g.lineas) === 4,
+    );
     revisar(
         'caso 2 temperatura: después de la última extrusión a Z <= 10 y antes de la primera a Z > 10',
         antes?.z <= 10 + EPS && despues?.z > 10,
@@ -126,7 +78,8 @@ async function probarTemperatura({ con, revisar, base }) {
     revisar(
         'caso 2 temperatura: el M104 S200 inicial se mantiene y no hay otro M104 antes',
         t.g.lineas.filter(l => l.startsWith('M104 S200')).length === 1 &&
-            T.capas.filter(c => c.n < 50).every(c => !c.m104.length),
+            T.capas.length > CAPA_10MM &&
+            T.capas.filter(c => c.n < CAPA_10MM).every(c => !c.m104.length),
     );
     return { t, T };
 }
@@ -135,11 +88,17 @@ async function probarTemperatura({ con, revisar, base }) {
 async function probarRelleno({ con, revisar, B }) {
     const sin = porCapa((await con([{ desdeMm: 10, relleno: 0 }])).g.lineas).capas;
     const mas = porCapa((await con([{ desdeMm: 10, relleno: 0.6 }])).g.lineas).capas;
-    const abajo = redondear(filamento(B.capas, 0, 49));
-    const sobra = n => redondear(filamento(n, 50, 999) - filamento(B.capas, 50, 999));
+    const abajo = redondear(filamento(B.capas, 0, CAPA_10MM - 1));
+    const sobra = n => redondear(filamento(n, CAPA_10MM, 999) - filamento(B.capas, CAPA_10MM, 999));
+    const capa = (capas, n) => redondear(filamento(capas, n, n));
+    revisar(
+        'caso 3 relleno: el borde es exacto (la capa 50 ya difiere de la base y la 49 no)',
+        [sin, mas].every(x => capa(x, 49) === capa(B.capas, 49) && capa(x, CAPA_10MM) !== capa(B.capas, CAPA_10MM)),
+        `capa 49 ${capa(B.capas, 49)} / capa 50 base ${capa(B.capas, 50)}, 0 % ${capa(sin, 50)}, 60 % ${capa(mas, 50)}`,
+    );
     revisar(
         'caso 3 relleno: por debajo de 10 mm el filamento es igual',
-        redondear(filamento(sin, 0, 49)) === abajo && redondear(filamento(mas, 0, 49)) === abajo,
+        redondear(filamento(sin, 0, CAPA_10MM - 1)) === abajo && redondear(filamento(mas, 0, CAPA_10MM - 1)) === abajo,
     );
     revisar('caso 3 relleno: 0 % por encima de 10 mm usa menos', sobra(sin) < -1, `(${sobra(sin)} mm de filamento)`);
     revisar('caso 3 relleno: 60 % por encima de 10 mm usa más', sobra(mas) > 1, `(+${sobra(mas)} mm de filamento)`);
@@ -152,7 +111,8 @@ async function probarVelocidad({ laminar, con, revisar, B }) {
     const v = porCapa((await con([{ desdeMm: 10, velocidad: 50 }])).g.lineas);
     const DB = porCapa((await laminar({ ...CUBO, calidad: 'detalle' })).g.lineas);
     const DV = porCapa((await con([{ desdeMm: 10, velocidad: 50 }], { calidad: 'detalle' })).g.lineas);
-    const arriba = DB.capas.find(c => c.n >= 1 && DB.capas[c.n - 1].z >= 10 - EPS).n + 10;
+    const primera = DB.capas.find(c => c.n >= 1 && DB.capas[c.n - 1].z >= 10 - EPS).n; // 1ª capa con piso >= 10
+    const arriba = primera + 10;
     const razon = (V, BB, n) =>
         Object.entries(fPorFeature(BB.extrusiones, n)).map(([k, f]) => [k, fPorFeature(V.extrusiones, n)[k] / f]);
     const texto = r => r.map(([k, x]) => `${k} ${x.toFixed(2)}`).join(', ');
@@ -163,13 +123,16 @@ async function probarVelocidad({ laminar, con, revisar, B }) {
         `capa ${arriba}: ${texto(r4)}`,
     );
     revisar(
-        'caso 4 velocidad: la capa 10 (debajo de 10 mm) no cambia',
-        JSON.stringify(fPorFeature(DV.extrusiones, 10)) === JSON.stringify(fPorFeature(DB.extrusiones, 10)),
+        `caso 4 velocidad: la capa ${primera - 1} (última con piso < 10 mm) no cambia y la ${primera} sí`,
+        JSON.stringify(fPorFeature(DV.extrusiones, primera - 1)) ===
+            JSON.stringify(fPorFeature(DB.extrusiones, primera - 1)) &&
+            JSON.stringify(fPorFeature(DV.extrusiones, primera)) !==
+                JSON.stringify(fPorFeature(DB.extrusiones, primera)),
     );
     const r4n = razon(v, B, 60);
     revisar(
-        'caso 4 velocidad (Normal): el tope de caudal recorta la base, el 50 % queda entre 50 y 100 %',
-        r4n.every(([, x]) => x > 0.5 && x < 1),
+        'caso 4 velocidad (Normal): el tope de caudal recorta la base, el 50 % da ≈ 74 % (±3)',
+        r4n.length >= 2 && r4n.every(([, x]) => Math.abs(x - 0.74) <= 0.03),
         `capa 60: ${texto(r4n)}`,
     );
 }
@@ -187,7 +150,7 @@ async function probarVentilador({ con, revisar }) {
 
 // Extra a: retracción 3 mm desde 10 mm en dos pilares (hay un viaje con retracción en cada capa).
 async function probarRetraccion({ laminar, revisar }) {
-    const pilares = { stlBase64: dosPilares(), personal: { adhesion: 'nada' } };
+    const pilares = { caso: 'pilares', stlBase64: dosPilares(), personal: { adhesion: 'nada' } }; // 'caso' sólo nombra el archivo de GUARDAR_GCODE
     const ret = porCapa((await laminar({ ...pilares, cambios: [{ desdeMm: 10, retraccion: 3 }] })).g.lineas).capas;
     const dist = (capas, d, h) => [...new Set(capas.filter(c => c.n >= d && c.n <= h).flatMap(c => c.retracciones))];
     revisar(
@@ -218,11 +181,12 @@ async function probarBalsa({ con: laminar, revisar, B }) {
     const r = await laminar([{ desdeMm: 10, tempBoquilla: 215 }], { personal: { adhesion: 'balsa' } });
     const R = porCapa(r.g.lineas);
     const capa = R.capas.find(c => c.m104.some(m => m.temp === 215));
+    const unico = lineasM104(r.g.lineas, 215).length === 1;
     const raft = SB.capas.length - B.capas.length;
     const piso = capa && R.capas[capa.n - 1].z - offset;
     revisar(
         'caso 7 balsa: el cambio cae a 10 mm sobre la pieza (Z = 10 + balsa), no a Z = 10',
-        capa && Math.abs(piso - 10) < 0.01 && capa.n === 50 + raft && offset > 0.5,
+        unico && capa && Math.abs(piso - 10) < 0.01 && capa.n === CAPA_10MM + raft && offset > 0.5,
         `capa ${capa?.n} (la balsa suma ${raft} capas), Z ${capa?.z}, piso ${piso} sobre la pieza, offset ${offset} mm; sin balsa sería la capa 50`,
     );
 }
@@ -259,10 +223,19 @@ function probarPausa({ revisar, t, T }) {
     const l = con.split('\n');
     const iM = l.indexOf('M600');
     const iT = lineasM104(l, 215);
+    const ini = l.indexOf(`;LAYER:${capa}`);
+    const fin = l.indexOf(`;LAYER:${capa + 1}`);
     revisar(
-        'caso 9 pausa + cambio: el M104 queda antes del M600 y no se duplica ninguna línea',
-        iM > 0 && iT.length === 1 && iT[0] < iM && [...l.slice(0, iM - 1), ...l.slice(iM + 1)].join('\n') === t.gcode,
-        `capa ${capa}: M104 en la línea ${iT[0]}, M600 en la ${iM}`,
+        'caso 9 pausa + cambio: M104 y M600 están dentro de la capa del cambio, el M104 antes, sin duplicar líneas',
+        ini >= 0 &&
+            fin > ini &&
+            iM > ini &&
+            iM < fin &&
+            iT.length === 1 &&
+            iT[0] > ini &&
+            iT[0] < iM &&
+            [...l.slice(0, iM - 1), ...l.slice(iM + 1)].join('\n') === t.gcode,
+        `capa ${capa} (líneas ${ini}-${fin}): M104 en la ${iT[0]}, M600 en la ${iM}`,
     );
 }
 
