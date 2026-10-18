@@ -94,12 +94,12 @@ revisar(
 console.log('\n▶ cambiosARangos: mapeo mm -> capa [h, h0, desde, lo, hasta, hi]');
 const tabla = [
     [0.2, 0.2, 10, 50, 12, 59],
-    [0.2, 0.2, 10.05, 51, 12.05, 59],
+    [0.2, 0.2, 10.05, 51, 12.05, 60],
     [0.2, 0.2, 0.1, 1, 1, 4],
-    [0.2, 0.3, 10, 50, 12, 58],
+    [0.2, 0.3, 10, 50, 12, 59],
     [0.2, 0.3, 0.1, 1, 0.5, 1],
     [0.12, 0.24, 10, 83, 12, 98],
-    [0.12, 0.24, 1, 8, 2, 14],
+    [0.12, 0.24, 1, 8, 2, 15],
 ];
 for (const [h, h0, x, lo, y, hi] of tabla) {
     const [r] = rangos({ desdeMm: x, hastaMm: y, tempBoquilla: 200 }, { sliceHeight: h, firstSliceHeight: h0 });
@@ -134,7 +134,7 @@ revisar('sin hastaMm -> hi 1e9', rangos({ desdeMm: 10, ...t })[0].hi === 1e9);
 const sinBase = { sliceHeight: 0.2, firstSliceHeight: 0.2 };
 revisar(
     'sin capas / sin cambios / sin base de velocidad -> []',
-    rangos({ desdeMm: 5, hastaMm: 5.05, ...t }).length +
+    rangos({ desdeMm: 5.05, hastaMm: 5.1, ...t }).length +
         rangos([]).length +
         rangos({ desdeMm: 10, velocidad: 80 }, sinBase).length ===
         0,
@@ -213,6 +213,51 @@ revisar(
     'altura no numérica o cambios inválidos -> []',
     [NaN, undefined, '10', null].every(a => avisosPostLaminado(cs, a).length === 0) &&
         avisosPostLaminado(null, 10).length === 0,
+);
+
+console.log('\n▶ rangos contiguos (la capa pertenece al cambio si su piso cae en [desde, hasta))');
+const bloques = [0, 10, 20, 30, 40, 50];
+const bloquesCambio = bloques
+    .slice(1)
+    .map((d, i) => ({ desdeMm: bloques[i] || 0.01, hastaMm: d, tempBoquilla: 200 + i }));
+for (const [h, h0] of [
+    [0.2, 0.2],
+    [0.12, 0.2],
+    [0.12, 0.24],
+    [0.28, 0.28],
+    [0.3, 0.3],
+]) {
+    const rs = rangos(bloquesCambio, { sliceHeight: h, firstSliceHeight: h0 });
+    const duenos = new Map();
+    rs.forEach((r, i) => {
+        for (let c = r.lo; c <= r.hi; c++) duenos.set(c, [...(duenos.get(c) || []), i]);
+    });
+    const ultima = rs[rs.length - 1].hi;
+    const sinCubrir = Array.from({ length: ultima }, (_, i) => i + 1).filter(c => !duenos.has(c));
+    const doble = [...duenos.values()].filter(v => v.length > 1).length;
+    revisar(
+        `h=${h} h0=${h0}: sin huecos ni capas repetidas`,
+        rs.length === 5 && !sinCubrir.length && !doble,
+        J(sinCubrir),
+    );
+    const piso = c => h0 + (c - 1) * h;
+    const mal = rs
+        .slice(1)
+        .filter(
+            (r, i) =>
+                !(Math.abs(piso(r.lo) - bloques[i + 1]) < h) ||
+                piso(r.lo) < bloques[i + 1] - 1e-6 ||
+                piso(r.lo - 1) >= bloques[i + 1] - 1e-6,
+        );
+    revisar(`h=${h} h0=${h0}: cada cambio empieza en la capa con piso >= su desde`, mal.length === 0);
+}
+const justo = rangos([
+    { desdeMm: 0.8, hastaMm: 1.4, ...t },
+    { desdeMm: 1.4, ...t },
+]);
+revisar(
+    'la capa con piso justo en X va al cambio que empieza en X',
+    justo[0].hi + 1 === justo[1].lo && justo[1].lo === 7,
 );
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);

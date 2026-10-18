@@ -9,7 +9,7 @@ const MAX_MM = 1000;
 const HASTA_EL_FINAL = 1e9;
 const EPS = 1e-6;
 // Propiedad numérica -> [mínimo, máximo, nombre para el usuario]
-const LIMITES = {
+export const LIMITES = {
     relleno: [0, 1, 'relleno'],
     tempBoquilla: [150, 300, 'temperatura'],
     velocidad: [50, 150, 'velocidad'],
@@ -110,8 +110,10 @@ const capaDesde = (desdeMm, h, h0) => Math.max(1, Math.ceil((desdeMm - h0) / h -
 
 /**
  * Convierte cambios (mm) en `process.ranges` de Kiri (índices de capa inclusivos). No valida.
- * "Desde X mm" es la primera capa cuyo piso es >= X (nunca antes de la capa 1); "hasta Y mm" es la última
- * capa cuyo techo es <= Y; sin `hastaMm`, `hi` vale 1e9. Un rango sin capas o sin campos
+ * Una capa pertenece a un cambio si su PISO cae en [desdeMm, hastaMm): `lo` es la primera capa con piso >= desdeMm
+ * (nunca antes de la capa 1) y `hi` es la capa anterior a la primera con piso >= hastaMm. Así los rangos de
+ * cambios consecutivos quedan contiguos (hi + 1 = lo siguiente) aunque la altura de capa no divida el borde.
+ * Sin `hastaMm`, `hi` vale 1e9. Un rango sin capas o sin campos
  * (por ejemplo velocidad sin velocidad base) se omite en silencio, sin error ni aviso.
  * @param {object[]} cambios cambios ya validados
  * @param {{ sliceHeight:number, firstSliceHeight:number, outputFeedrate?:number, outputFinishrate?:number }} base
@@ -123,7 +125,7 @@ export function cambiosARangos(cambios, base) {
     const rangos = [];
     for (const c of cambios || []) {
         const lo = capaDesde(c.desdeMm, h, h0);
-        const hi = c.hastaMm === undefined ? HASTA_EL_FINAL : Math.floor((c.hastaMm - h0) / h + EPS);
+        const hi = c.hastaMm === undefined ? HASTA_EL_FINAL : capaDesde(c.hastaMm, h, h0) - 1;
         const fields = camposDe(c, base);
         if (hi >= lo && Object.keys(fields).length) rangos.push({ lo, hi, fields });
     }
