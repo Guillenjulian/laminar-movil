@@ -39,7 +39,7 @@ const TEXTO_NO_ENTRAN = 'No entran todas en la cama: achicá, rotá, bajá las c
  *   escala, rotación, copias, piezas o impresora; paso1 lo engancha en `alCambiar` del ajuste).
  */
 export function crearPiezas(ctx) {
-    const u = { ctx, visor: null };
+    const u = { ctx, visor: null, copias: null };
     u.copias = crearCopias({ alCambiar: () => reacomodar(u) });
     return {
         conectar: () => {
@@ -160,15 +160,19 @@ function reacomodar(u) {
     if (!visor || !estado.piezas.length) return;
     const { fuera } = acomodarPiezas();
     const sola = estado.piezas.length === 1 && estado.piezas[0].copias === 1; // como siempre: la malla sola
+    const rojas = []; // 'idPieza:copia' de las que no entran (lo leen las pruebas: data-fuera)
     let base = 0;
     for (const p of estado.piezas) {
-        const locales = fuera.filter(k => k >= base && k < base + p.copias).map(k => k - base);
-        visor.ponerCopias(p.id, sola ? [] : p.posiciones, sola ? [] : locales);
+        const locales = sola ? [] : fuera.filter(k => k >= base && k < base + p.copias).map(k => k - base);
+        visor.ponerCopias(p.id, sola ? [] : p.posiciones, locales);
+        rojas.push(...locales.map(k => `${p.id}:${k}`));
         base += p.copias;
     }
     const bloquea = !estado.entra && !sola;
-    $('avisoEntran').textContent = bloquea ? TEXTO_NO_ENTRAN : '';
+    const aviso = bloquea ? TEXTO_NO_ENTRAN : '';
+    if ($('avisoEntran').textContent !== aviso) $('avisoEntran').textContent = aviso; // no re-anunciar lo mismo
     $('avisoEntran').hidden = !bloquea;
+    $('listaPiezas').dataset.fuera = rojas.join();
     $('siguiente').disabled = bloquea;
     $('listaPiezas').dataset.copias = String(copiasTotales());
     for (const [i, p] of estado.piezas.entries()) {

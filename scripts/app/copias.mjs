@@ -17,6 +17,8 @@ export async function probarCopias(ctx) {
     await probarTresCopias(ctx);
     await probarCopiasNoEntran(ctx);
     await probarTopeCopias(ctx);
+    await probarFueraPorPieza(ctx);
+    await probarImpresoraChica(ctx);
     await probarReciente(ctx);
 }
 
@@ -35,7 +37,7 @@ async function probarTresCopias(ctx) {
         (await visible('#copiasPieza')) &&
             (await numCopias(pagina)) === '1' &&
             (await pagina.isDisabled('#copiasMenos')) &&
-            (await pagina.getAttribute('#copiasMas', 'aria-label')) === 'Agregar una copia',
+            (await pagina.getAttribute('#copiasMas', 'aria-label')) === 'Agregar una copia de cubo-20mm.stl',
     );
     revisar('copias: con una copia el visor no cambia (1 copia)', (await copiasEnVisor(pagina)) === 1);
     await pagina.tap('#copiasMas');
@@ -133,4 +135,64 @@ async function probarReciente({ page: pagina, ok: revisar, tmp, elegirArchivo })
         () => ![...document.querySelectorAll('.reciente b')].some(b => b.textContent === 'pieza-extra.stl'),
     );
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
+}
+
+/** Con 2 piezas donde sólo una no entra: `data-fuera` nombra exactamente esa copia (la que `acomodar` deja fuera). */
+async function probarFueraPorPieza({ page: pagina, ok: revisar }) {
+    await pagina.tap('#agregarEjemplo');
+    await pagina.waitForFunction(() => document.querySelectorAll('#listaPiezas .chip').length === 2);
+    await pagina.fill('#escala', '1000'); // la pieza 2 pasa a 200 mm; la 1 sigue en 20 mm
+    await pagina.locator('#escala').blur();
+    const ids = await chips(pagina).evaluateAll(b => b.map(x => x.dataset.id));
+    const huellas = [
+        { x: 20, y: 20 },
+        { x: 200, y: 200 },
+    ];
+    const { fuera } = acomodar(huellas, { x: CAMA, y: CAMA }, SEPARACION_PIEZAS_MM);
+    const esperado = fuera.map(k => `${ids[k]}:0`).join();
+    const real = await pagina.evaluate(() => document.getElementById('listaPiezas').dataset.fuera);
+    revisar(
+        'dos piezas, una no entra: data-fuera nombra sólo esa copia',
+        fuera.length === 1 && real === esperado,
+        `real "${real}", esperado "${esperado}"`,
+    );
+    await pagina.tap('#restablecerModelo');
+    revisar(
+        'dos piezas: al achicarla no queda ninguna fuera',
+        (await pagina.evaluate(() => document.getElementById('listaPiezas').dataset.fuera)) === '',
+    );
+    await pagina.tap('#listaPiezas li:nth-child(2) .chip-quitar');
+}
+
+/** Paso 2 -> impresora más chica donde ya no entran 2 copias: laminar da el error del paso 3 y no hay paso 4. */
+async function probarImpresoraChica({ page: pagina, ok: revisar, visible }) {
+    await pagina.fill('#escala', '450'); // 90 mm: 2 copias entran en la Ender (220) y no en la Prusa mini (180)
+    await pagina.locator('#escala').blur();
+    await pagina.tap('#copiasMas');
+    revisar('impresora chica: con 2 copias de 90 mm entran en la Ender', await entranTodas({ page: pagina, visible }));
+    await pagina.tap('#siguiente');
+    await pagina.tap('#cambiarImpresora');
+    await pagina.fill('#buscarImpresora', 'prusa mini');
+    await pagina.tap('[data-id="kiri-prusa-mini"]');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
+    revisar(
+        'impresora chica: laminar da "Las piezas no entran en la cama…", en 0 %, con "Volver" y sin paso 4',
+        /^Las piezas no entran en la cama/.test(await pagina.textContent('#errorLaminado')) &&
+            (await pagina.textContent('#porcentaje')) === '0 %' &&
+            (await pagina.textContent('#cancelar')) === 'Volver' &&
+            !(await visible('section[data-paso="4"]')),
+        await pagina.textContent('#errorLaminado'),
+    );
+    await pagina.tap('#cancelar'); // vuelve al paso 2: se deja la impresora como estaba
+    await pagina.tap('#cambiarImpresora');
+    await pagina.fill('#buscarImpresora', 'v3 se');
+    await pagina.tap('[data-id="creality-ender-3-v3-se"]');
+    await pagina.goBack();
+    await pagina.tap('#restablecerModelo');
+    await pagina.tap('#copiasMenos');
+    revisar(
+        'impresora chica: restaurado un cubo de 20 mm, 1 copia, a 100 %',
+        (await pagina.inputValue('#escala')) === '100' && (await numCopias(pagina)) === '1',
+    );
 }

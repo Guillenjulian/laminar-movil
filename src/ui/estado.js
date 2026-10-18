@@ -59,6 +59,7 @@ export const estado = {
  * @property {number} copias entero >= 1
  * @property {'modelo'|'litofania'|'torre'} origen
  * @property {{x:number,y:number}[]} posiciones centro de cada copia en mm (no se persiste)
+ * @property {{x:number,y:number,z:number}} [tamano] medida real ya transformada (la guarda la UI desde el visor)
  */
 
 let ultimoId = 0;

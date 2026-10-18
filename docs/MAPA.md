@@ -33,7 +33,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/estado.js` | Objeto `estado` único (con `piezas`, ADR 0003), `crearPieza`, `piezaActiva`, `matrizPieza`, `matrizModelo`, `copiasTotales`, `piezasParaMotor`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
 | `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` y las piezas extra `piezas-ui` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `ajuste-modelo`, `piezas-ui`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
-| `src/ui/ajuste-modelo.js` | Ajuste de la pieza activa (ADR 0003): escala, rotaciones de 90°, apoyar cara, ajustar a la cama, restablecer y avisos (no entra, modelo pesado); `crearAjuste` | `estado`, `util-dom`, `formato`, `motor/transformar`, `perfiles/perfiles`, `config` |
+| `src/ui/ajuste-modelo.js` | Ajuste de la pieza activa (ADR 0003): escala, rotaciones de 90°, apoyar cara, ajustar a la cama, restablecer y avisos (no entra, modelo pesado); en cada `aplicar` guarda en la pieza su medida real (`p.tamano`, desde `visor.tamanoModelo`); `crearAjuste` | `estado`, `util-dom`, `formato`, `motor/transformar`, `perfiles/perfiles`, `config` |
 | `src/ui/piezas-ui.js` | Varias piezas en el paso 1 (ADR 0003, T8 y T10): chips de `#listaPiezas` (desde 2 piezas, con `×copias`), "Agregar pieza" (archivo o cubo de ejemplo; no con torre ni litofanía; tope de piezas y de copias; las agregadas van a recientes con `ctx.guardar`), quitar y elegir la pieza activa (chip o toque en el visor). `reacomodar()`: `acomodarPiezas()`, `visor.ponerCopias` por pieza (las que no entran, en rojo), aviso `#avisoEntran` "No entran todas en la cama" y "Siguiente" deshabilitado (con una pieza y una copia no cambia nada: sigue el aviso de `ajuste-modelo`); expone `data-copias` en `#listaPiezas`; `crearPiezas` | `estado`, `util-dom`, `config`, `motor/piezas`, `acomodo`, `copias-ui` |
 | `src/ui/copias-ui.js` | Stepper de copias de la pieza activa (ADR 0003, T10): `#copiasPieza` con − / + y el número; mínimo 1, máximo según `validarCantidad` (`MAX_PIEZAS`, `maxCopias()`), con texto que explica el tope; oculto con torre o litofanía; `crearCopias` | `estado`, `util-dom`, `config`, `motor/piezas` |
 | `src/ui/acomodo.js` | `acomodarPiezas(medir?)` (ADR 0003, T9), sin DOM (`medir` opcional: tamaño real transformado; sin él, caja de 8 esquinas): huella de cada copia (`vista.tamano` × `matrizPieza`), `motor/piezas.acomodar` con la cama de la impresora elegida y `SEPARACION_PIEZAS_MM`; escribe `p.posiciones` y `estado.entra` y devuelve `{ entra, fuera }` (índices de copia global). Sin `medir` usa `p.tamano` (la medida real que guardan `ajuste-modelo` y `piezas-ui` desde `visor.tamanoModelo`) y, si falta, la caja de 8 esquinas. Lo llaman `piezas-ui` (`reacomodar`) y el paso 3 | `estado`, `motor/piezas`, `motor/transformar`, `perfiles/perfiles`, `config` |
@@ -69,11 +69,11 @@ Nivel 6   main.js ──► (todos los de abajo)
 Nivel 5   paso4-resultado ──► vista-capas, paso2-config
 Nivel 4   paso2-config ──► impresoras
 Nivel 3   impresoras ──► formulario-impresora
-Nivel 3   paso1-modelo ──► ajuste-modelo, piezas-ui, recientes
+Nivel 3   paso1-modelo ──► ajuste-modelo, piezas-ui, recientes, navegacion
 Nivel 2   piezas-ui ──► acomodo, copias-ui
 Nivel 2   paso3-laminar ──► acomodo
 Nivel 1   acomodo ──► estado, config, motor/piezas, motor/transformar, perfiles
-Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
+Nivel 2   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
           vista-capas ──► pausas-ui
 Nivel 1   pausas-ui ──► estado, util-dom
 Nivel 1   copias-ui ──► estado, util-dom, config, motor/piezas

@@ -53,6 +53,8 @@ function dibujar() {
     if (!pieza) return;
     const tope = textoMaximo();
     $('copiasNum').textContent = String(pieza.copias);
+    $('copiasMenos').setAttribute('aria-label', `Quitar una copia de ${pieza.nombre}`);
+    $('copiasMas').setAttribute('aria-label', `Agregar una copia de ${pieza.nombre}`);
     $('copiasMenos').disabled = pieza.copias <= 1;
     $('copiasMas').disabled = !!tope;
     $('copiasAyuda').textContent = tope ?? '';

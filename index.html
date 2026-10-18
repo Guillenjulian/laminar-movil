@@ -74,19 +74,12 @@
 
                         <!-- Copias de la pieza activa (sólo modelos) -->
                         <div class="copias-pieza" id="copiasPieza" hidden>
-                            <div class="fila-escala">
+                            <div class="fila-escala" role="group" aria-labelledby="copiasEtiqueta">
                                 <span id="copiasEtiqueta">Copias</span>
                                 <button type="button" class="boton-capa" id="copiasMenos" aria-label="Quitar una copia">
                                     −
                                 </button>
-                                <output
-                                    id="copiasNum"
-                                    class="copias-num"
-                                    aria-live="polite"
-                                    for="copiasMenos copiasMas"
-                                >
-                                    1
-                                </output>
+                                <output id="copiasNum" class="copias-num" for="copiasMenos copiasMas"> 1 </output>
                                 <button
                                     type="button"
                                     class="boton-capa"
