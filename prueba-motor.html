@@ -46,6 +46,7 @@
         <pre id="salida"></pre>
         <script type="module">
             import { laminar, torreAStl } from './src/motor/motor.js';
+            import { armarTorre, configuracionDeTorre } from './src/perfiles/torres.js';
             import {
                 armarConfiguracion,
                 listaImpresoras,
@@ -56,7 +57,6 @@
             window.buscarImpresora = buscarImpresora;
             // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
             window.ponerImpresorasPropias = ponerImpresorasPropias;
-            import { armarTorre, configuracionDeTorre } from './src/perfiles/torres.js';
             import { maxTriangulos } from './src/config.js';
             import { esfera, te, tubo } from './src/prueba/mallas.js';
 
@@ -110,8 +110,9 @@
             };
 
             // Torre de calibración: su configuración (perfiles/torres.js importa JSON, que Node no carga sin más).
-            window.configTorre = op => {
-                const torre = armarTorre(op);
+            // Con el hotendMax de la impresora, como lo hace la app.
+            window.configTorre = ({ impresoraId = 'creality-ender-3-v3-se', ...op }) => {
+                const torre = armarTorre({ ...op, hotendMax: buscarImpresora(impresoraId).limites?.hotendMax });
                 return { torre, config: configuracionDeTorre(torre) };
             };
 

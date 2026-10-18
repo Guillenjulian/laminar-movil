@@ -3,9 +3,8 @@
 // configuración de `configuracionDeTorre` y revisar sobre el G-code que cada bloque tiene su temperatura / retracción.
 // Lo llama scripts/probar-motor.mjs dentro de su `try`. Regla de capas (ADR 0002, sección 3): una capa pertenece a
 // un bloque si su PISO (la Z de la capa anterior; 0 para la capa 0) cae en [desde, hasta).
-// Los helpers vienen de cambios.mjs (el dev de T3 los mueve a gcode-capas.mjs; ajustar este import al integrar).
 
-import { porCapa } from './cambios.mjs';
+import { porCapa } from './gcode-capas.mjs';
 
 const EPS = 1e-6;
 const ALTO = 10;
@@ -31,6 +30,8 @@ async function laminarTorre({ laminar, pagina, revisar }, tipo, valores, calidad
         stlBase64: stl.base64,
         calidad,
         soportes: false,
+        // adhesion 'nada': con balsa los cambios caen a 'desde' mm SOBRE la pieza (caso 7 de cambios.mjs) y los pisos
+        // de la torre ya no coinciden con la Z del G-code; acá se mide el mapa mm -> capa sin ese desfase
         personal: { adhesion: 'nada', ...t.personal, avanzado: t.avanzado },
         cambios: t.cambios,
     });
@@ -68,22 +69,61 @@ async function probarTemperatura(ctx, calidad, h) {
     );
 }
 
-// Caso 11: la retracción más frecuente de cada bloque es la de su valor (±0,05 mm).
+// Caso 11: cada capa n >= 1 tiene retracciones y todas son las de su bloque (nunca las del vecino), y la primera
+// capa con las del bloque k es la primera con piso >= desde (mismo patrón que el caso 10).
 async function probarRetraccion(ctx) {
     const valores = [0.5, 1.5, 2.5, 3.5, 4.5];
     const { torre, C } = await laminarTorre(ctx, 'retraccion', valores, 'normal');
+    const capas = C.filter(c => c.n >= 1);
+    const sin = capas.filter(c => !c.retracciones.length);
+    ctx.revisar(
+        'caso 11 retracción: todas las capas tienen al menos una retracción',
+        !sin.length,
+        `(${capas.length} capas)`,
+    );
+    const ajenas = capas.filter(c => c.retracciones.some(d => d !== valores[bloqueDe(torre, piso(C, c.n))]));
+    ctx.revisar(
+        'caso 11 retracción: ninguna capa retrae con la distancia de otro bloque',
+        !ajenas.length,
+        ajenas.length ? `(primera: capa ${ajenas[0].n}, ${ajenas[0].retracciones})` : '',
+    );
     torre.bloques.forEach((b, k) => {
-        const cuenta = new Map();
-        for (const c of C.filter(c => c.n >= 1 && bloqueDe(torre, piso(C, c.n)) === k)) {
-            for (const d of c.retracciones) cuenta.set(d, (cuenta.get(d) || 0) + 1);
-        }
-        const [moda, veces] = [...cuenta].sort((a, b) => b[1] - a[1])[0] ?? [NaN, 0];
+        const primera = capas.find(c => c.retracciones.length && c.retracciones.every(d => d === b.valor))?.n;
+        const esperada = capas.find(c => piso(C, c.n) >= b.desdeMm - EPS)?.n;
         ctx.revisar(
-            `caso 11 retracción: bloque ${k + 1} retrae ${b.valor} mm`,
-            Math.abs(moda - b.valor) <= 0.05,
-            `(más frecuente ${moda} mm, ${veces} veces)`,
+            `caso 11 retracción: bloque ${k + 1} (${b.valor} mm) empieza en la primera capa con piso >= ${b.desdeMm} mm`,
+            primera === esperada,
+            `(capa ${primera}, esperada ${esperada})`,
         );
     });
+}
+
+// La app arma la torre con el hotendMax de la impresora: una torre de 230 °C en una de 200 °C se rechaza.
+async function probarTope({ pagina, revisar }) {
+    const pedir = impresoraId =>
+        pagina.evaluate(
+            async op => {
+                try {
+                    return { ok: !!window.configTorre(op) };
+                } catch (e) {
+                    return { mensaje: e.message };
+                }
+            },
+            { tipo: 'temperatura', valores: [230, 225, 220], impresoraId },
+        );
+    await pagina.evaluate(() =>
+        window.ponerImpresorasPropias([
+            { id: 'tope200', nombre: 'Tope', hotendMax: 200, camaMax: 100, firmware: 'marlin' },
+        ]),
+    );
+    const bajo = await pedir('tope200');
+    revisar(
+        'hotendMax 200: la torre de 230 °C se rechaza con "Bloque 1"',
+        /^Bloque 1: /.test(bajo.mensaje ?? ''),
+        bajo.mensaje,
+    );
+    await pagina.evaluate(() => window.ponerImpresorasPropias([]));
+    revisar('hotendMax de la Ender: la misma torre pasa', (await pedir('creality-ender-3-v3-se')).ok === true);
 }
 
 /**
@@ -103,4 +143,5 @@ export async function probarTorres(ctx) {
     await probarTemperatura(ctx, 'normal', '0,2 mm');
     await probarTemperatura(ctx, 'detalle', '0,12 mm');
     await probarRetraccion(ctx);
+    await probarTope(ctx);
 }
