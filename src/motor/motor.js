@@ -83,9 +83,11 @@ export async function leerParaVista(stl, maxTriangulosVista = 300_000) {
 
 // Lee un G-code y arma los recorridos para la vista previa capa por capa
 // (ver recorridos-lector.js). El G-code se copia al worker; el resultado vuelve sin copiar.
-export async function leerRecorridos(gcode, maxSegmentos) {
+// `opciones.auto`: el worker elige el nivel de detalle que entra en `maxSegmentos` (recorridos-auto.js) y el
+// resultado trae `nivel`, `simplificado` y `leidoHasta` (ADR 0006).
+export async function leerRecorridos(gcode, maxSegmentos, opciones = {}) {
     const worker = new Worker(new URL('./recorridos.worker.js', import.meta.url), { type: 'module' });
-    return correr(worker, { gcode, maxSegmentos }, []);
+    return correr(worker, { gcode, maxSegmentos, auto: !!opciones.auto }, []);
 }
 
 // Convierte un OBJ o un 3MF a STL binario (en un worker). Devuelve { stl: ArrayBuffer }.

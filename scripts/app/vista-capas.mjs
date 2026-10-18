@@ -22,6 +22,11 @@ export async function probarVistaCapas(ctx) {
         ultima,
     );
     revisar('vista previa: tantas capas como Kiri', m && Math.abs(Number(m[2]) - 72) <= 1, `${m?.[2]} capas`);
+    revisar(
+        'vista previa: un cubo no muestra aviso de simplificada ni de cortada',
+        (await pagina.textContent('#avisoVista')) === '' && !(await pagina.isVisible('#avisoVista')),
+        await pagina.textContent('#avisoVista'),
+    );
     await pagina.tap('#capaMenos');
     revisar('botón − baja una capa', (await textoCapa()).startsWith(`Capa ${Number(m[2]) - 1}/`));
     await pagina.locator('#capa').fill('0');

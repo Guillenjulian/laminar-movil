@@ -104,8 +104,18 @@ export const CONTRATOS = {
     },
     'ui/vista-capas': {
         exports: { iniciarVistaCapas: 1, armarVistaPrevia: 0 },
-        importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config', 'ui/pausas-ui'),
+        importa: conBase(
+            VISOR,
+            FORMATO,
+            MOTOR,
+            'motor/tipos-linea',
+            PERFILES,
+            'config',
+            'ui/pausas-ui',
+            'ui/aviso-vista',
+        ),
     },
+    'ui/aviso-vista': { exports: { textoAvisoVista: 2 }, importa: [] },
     'ui/pausas-ui': {
         exports: { conectarPausas: 1, dibujarPausas: 0 },
         importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/tipos-linea', PERFILES],

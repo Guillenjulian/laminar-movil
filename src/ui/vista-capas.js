@@ -14,6 +14,7 @@ import { leerRecorridos } from '../motor/motor.js';
 import { TIPOS } from '../motor/tipos-linea.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxSegmentosVista } from '../config.js';
+import { textoAvisoVista } from './aviso-vista.js';
 import { conectarPausas, dibujarPausas } from './pausas-ui.js';
 
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
@@ -60,7 +61,7 @@ export async function armarVistaPrevia() {
     $('cargandoCapas').hidden = false;
     $('cargandoCapas').textContent = 'Armando la vista previa…';
     try {
-        const r = await leerRecorridos(resultado.gcode, maxSegmentosVista());
+        const r = await leerRecorridos(resultado.gcode, maxSegmentosVista(), { auto: true });
         if (estado.resultado !== resultado) return; // ya se laminó otra cosa
         if (!(r.inicioCapa.length - 1)) throw new Error('el G-code no tiene recorridos');
         mostrarRecorridos(r, resultado);
@@ -88,10 +89,9 @@ function mostrarRecorridos(r, resultado) {
     $('leyenda').innerHTML = TIPOS.slice(0, -1)
         .map(t => `<li><i style="background: rgb(${t.color.join(',')})"></i>${t.nombre}</li>`)
         .join('');
-    $('avisoVista').hidden = !r.incompleta;
-    $('avisoVista').textContent = r.incompleta
-        ? `El archivo es muy grande para mostrarlo entero en este equipo: la vista llega hasta la capa ${total}. El G-code está completo.`
-        : '';
+    const aviso = textoAvisoVista(r, total);
+    $('avisoVista').hidden = !aviso;
+    $('avisoVista').textContent = aviso;
     $('cargandoCapas').hidden = true;
     $('controlCapas').hidden = false;
     irACapa(total - 1);
