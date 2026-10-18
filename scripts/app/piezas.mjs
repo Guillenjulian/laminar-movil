@@ -16,6 +16,7 @@
 import fs from 'node:fs';
 import { acomodar } from '../../src/motor/piezas.js';
 import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
+import { puntosDeCapa } from '../lib/gcode.mjs';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarPiezas(ctx) {
@@ -165,19 +166,7 @@ async function probarTorre({ page: pagina, ok: revisar, visible, elegirArchivo }
 export const CAMA = 220; // Ender 3 V3 SE, origen en la esquina: el centro de la cama es (110, 110)
 
 /** X de las extrusiones de la capa `n` del G-code (coordenadas de cama). */
-export function xDeCapa(gcode, n) {
-    const xs = [];
-    let dentro = false;
-    let x = 0;
-    for (const l of gcode.split('\n')) {
-        const capa = l.match(/^;LAYER:(\d+)/);
-        if (capa) dentro = +capa[1] === n;
-        if (!/^G[01] /.test(l)) continue;
-        x = +(l.match(/ X(-?[\d.]+)/)?.[1] ?? x);
-        if (dentro && /^G1 .*[XY].* E\d/.test(l)) xs.push(x);
-    }
-    return xs;
-}
+export const xDeCapa = (gcode, n) => puntosDeCapa(gcode, n).map(p => p.x);
 
 /** Con 2 cubos de 20 mm: lamina, y revisa los 2 grupos de extrusión de la capa 2 y el resumen del paso 4. */
 async function probarLaminarVarias({ page: pagina, ok: revisar, esperarResultado }) {

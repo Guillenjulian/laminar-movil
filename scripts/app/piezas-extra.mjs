@@ -11,13 +11,14 @@
 //
 // probarPrecioTrasRecargar: guarda un precio de PETG, recarga la página y revisa que el precio siga en el paso 2
 //   y que el costo del resumen se calcule con él.
-//   Precondición: cualquier paso de la app ya cargada con el cubo de ejemplo disponible (paso 1 con modelo).
+//   Precondición: paso 1 con el cubo de ejemplo cargado (toca "Siguiente" para ir al paso 2).
 //   Deja: paso 2 con el cubo cargado y PLA elegido (el precio del PETG queda guardado aparte).
 
 import fs from 'node:fs';
 import { acomodar } from '../../src/motor/piezas.js';
 import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
 import { medir, multiplicar, rotacion90, rotacionQueApoya } from '../../src/motor/transformar.js';
+import { puntosDeCapa } from '../lib/gcode.mjs';
 import { CAMA } from './piezas.mjs';
 
 const LARGO = 40;
@@ -56,37 +57,33 @@ function stlTecho() {
     return b;
 }
 
-/** Extrusiones { x, y } de la capa `n` del G-code (coordenadas de cama). */
-function puntosDeCapa(gcode, n) {
-    const salida = [];
-    let dentro = false;
-    let x = 0;
-    let y = 0;
-    for (const l of gcode.split('\n')) {
-        const capa = l.match(/^;LAYER:(\d+)/);
-        if (capa) dentro = +capa[1] === n;
-        if (!/^G[01] /.test(l)) continue;
-        x = +(l.match(/ X(-?[\d.]+)/)?.[1] ?? x);
-        y = +(l.match(/ Y(-?[\d.]+)/)?.[1] ?? y);
-        if (dentro && /^G1 .*[XY].* E\d/.test(l)) salida.push({ x, y });
-    }
-    return salida;
-}
-
 const medidas = pagina => pagina.textContent('#datosModelo').then(t => t.split(' · ')[0]);
 
-/** Apoya la cara que está en el punto (fx, fy) del visor (fracciones del lienzo) y espera a que termine. */
-async function apoyarCara(pagina, fx, fy) {
+/**
+ * Apoya la cara que está en el punto (fx, fy) del visor (fracciones del lienzo). Si el toque no cae en una pieza,
+ * saca una captura, registra la falla con el contexto (lienzo, chips, pieza activa) y devuelve false.
+ */
+async function apoyarCara({ page: pagina, ok: revisar, captura }, fx, fy, nombre) {
     await pagina.tap('#apoyarCara');
     const l = await pagina.locator('#visor canvas').boundingBox();
     await pagina.touchscreen.tap(l.x + l.width * fx, l.y + l.height * fy);
-    await pagina
+    const cayo = await pagina
         .waitForFunction(() => document.getElementById('ayudaCara').hidden, null, { timeout: 5000 })
-        .catch(() => {
-            throw new Error(
-                `apoyar cara: el toque en ${fx}/${fy} del lienzo no cayó en ninguna pieza (¿cambió el encuadre?)`,
-            );
-        });
+        .then(
+            () => true,
+            () => false,
+        );
+    if (cayo) return true;
+    await captura('apoyar-cara-fallo');
+    const chips = await pagina.locator('#listaPiezas .chip').count();
+    const activa = await pagina.locator('#listaPiezas .chip[aria-pressed="true"]').allTextContents();
+    const caja = `x ${l.x}, y ${l.y}, ${l.width} × ${l.height}`;
+    revisar(
+        `${nombre}: el toque en ${fx}/${fy} del lienzo cae en la pieza (¿cambió el encuadre?)`,
+        false,
+        `lienzo ${caja}; ${chips} chips; activa: ${activa.join() || 'ninguna'}; captura apoyar-cara-fallo`,
+    );
+    return false;
 }
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
@@ -95,7 +92,8 @@ export async function probarAcomodoConGiros(ctx) {
     const techo = `${tmp}/techo.stl`;
     fs.writeFileSync(techo, stlTecho());
     await elegirArchivo(techo);
-    await apoyarCara(pagina, 0.5, 0.5); // sola, el centro del visor da en la cara inclinada del frente
+    // sola, el centro del visor da en la cara inclinada del frente
+    if (!(await apoyarCara(ctx, 0.5, 0.5, 'techo'))) return elegirArchivo('public/ejemplos/cubo-20mm.stl');
     await pagina.tap('[data-rotar="z"]');
     revisar(
         'techo: apoyada la cara inclinada (45°) y girada 90° en Z',
@@ -105,8 +103,8 @@ export async function probarAcomodoConGiros(ctx) {
     await pagina.waitForFunction(() => document.querySelectorAll('#listaPiezas .chip').length === 2);
     await pagina.tap('#listaPiezas li:nth-child(2) .chip'); // la activa es la 2: a ella se aplica el giro
     // El visor no re-encuadra: con 2 piezas la 2 queda a la derecha y al frente, en 0,62/0,62 del lienzo (Pixel 7).
-    // Si cambia la cámara y el toque cae en la pieza 1 (ya apoyada) o en el vacío, esto falla con un mensaje claro.
-    await apoyarCara(pagina, 0.62, 0.62);
+    // Si el toque cae en la pieza 1 (ya apoyada) o en el vacío, falla con el contexto y las áreas siguientes siguen.
+    if (!(await apoyarCara(ctx, 0.62, 0.62, 'techo 2'))) return elegirArchivo('public/ejemplos/cubo-20mm.stl');
     revisar(
         'techo 2: el toque cayó en la pieza 2 y la apoyó (40,0 × 14,1 × 14,1 mm antes de girarla)',
         (await medidas(pagina)) === '40,0 × 14,1 × 14,1 mm',
@@ -187,6 +185,27 @@ const filaResumen = (pagina, clave) =>
         clave,
     );
 
+/** Espera a que IndexedDB (ajuste 'precios') tenga el PETG en 25000: lee la base, no espera un tiempo fijo. */
+const esperarPrecioGuardado = pagina =>
+    pagina.waitForFunction(
+        () =>
+            new Promise(listo => {
+                const abrir = indexedDB.open('laminar-movil');
+                abrir.onerror = () => listo(false);
+                abrir.onsuccess = () => {
+                    const db = abrir.result;
+                    const pedido = db.transaction('ajustes').objectStore('ajustes').get('precios');
+                    pedido.onerror = () => listo(false);
+                    pedido.onsuccess = () => {
+                        db.close();
+                        listo(pedido.result?.petg === 25000);
+                    };
+                };
+            }),
+        null,
+        { timeout: 5000 },
+    );
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarPrecioTrasRecargar(ctx) {
     const { page: pagina, ok: revisar, esperarResultado } = ctx;
@@ -194,7 +213,7 @@ export async function probarPrecioTrasRecargar(ctx) {
     await pagina.tap('label.opcion:has(input[value="petg"])');
     await pagina.fill('#precioRollo', '25000');
     await pagina.locator('#precioRollo').blur();
-    await pagina.waitForTimeout(500); // que IndexedDB termine de escribir
+    await esperarPrecioGuardado(pagina);
     await pagina.reload();
     await pagina.waitForSelector('#ejemplo');
     await pagina.tap('#ejemplo');

@@ -1,29 +1,15 @@
 // Huecos de prueba del motor (deuda de pruebas): cama centrada con varias piezas, y progreso y cancelación del
 // laminado con más de un widget. Lo llama scripts/probar-motor.mjs dentro de su `try`.
 
-const IMPRESORA_CENTRADA = 'kiri-atom-v2'; // originCenter: true, cama de 210 × 210 mm
+import { puntosDeCapa } from '../lib/gcode.mjs';
+
+// originCenter: true y bedRound: false (Kiri hace originCenter || bedRound: con una cama redonda no se notaría)
+const IMPRESORA_CENTRADA = 'kiri-flashforge-guider-ii'; // cama de 280 × 250 mm
 const COPIAS = [
     { x: -30, y: 20 },
     { x: 40, y: -15 },
     { x: 0, y: -50 },
 ];
-
-// Extrusiones { x, y } de la capa de Kiri `;LAYER:n`, tal cual salen en el G-code.
-function puntosDeCapa(lineas, n) {
-    const salida = [];
-    let dentro = false;
-    let x = 0;
-    let y = 0;
-    for (const l of lineas) {
-        const capa = l.match(/^;LAYER:(\d+)/);
-        if (capa) dentro = +capa[1] === n;
-        if (!/^G[01] /.test(l)) continue;
-        x = +(l.match(/ X(-?[\d.]+)/)?.[1] ?? x);
-        y = +(l.match(/ Y(-?[\d.]+)/)?.[1] ?? y);
-        if (dentro && /^G1 .*[XY].* E\d/.test(l)) salida.push({ x, y });
-    }
-    return salida;
-}
 
 const rango = valores => [Math.min(...valores), Math.max(...valores)];
 
@@ -31,7 +17,11 @@ const rango = valores => [Math.min(...valores), Math.max(...valores)];
 // sin sumarles la mitad de la cama.
 async function probarCamaCentrada({ laminar, revisar, pagina }) {
     const d = await pagina.evaluate(id => window.buscarImpresora(id).dispositivo, IMPRESORA_CENTRADA);
-    revisar('la impresora de prueba tiene originCenter', d.originCenter === true, `(${IMPRESORA_CENTRADA})`);
+    revisar(
+        'la impresora de prueba tiene originCenter y no es de cama redonda',
+        d.originCenter === true && d.bedRound === false,
+        `(${IMPRESORA_CENTRADA})`,
+    );
     const copias = COPIAS.slice(0, 2);
     const r = await laminar({
         impresoraId: IMPRESORA_CENTRADA,
@@ -50,9 +40,11 @@ async function probarCamaCentrada({ laminar, revisar, pagina }) {
         const [y0, y1] = rango(g.map(p => p.y));
         return { x0, x1, y0, y1, c: copias[i] };
     });
-    const dentro = medidas.every(
-        ({ x0, x1, y0, y1, c }) => x0 >= c.x - 10.5 && x1 <= c.x + 10.5 && y0 >= c.y - 10.5 && y1 <= c.y + 10.5,
-    );
+    const dentro =
+        grupos.every(g => g.length > 0) &&
+        medidas.every(
+            ({ x0, x1, y0, y1, c }) => x0 >= c.x - 10.5 && x1 <= c.x + 10.5 && y0 >= c.y - 10.5 && y1 <= c.y + 10.5,
+        );
     const llena = medidas.every(({ x0, x1, y0, y1 }) => x1 - x0 > 15 && y1 - y0 > 15);
     const texto = medidas.map(m => `X ${m.x0}..${m.x1} Y ${m.y0}..${m.y1} (pos ${m.c.x}, ${m.c.y})`).join(' | ');
     revisar('cama centrada: el bbox de cada copia queda en pos ± 10,5 respecto del centro (0, 0)', dentro, texto);
@@ -81,6 +73,18 @@ async function probarProgreso({ laminar, revisar, pagina }) {
     revisar(
         '3 copias: ningún progreso (de ninguna etapa) sale de 0..1',
         todos.every(v => v >= 0 && v <= 1),
+    );
+}
+
+// Caso (c) con N = 1: una sola pieza, sin copias; "laminando" también tiene que terminar exactamente en 1.
+async function probarProgresoUna({ laminar, revisar, pagina }) {
+    await laminar({ piezas: [{ caso: 'cubo', posiciones: [{ x: 0, y: 0 }] }], personal: { adhesion: 'nada' } });
+    const lam = (await pagina.evaluate(() => window.progreso)).filter(([e]) => e === 'laminando').map(([, v]) => v);
+    const crece = lam.every((v, i) => i === 0 || v >= lam[i - 1]);
+    revisar(
+        '1 pieza: el último aviso de "laminando" es exactamente 1, ninguno pasa de 1 y no bajan',
+        lam.length >= 2 && crece && lam.at(-1) === 1 && Math.max(...lam) === 1,
+        `(${lam.length} avisos, último ${lam.at(-1)})`,
     );
 }
 
@@ -149,5 +153,6 @@ export async function probarPiezasExtra(ctx) {
     console.log('\n▶ Varias piezas: cama centrada, progreso y cancelación');
     await probarCamaCentrada(ctx);
     await probarProgreso(ctx);
+    await probarProgresoUna(ctx);
     await probarCancelar(ctx);
 }
