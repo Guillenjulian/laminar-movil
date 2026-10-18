@@ -177,6 +177,25 @@ async function control(ctx, zonas, esperarResultado) {
     await pagina.tap('#tipoSoportes input[value="no"]');
 }
 
+/** Con 'no' la T se lamina sin una sola extrusión de soporte; con 'normal', con soporte (estamos en el paso 2). */
+async function probarTipos(ctx) {
+    const { page: pagina, ok: revisar } = ctx;
+    for (const [tipo, hay] of [
+        ['no', false],
+        ['normal', true],
+    ]) {
+        await pagina.tap(`#tipoSoportes input[value="${tipo}"]`);
+        const extr = extrusionesDe(await laminarYDescargar(ctx)).filter(esSoporte);
+        revisar(
+            `tipo '${tipo}': ${hay ? 'hay' : 'cero'} extrusiones de soporte`,
+            hay ? extr.length > 0 : extr.length === 0,
+            `${extr.length}`,
+        );
+        await pagina.goBack();
+    }
+    await pagina.tap('#tipoSoportes input[value="no"]');
+}
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarSoportesEstado(ctx) {
     // Anota el mensaje de cada laminado (zonas y proceso) para poder leerlo desde la prueba.
@@ -194,4 +213,5 @@ export async function probarSoportesEstado(ctx) {
     });
     await probarMigracion(ctx);
     await probarArbolConZona(ctx);
+    await probarTipos(ctx);
 }

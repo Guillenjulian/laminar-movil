@@ -31,6 +31,7 @@ export async function probarDescargaBambu(ctx) {
     await elegirYLaminar(ctx, 'bambu-lab-a1');
     await revisarSinPausas(ctx);
     await revisarOtroMaterial(ctx);
+    await revisarSoportesBambu(ctx);
     await marcarPausa(ctx, 10);
     await revisarUnaPausa(ctx);
     await marcarPausa(ctx, 30);
@@ -162,6 +163,28 @@ async function revisarOtroMaterial(ctx) {
     revisar('Bambu con PETG: sigue sin pausas', !gcode.includes('M400 U1'));
     await pagina.goBack();
     await pagina.tap('label.opcion:has(input[value="pla"])');
+    await pagina.tap('#laminar');
+    await ctx.esperarResultado();
+}
+
+// `support_used` de slice_info.config sale del tipo de soporte: 'no' es texto (verdadero en JS), tiene que dar false.
+async function revisarSoportesBambu(ctx) {
+    const { page: pagina, ok: revisar } = ctx;
+    const usado = async () => {
+        const { bytes } = await descargar(ctx);
+        const info = await (await abrir(bytes)).zip.file(ENTRADAS.sliceInfo).async('string');
+        return info.match(/key="support_used" value="(\w+)"/)?.[1];
+    };
+    revisar("Bambu: con soportes 'no' support_used es false", (await usado()) === 'false');
+    for (const tipo of ['normal', 'arbol']) {
+        await pagina.goBack();
+        await pagina.tap(`#tipoSoportes input[value="${tipo}"]`);
+        await pagina.tap('#laminar');
+        await ctx.esperarResultado();
+        revisar(`Bambu: con soportes '${tipo}' support_used es true`, (await usado()) === 'true');
+    }
+    await pagina.goBack();
+    await pagina.tap('#tipoSoportes input[value="no"]');
     await pagina.tap('#laminar');
     await ctx.esperarResultado();
 }

@@ -61,7 +61,15 @@ export function chipZona(zona, n, nombrePieza, elegida) {
  *   `sincronizar()` compara `firmaBloqueos` con la actual y vacía las zonas si cambió la pieza.
  */
 export function crearBloqueosUI(ctx) {
-    const est = { ...ctx, conectado: false, modo: false, radio: RADIO_INICIAL_MM, elegida: null, aviso: '' };
+    const est = {
+        ...ctx,
+        conectado: false,
+        modo: false,
+        radio: RADIO_INICIAL_MM,
+        elegida: null,
+        aviso: '',
+        avisoId: null,
+    };
     return {
         conectar: () => conectar(est),
         dibujar: () => dibujar(est),
@@ -108,7 +116,8 @@ function conectar(est) {
 /** Toque sobre una pieza con el modo activo: agrega una esfera con el radio elegido en el punto tocado. */
 function tocar(est, { id, punto }) {
     const p = pieza();
-    if (!est.modo || !p || p.id !== id) return; // una pieza no activa sólo se activa (el visor avisa el punto antes que el id)
+    // Una pieza no activa sólo se activa: el visor avisa el punto antes que el id (`p` es la de antes).
+    if (!est.modo || !p || p.id !== id) return;
     est.aviso = '';
     // El tope no se chequea acá: `dibujar` apaga el modo al llegar a MAX_BLOQUEOS, y sin modo se sale arriba.
     const lista = (p.bloqueos ??= []);
@@ -164,7 +173,8 @@ function sincronizar(est) {
     }
     est.elegida = null;
     estado.resultado = null;
-    est.aviso = AVISO_VACIADAS; // dura hasta la próxima acción del usuario en el panel
+    est.aviso = AVISO_VACIADAS; // dura hasta la próxima acción en el panel o hasta que cambie la pieza activa
+    est.avisoId = piezaActiva()?.id;
     dibujar(est);
     est.avisar(AVISO_VACIADAS);
     est.alCambiar?.();
@@ -175,6 +185,7 @@ function dibujar(est) {
     const p = pieza();
     const zonas = p?.bloqueos ?? [];
     const lleno = zonas.length >= MAX_BLOQUEOS;
+    if (est.aviso && est.avisoId !== p?.id) est.aviso = ''; // otra pieza u otro modelo: ya no corresponde
     if (!p || lleno) est.modo = false;
     $('bloqueosPanel').hidden = !p;
     $('bloqueoNota').textContent = NOTA_VOLADIZO;

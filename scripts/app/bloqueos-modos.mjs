@@ -44,20 +44,63 @@ async function probarPiezaNoActiva({ page: pagina, ok: revisar }) {
     await pagina.tap('#agregarEjemplo'); // la 2.ª queda activa, a la derecha y al frente (0,62 / 0,62 del lienzo)
     await pagina.waitForFunction(() => document.getElementById('listaPiezas').dataset.copias === '2');
     await pagina.tap('#bloqueoMarcar');
-    await tocarLienzo(pagina, 0.38, 0.62); // la 1.ª, a la izquierda (simétrica)
+    await tocarLienzo(pagina, 0.38, 0.5); // la 1.ª, a la izquierda (simétrica)
     const activa = await pagina.locator('#listaPiezas .chip[aria-pressed="true"]').allTextContents();
     revisar('modos: el toque sobre la pieza no activa la vuelve activa', activa[0]?.startsWith('1.'), activa.join());
     revisar('modos: ...y en ese toque no se agrega zona', (await chips.count()) === 0);
-    await tocarLienzo(pagina, 0.38, 0.62);
+    await tocarLienzo(pagina, 0.38, 0.5);
     revisar('modos: el siguiente toque, ya sobre la activa, sí agrega la zona', (await chips.count()) === 1);
     await pagina.tap('#bloqueoLista .chip-quitar');
     await pagina.tap('#bloqueoMarcar'); // fuera del modo
+}
+
+const AVISO = 'Se quitaron las zonas sin soporte porque cambió la pieza';
+const chip = n => `#listaPiezas li:nth-child(${n}) .chip`;
+
+/** Marca una zona con un toque en (fx, fy) del lienzo y sale del modo; devuelve su id (data-zona de la chip). */
+async function marcarUna(pagina, fx, fy) {
+    await pagina.tap('#bloqueoMarcar');
+    await tocarLienzo(pagina, fx, fy);
+    await pagina.tap('#bloqueoMarcar');
+    return Number(await pagina.locator('#bloqueoLista .chip').first().getAttribute('data-zona'));
+}
+
+/**
+ * Con 2 piezas (la 1.ª activa): la lista de zonas es la de la pieza activa (cambiar de pieza redibuja), el aviso de
+ * "se quitaron las zonas" se va al cambiar de pieza activa y los ids de zona nunca se repiten ni retroceden, aunque
+ * se quiten y agreguen piezas.
+ */
+async function probarPiezasYAviso({ page: pagina, ok: revisar }) {
+    const chips = pagina.locator('#bloqueoLista .chip');
+    const ids = [];
+    await pagina.tap(chip(1));
+    ids.push(await marcarUna(pagina, 0.38, 0.5));
+    await pagina.tap(chip(2));
+    revisar('piezas: la pieza 2 activa no muestra las zonas de la 1', (await chips.count()) === 0);
+    await pagina.tap(chip(1));
+    revisar('piezas: volver a la pieza 1 muestra su zona', (await chips.count()) === 1);
+    await pagina.tap('#escalaMas'); // cambia la pieza: las zonas se vacían con aviso
+    revisar('piezas: el aviso de zonas vaciadas se ve', (await pagina.getByText(AVISO).count()) > 0);
+    await pagina.tap('#escalaMenos');
+    await pagina.tap(chip(2));
+    revisar('piezas: el aviso se va al cambiar de pieza activa', (await pagina.getByText(AVISO).count()) === 0);
+    await pagina.tap(chip(1));
+    ids.push(await marcarUna(pagina, 0.38, 0.5));
+    await pagina.tap('#bloqueoLista .chip-quitar');
+    await pagina.tap('#listaPiezas li:nth-child(2) .chip-quitar'); // quita la pieza 2 y vuelve a agregar otra
+    await pagina.tap('#agregarEjemplo');
+    await pagina.waitForFunction(() => document.getElementById('listaPiezas').dataset.copias === '2');
+    await pagina.tap(chip(1));
+    ids.push(await marcarUna(pagina, 0.38, 0.5));
+    await pagina.tap('#bloqueoLista .chip-quitar');
+    return ids;
 }
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarBloqueosModos(ctx) {
     await probarExclusion(ctx);
     await probarPiezaNoActiva(ctx);
+    const ids = await probarPiezasYAviso(ctx);
     const { page: pagina, ok: revisar } = ctx;
     await pagina.tap('#otroModelo');
     await pagina.tap('#ejemplo'); // un cubo nuevo: vuelve el encuadre de una sola pieza
@@ -65,6 +108,13 @@ export async function probarBloqueosModos(ctx) {
         () => !document.getElementById('conModelo').hidden && document.getElementById('listaPiezas').hidden,
     );
     await esperarVisor(pagina, '#visor');
+    ids.push(await marcarUna(pagina, 0.5, 0.5)); // tras cargar otro modelo
+    await pagina.tap('#bloqueoLista .chip-quitar');
+    revisar(
+        'ultimoIdBloqueo: los ids de zona crecen siempre',
+        ids.every((id, i) => i === 0 || id > ids[i - 1]),
+        ids.join(),
+    );
     revisar(
         'modos: queda una sola pieza',
         (await pagina.locator('#listaPiezas .chip').count()) === 0 && (await pagina.inputValue('#escala')) === '100',

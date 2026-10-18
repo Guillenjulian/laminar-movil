@@ -234,7 +234,9 @@ export function iniciarPaso2({ irAPaso1 } = {}) {
         },
     });
     cambios = crearCambios({ estado, alCambiar: () => {} });
-    tipoSoportes = crearTipoSoportes({ alCambiar: guardarPreferencias });
+    // El `change` de la pantalla (conectarEleccion) ya guarda las preferencias cuando cambia el tipo: el listener del
+    // grupo corre antes (está más adentro), así que guarda el valor nuevo. Por eso acá `alCambiar` no hace nada.
+    tipoSoportes = crearTipoSoportes({ alCambiar: () => {} });
     tipoSoportes.conectar();
     conectarPersonalizar();
     conectarEleccion();

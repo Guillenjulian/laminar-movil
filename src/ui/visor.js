@@ -18,9 +18,10 @@ const IDENTIDAD = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 /**
  * Crea el visor dentro de `contenedor`. Las piezas van por `id` (0 si no se dice: la única de hoy). API:
  * ponerCama, ponerModelo(vertices, id?), ponerTransformacion(m, id?), ponerCopias(id, posiciones, fuera?),
- * tamanoModelo(id?), quitarModelo(id?; sin id, todas), resaltarPieza(id|null), elegirCara(activo, alElegir(normal, id)),
- * alTocarPieza(fn|null), alTocarPunto(fn|null; ADR 0004), marcasBloqueo ({poner, quitar}: zonas sin soporte), ponerRecorridos, mostrarCapa, pintarRecorridos, atenuarAbajo, quitarRecorridos,
- * vistaInicial, pausar(p).
+ * tamanoModelo(id?), quitarModelo(id?; sin id, todas), resaltarPieza(id|null),
+ * elegirCara(activo, alElegir(normal, id)),
+ * alTocarPieza(fn|null), alTocarPunto(fn|null; ADR 0004), marcasBloqueo ({poner, quitar}: zonas sin soporte),
+ * ponerRecorridos, mostrarCapa, pintarRecorridos, atenuarAbajo, quitarRecorridos, vistaInicial, pausar(p).
  * @param {HTMLElement} contenedor
  * @returns {Record<string, Function>} el visor
  */
