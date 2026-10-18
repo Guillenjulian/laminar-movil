@@ -79,12 +79,17 @@ export function filasResumen(mmFilamento, diametro, id) {
     ];
 }
 
-// "Poné el precio": vuelve al paso 2 (el resultado se abre reemplazando al
-// paso 3, así que "atrás" lleva a la configuración) y pone el foco en el precio.
-document.addEventListener('click', e => {
-    if (!e.target.closest('[data-poner-precio]')) return;
-    history.back();
-    addEventListener('popstate', () => setTimeout(() => document.getElementById('precioRollo')?.focus(), 50), {
-        once: true,
+/**
+ * Registra el listener de "Poné el precio": vuelve al paso 2 (el resultado se
+ * abre reemplazando al paso 3, así que "atrás" lleva a la configuración) y
+ * pone el foco en el precio. Llamar una sola vez desde main.js.
+ */
+export function iniciarMateriales() {
+    document.addEventListener('click', e => {
+        if (!e.target.closest('[data-poner-precio]')) return;
+        history.back();
+        addEventListener('popstate', () => setTimeout(() => document.getElementById('precioRollo')?.focus(), 50), {
+            once: true,
+        });
     });
-});
+}

@@ -45,6 +45,7 @@ alMostrarPaso(p => {
     if (p !== 4) pararReproduccion();
 });
 iniciarNavegacion();
+materialesUI.iniciarMateriales();
 
 // ---------------------------------------------------------------------------
 // Paso 1: subir el STL
