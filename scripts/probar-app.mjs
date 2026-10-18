@@ -11,6 +11,8 @@
 import { iniciarApp } from './lib/app.mjs';
 import { probarModelo, probarGestos } from './app/paso1-modelo.mjs';
 import { probarFormatos } from './app/paso1-formatos.mjs';
+import { probarPiezas } from './app/piezas.mjs';
+import { probarCopias } from './app/copias.mjs';
 import { probarConfig } from './app/paso2-config.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
@@ -30,6 +32,8 @@ const AREAS = [
     probarModelo,
     probarFormatos,
     probarGestos,
+    probarPiezas,
+    probarCopias,
     probarConfig,
     probarCancelar,
     probarPersonalizar,

@@ -1,4 +1,4 @@
-// BORRADOR hasta T11 (no está enganchado en probar-app.mjs): varias piezas en el paso 1 (ADR 0003, T8).
+// Varias piezas, copias y acomodo en el paso 1 (ADR 0003, T8, T9, T10 y T11).
 //
 // Flujo: con el cubo cargado, "Agregar cubo de ejemplo" suma una segunda pieza (2 chips numeradas, la nueva
 // activa y con el foco); su escala se ve en #datosModelo (que sale del visor) y en una captura del visor;
@@ -6,7 +6,8 @@
 // (el visor ya no la dibuja y el foco va a "Agregar pieza"). Después: quitar la activa cuando es la primera,
 // el tope de MAX_PIEZAS (8) y que con una torre no se vea "Agregar pieza". Al final (T9), laminado: 2 cubos
 // se laminan acomodados (2 grupos de extrusión en la capa 2, en las X de `acomodar`, y "2 piezas" en el
-// resumen), dos agrandadas hasta que no entran dan el error "Las piezas no entran en la cama" sin laminar, y
+// resumen), dos agrandadas hasta que no entran dan el aviso "No entran todas en la cama" con "Siguiente"
+// deshabilitado (T10; el error del paso 3 queda como red de seguridad), y
 // una sola que no entra da el mensaje detallado del worker ("El modelo mide … no entra en la cama").
 //
 // Precondición: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
@@ -156,14 +157,15 @@ async function probarTorre({ page: pagina, ok: revisar, visible, elegirArchivo }
         },
     );
     revisar('con una torre no se ve "Agregar pieza"', !(await visible('#agregarPieza')));
+    revisar('con una torre no se ven las copias', !(await visible('#copiasPieza')));
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
     revisar('de vuelta al cubo: vuelve "Agregar pieza"', await visible('#agregarPieza'));
 }
 
-const CAMA = 220; // Ender 3 V3 SE, origen en la esquina: el centro de la cama es (110, 110)
+export const CAMA = 220; // Ender 3 V3 SE, origen en la esquina: el centro de la cama es (110, 110)
 
 /** X de las extrusiones de la capa `n` del G-code (coordenadas de cama). */
-function xDeCapa(gcode, n) {
+export function xDeCapa(gcode, n) {
     const xs = [];
     let dentro = false;
     let x = 0;
@@ -207,28 +209,22 @@ async function probarLaminarVarias({ page: pagina, ok: revisar, esperarResultado
     await pagina.goBack();
 }
 
-/** Agranda la pieza 2 hasta que el conjunto no entra: aparece el error y el laminado no arranca. */
+/** Agranda la pieza 2 hasta que el conjunto no entra: aviso y "Siguiente" deshabilitado (el paso 3 ya no se alcanza). */
 async function probarNoEntra({ page: pagina, ok: revisar, visible }) {
     await pagina.fill('#escala', '1000'); // 20 mm -> 200 mm: cada una entra sola, juntas no
     await pagina.locator('#escala').blur();
-    await pagina.tap('#siguiente');
-    await pagina.tap('#laminar');
-    await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
     revisar(
-        'varias piezas: si no entran, error "Las piezas no entran en la cama…"',
-        /^Las piezas no entran en la cama/.test(await pagina.textContent('#errorLaminado')),
-        await pagina.textContent('#errorLaminado'),
+        'varias piezas: si no entran, aviso "No entran todas en la cama…" y "Siguiente" deshabilitado',
+        (await visible('#avisoEntran')) &&
+            /^No entran todas en la cama/.test(await pagina.textContent('#avisoEntran')) &&
+            (await pagina.isDisabled('#siguiente')),
+        await pagina.textContent('#avisoEntran'),
     );
-    revisar(
-        'varias piezas: si no entran no se lamina (sigue en el paso 3, en 0 %, sin resultado)',
-        (await visible('section[data-paso="3"]')) &&
-            (await pagina.textContent('#porcentaje')) === '0 %' &&
-            (await pagina.textContent('#cancelar')) === 'Volver' &&
-            !(await visible('section[data-paso="4"]')),
-    );
-    await pagina.tap('#cancelar');
-    await pagina.goBack();
     await pagina.tap('#restablecerModelo');
+    revisar(
+        'varias piezas: al achicarla vuelven a entrar (sin aviso y "Siguiente" habilitado)',
+        !(await visible('#avisoEntran')) && (await pagina.isEnabled('#siguiente')),
+    );
     await pagina.tap('#listaPiezas li:nth-child(2) .chip-quitar');
     revisar(
         'varias piezas: restaurado un cubo de 20 mm a 100 %',

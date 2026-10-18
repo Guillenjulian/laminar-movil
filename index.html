@@ -69,7 +69,36 @@
                         <p class="nombre" id="nombreModelo"></p>
                         <p id="datosModelo"></p>
                         <div class="aviso" id="avisoModelo" hidden></div>
+                        <div class="aviso" id="avisoEntran" role="alert" hidden></div>
                         <div class="aviso" id="avisoTorre" hidden></div>
+
+                        <!-- Copias de la pieza activa (sólo modelos) -->
+                        <div class="copias-pieza" id="copiasPieza" hidden>
+                            <div class="fila-escala">
+                                <span id="copiasEtiqueta">Copias</span>
+                                <button type="button" class="boton-capa" id="copiasMenos" aria-label="Quitar una copia">
+                                    −
+                                </button>
+                                <output
+                                    id="copiasNum"
+                                    class="copias-num"
+                                    aria-live="polite"
+                                    for="copiasMenos copiasMas"
+                                >
+                                    1
+                                </output>
+                                <button
+                                    type="button"
+                                    class="boton-capa"
+                                    id="copiasMas"
+                                    aria-label="Agregar una copia"
+                                    aria-describedby="copiasAyuda"
+                                >
+                                    +
+                                </button>
+                            </div>
+                            <p class="aviso" id="copiasAyuda" hidden></p>
+                        </div>
 
                         <!-- Ajustes del modelo en la cama -->
                         <div class="ajustes-modelo" id="ajustesModelo">

@@ -281,6 +281,19 @@ h2:first-child {
     color: var(--suave);
     font-size: 1.4rem;
 }
+.copias-pieza {
+    margin-bottom: 12px;
+}
+.copias-pieza .fila-escala > span:first-child {
+    flex: 1;
+    font-weight: 600;
+}
+.copias-num {
+    min-width: 2.5em;
+    text-align: center;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+}
 .solo-lectores {
     position: absolute;
     width: 1px;

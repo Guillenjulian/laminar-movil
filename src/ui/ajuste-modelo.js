@@ -42,6 +42,13 @@ function tamanoActual(ctx) {
     return ctx.visor()?.tamanoModelo(piezaActiva()?.id) || estado.vista.tamano;
 }
 
+/** Guarda en la pieza su medida real (lo que se ve es lo que se imprime): la usa el acomodo sin visor. */
+function guardarMedida(ctx) {
+    const p = piezaActiva();
+    const t = p && ctx.visor().tamanoModelo(p.id);
+    if (t) p.tamano = t;
+}
+
 /** Cambia la escala (entre 0,01 y 20) y reaplica; ignora valores no positivos. */
 function ponerEscala(ctx, s) {
     if (!(s > 0)) return;
@@ -52,6 +59,7 @@ function ponerEscala(ctx, s) {
 /** Aplica rotación y escala al visor y refresca escala, textos, "restablecer" y avisos. */
 function aplicar(ctx) {
     ctx.visor().ponerTransformacion(matrizModelo(), piezaActiva()?.id);
+    guardarMedida(ctx);
     const pct = Math.round(estado.escala * 1000) / 10;
     $('escala').value = pct;
     $('datosModelo').textContent =

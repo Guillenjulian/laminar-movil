@@ -26,13 +26,21 @@ export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 let visor = null; // visor del modelo (se crea al cargar el primer modelo)
 let litofania = null; // hoja "Litofanía desde una foto" (se crea en iniciarPaso1)
 let torres = null; // hoja "Torre de calibración" (se crea en iniciarPaso1)
-const ajuste = crearAjuste({ visor: () => visor, alCambiar: programarGuardado, torres: () => torres });
+const ajuste = crearAjuste({
+    visor: () => visor,
+    alCambiar: () => {
+        programarGuardado();
+        piezas.reacomodar();
+    },
+    torres: () => torres,
+});
 const piezas = crearPiezas({
     visor: () => visor,
     ajuste,
     ejemplo: bufferEjemplo,
     leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
     elegirOtro: elegirOtroModelo,
+    guardar: almacen.guardarModelo, // las piezas agregadas también van a recientes
 });
 
 /**
@@ -72,6 +80,7 @@ export function alCambiarImpresora() {
         visor.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
     }
     ajuste.actualizarAviso();
+    piezas.reacomodar();
 }
 
 /**

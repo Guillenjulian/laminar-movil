@@ -53,7 +53,11 @@ export const CONTRATOS = {
     },
     'ui/piezas-ui': {
         exports: { crearPiezas: 1 },
-        importa: ['ui/estado', 'ui/util-dom', 'config'],
+        importa: ['ui/estado', 'ui/util-dom', 'config', 'motor/piezas', 'ui/acomodo', 'ui/copias-ui'],
+    },
+    'ui/copias-ui': {
+        exports: { crearCopias: 1 },
+        importa: ['ui/estado', 'ui/util-dom', 'config', 'motor/piezas'],
     },
     'ui/torres': {
         exports: { prepararTorre: 1 },

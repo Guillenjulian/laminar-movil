@@ -34,7 +34,8 @@ function tamanoTransformado(p) {
  * impresora cuenta como `fuera`. Sin piezas: `entra` es true y `fuera` está vacío.
  * @param {(p: import('./estado.js').Pieza) => ({x:number, y:number, z:number}|null|undefined)} [medir] tamaño
  *   real de la pieza ya transformada (ej. `p => visor.tamanoModelo(p.id)`). Si no viene, o devuelve algo falso,
- *   se usa la caja de las 8 esquinas de `vista.tamano` (conservadora: con giros que no son de 90° puede ser
+ *   se usa `p.tamano` (la medida real que guardan el ajuste y "agregar pieza" desde el visor) y, si tampoco
+ *   está, la caja de las 8 esquinas de `vista.tamano` (conservadora: con giros que no son de 90° puede ser
  *   más grande que la malla real).
  * @returns {{entra: boolean, fuera: number[]}} `fuera`: índices de copia global (piezas en orden, copias seguidas)
  */
@@ -43,7 +44,7 @@ export function acomodarPiezas(medir) {
     const huellas = [];
     const altas = [];
     for (const p of estado.piezas) {
-        const t = medir?.(p) || tamanoTransformado(p);
+        const t = medir?.(p) || p.tamano || tamanoTransformado(p);
         for (let c = 0; c < p.copias; c++) {
             altas.push(t.z > d.maxHeight);
             huellas.push({ x: t.x, y: t.y });
