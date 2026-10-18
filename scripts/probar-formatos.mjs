@@ -24,7 +24,7 @@ await probar3mf({ revisar });
 await probarErrores({ revisar });
 await probarLitofania({ revisar });
 probarMd5({ revisar });
-await probarBambuXml({ revisar });
+probarBambuXml({ revisar });
 await probarBambu3mf({ revisar });
 await probarEntrega({ revisar });
 
