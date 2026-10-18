@@ -2,8 +2,8 @@
 // modo de color y pintado de los recorridos.
 // Responsabilidad: dibuja y cablea #pausarCapa, #listaPausas, #marcasPausa y #modoColor; los datos
 // viven en `estado.pausas`, `estado.coloresFilamento` y `estado.modoColor` (se leen en el momento).
-// Flujo: vista-capas llama conectarPausas(deps) una vez y le inyecta lo que necesita del visor
-// (capas, visor, irACapa, pararReproduccion); luego llama dibujarPausas() cuando cambian las pausas.
+// Flujo: vista-capas llama conectarPausas(deps) una vez y le inyecta lo que es suyo: las capas, el visor,
+// irACapa y pararReproduccion; luego llama dibujarPausas() cuando cambian las pausas.
 // No toca el DOM al importarse: todo manejador se registra dentro de conectarPausas().
 
 import { estado } from './estado.js';
@@ -107,7 +107,7 @@ export function dibujarPausas() {
         ? tramos
               .map(
                   (t, i) => `<li>
-        <input type="color" value="${colorFilamento(i)}" data-filamento="${i}" aria-label="Color del filamento ${i + 1}">
+        <input type="color" value="${escapar(colorFilamento(i))}" data-filamento="${i}" aria-label="Color del filamento ${i + 1}">
         <button type="button" class="ir" data-capa="${t.desde}">
             <b>Filamento ${i + 1}</b> · capas ${t.desde + 1}–${t.hasta + 1}
             ${t.pausa ? `<small>⏸ pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}

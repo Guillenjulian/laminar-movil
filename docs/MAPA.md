@@ -66,6 +66,7 @@ Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   �
           vista-capas ──► pausas-ui
 Nivel 1   pausas-ui ──► estado, util-dom
 Nivel 1   navegacion ──► estado
+          pausas-ui ──► estado, util-dom
 Nivel 0   estado, util-dom, actualizacion, cambios, torres ──► hojas ya existentes (avanzado, formato, materiales,
                                               litofania, visor, motor/*, perfiles/*, almacen, config)
 ```
