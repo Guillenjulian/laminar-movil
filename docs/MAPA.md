@@ -157,7 +157,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y posiciones inválidas | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige. También corre las pruebas de los accesores de `estado.piezas` (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` + `scripts/probar-estado.mjs` |
-| `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, todas las impresoras importadas, malla pesada, cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa), torres de calibración (casos 10-11: M104 y retracción por bloque), los 8 perfiles revisados (tabla fija de datos de fábrica, macros sin reemplazar, temperaturas, X/Y dentro de la cama, retracción esperada, orden de arranque, G29 sólo donde corresponde, `reemplaza` e `idVigente`) y varias piezas con `track.pos` (ADR 0003: T0 con falda, borde, balsa y soportes; T6 con equivalencia con una pieza, 4 copias, alturas distintas, cambio por altura, fuera de la cama) | `scripts/probar-motor.mjs` (orquestador) + `prueba-motor.html` + `scripts/motor/{cubo,materiales,transformaciones,personalizar,impresoras,avanzado,malla-pesada,ayudas}.mjs` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` + `scripts/motor/perfiles-revisados.mjs` + `scripts/motor/piezas-kiri.mjs` + `scripts/motor/piezas.mjs` (helpers de G-code en `scripts/motor/gcode-capas.mjs`) |
+| `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, todas las impresoras importadas, malla pesada, cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa), torres de calibración (casos 10-11: M104 y retracción por bloque), los 8 perfiles revisados (tabla fija de datos de fábrica, macros sin reemplazar, temperaturas, X/Y dentro de la cama, retracción esperada, orden de arranque, G29 sólo donde corresponde, `reemplaza` e `idVigente`) y varias piezas con `track.pos` (ADR 0003: T0 con falda, borde, balsa y soportes; T6 con equivalencia con una pieza, 4 copias, alturas distintas, cambio por altura, fuera de la cama) | `scripts/probar-motor.mjs` (orquestador) + `prueba-motor.html` + `scripts/motor/{cubo,materiales,transformaciones,personalizar,impresoras,avanzado,malla-pesada,ayudas}.mjs` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` + `scripts/motor/perfiles-revisados.mjs` + `scripts/motor/piezas-kiri.mjs` + `scripts/motor/piezas.mjs` + `scripts/motor/piezas-extra.mjs` (cama centrada con `originCenter`, progreso y `AbortError` con 3 copias, sin worker vivo; `prueba-motor.html` expone `window.progreso` y `cancelarEn`) (helpers de G-code en `scripts/motor/gcode-capas.mjs`) |
 | `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` (orquestador) + `scripts/app/*.mjs` + `scripts/lib/` |
 | `npm run lint` | ESLint (recomendado + límites de tamaño como aviso: 300 líneas por archivo, 40 por función); `npm run lint:fix` aplica los arreglos automáticos | `eslint.config.js` |
 | `npm run format:check` | Prettier (4 espacios, comillas simples, 120 columnas); `npm run format` lo aplica | `.prettierrc.json` |
@@ -172,6 +172,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Paso 1: OBJ, 3MF, litofanía | `scripts/app/paso1-formatos.mjs` |
 | Paso 1: varias piezas (agregar, activar, escalar, quitar, laminar dos cubos, tope, torre) | `scripts/app/piezas.mjs` |
 | Paso 1: copias (stepper, acomodo, aviso "no entran", recientes) | `scripts/app/copias.mjs` |
+| Paso 1: dos piezas con giro de 45° (apoyar cara) acomodadas con la huella real | `scripts/app/piezas-extra.mjs` |
 | Paso 2: calidad, atrás/adelante | `scripts/app/paso2-config.mjs` |
 | Paso 3: cancelar, personalizar, laminar el cubo | `scripts/app/paso3-laminar.mjs` |
 | Materiales y costo | `scripts/app/materiales.mjs` |
@@ -185,6 +186,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Recientes y ajustes guardados | `scripts/app/recientes.mjs` |
 | Escala, rotar, apoyar cara | `scripts/app/transformar.mjs` |
 | Torres de calibración (hoja, paso 2, M104 por bloque) | `scripts/app/torres.mjs` |
+| Precio del rollo tras recargar (precio y costo) | `scripts/app/piezas-extra.mjs` |
 | PWA y sin conexión | `scripts/app/offline.mjs` |
 
 Antes de cualquier commit: `npm run build` y las suites que toquen el área cambiada. Antes de integrar, todas.
@@ -231,7 +233,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - Warnings de `npm run lint` (3, 0 errores; no bloquean). Funciones: `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`).
 - Piezas y copias (ADR 0003):
-  - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
-  - No hay prueba de piezas con impresoras `originCenter` ni de cama de cinta (R1 del ADR 0003 lo deja pendiente).
-  - `progreso` y `cancelación` con más de un widget (N > 1) no tienen prueba propia.
+  - No hay prueba de piezas con cama de cinta (R1 del ADR 0003 lo deja pendiente).
+  - El progreso de "laminando" con 3 copias no llega a 1 (medido 0,87 y 0,94 según la corrida; el último tramo del último widget no se avisa; la etapa "exportando" sí cierra en 1). Está anotado en `scripts/motor/piezas-extra.mjs`; no se tocó `src/`.

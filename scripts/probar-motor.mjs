@@ -23,6 +23,7 @@ import { probarTorres } from './motor/torres.mjs';
 import { probarPiezasKiri } from './motor/piezas-kiri.mjs';
 import { probarPerfilesRevisados } from './motor/perfiles-revisados.mjs';
 import { probarPiezas } from './motor/piezas.mjs';
+import { probarPiezasExtra } from './motor/piezas-extra.mjs';
 
 const modoDev = process.argv.includes('--dev');
 const servidor = modoDev
@@ -71,6 +72,7 @@ try {
     await probarPiezasKiri(ctx); // varias piezas con track.pos (ADR 0003, T0)
     await probarPerfilesRevisados(ctx); // 8 impresoras populares revisadas
     await probarPiezas(ctx); // varias piezas con track.pos (ADR 0003)
+    await probarPiezasExtra(ctx); // cama centrada, progreso y cancelación con 3 copias
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());

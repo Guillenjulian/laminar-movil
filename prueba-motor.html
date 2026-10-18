@@ -99,12 +99,15 @@
                 transformacion,
                 stlBase64, // un STL ya armado (lo usan las pruebas que necesitan una malla propia)
                 piezas: pedidas, // varias piezas (ADR 0003): [{ caso | stlBase64 | mismoQue, transformacion?, posiciones }]
+                cancelarEn, // aborta (AbortSignal) cuando 'laminando' llega a este valor (0..1)
                 ...config
             } = {}) => {
                 const piezas = pedidas && (await leerPiezas(pedidas));
                 const stl = pedidas ? null : await aBuffer({ stlBase64, caso });
                 const { dispositivo, proceso, avisos } = configurar(config);
                 const inicio = performance.now();
+                const control = new AbortController();
+                window.progreso = []; // [etapa, valor] de cada aviso de progreso, para las pruebas
                 const r = await laminar({
                     stl,
                     dispositivo,
@@ -112,7 +115,12 @@
                     maxTriangulos: limite ?? maxTriangulos(),
                     transformacion,
                     piezas,
-                    alProgresar: (etapa, valor) => (estado.textContent = `${etapa} ${Math.round(valor * 100)}%`),
+                    signal: control.signal,
+                    alProgresar: (etapa, valor) => {
+                        window.progreso.push([etapa, valor]);
+                        estado.textContent = `${etapa} ${Math.round(valor * 100)}%`;
+                        if (etapa === 'laminando' && valor >= (cancelarEn ?? Infinity)) control.abort();
+                    },
                 });
                 r.ms = Math.round(performance.now() - inicio);
                 r.avisos = avisos;
