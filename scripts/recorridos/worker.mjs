@@ -14,7 +14,17 @@ class WorkerFalso {
 
 export async function probarWorker({ revisar }) {
     console.log('\nrecorridos.worker.js y motor.leerRecorridos (auto)');
+    // El Worker falso se restaura al final para no ensuciar a las pruebas que se sumen después.
+    const WorkerOriginal = globalThis.Worker;
     globalThis.Worker = WorkerFalso;
+    try {
+        await probarConWorkerFalso(revisar);
+    } finally {
+        globalThis.Worker = WorkerOriginal;
+    }
+}
+
+async function probarConWorkerFalso(revisar) {
     const { leerRecorridos } = await import('../../src/motor/motor.js');
 
     const g = generarGcode(30000, 3);
