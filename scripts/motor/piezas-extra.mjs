@@ -67,13 +67,13 @@ async function probarProgreso({ laminar, revisar, pagina }) {
     const crece = lam.every((v, i) => i === 0 || v >= lam[i - 1]) && lam.at(-1) > lam[0];
     const resumen = `(${lam.length} avisos: ${lam[0].toFixed(3)} … ${lam.at(-1)})`;
     revisar('3 copias: el progreso de "laminando" crece sin bajar', lam.length >= 3 && crece, resumen);
-    // Hallazgo: "laminando" no llega a 1 (Kiri no avisa el último tramo del último widget): el máximo se informa acá.
+    // Reproduce un bug de src/motor/laminador.worker.js (laminarWidgets): "laminando" no llega a 1 porque el último
+    // tramo del último widget no se avisa. Esta prueba falla hasta que se arregle (hoy el máximo es < 1).
     const fin = avisos.at(-1);
-    const detalle = `(laminando máx ${Math.max(...lam)}; último aviso ${JSON.stringify(fin)})`;
     revisar(
-        '3 copias: ningún aviso pasa de 1 y el último de todos es "exportando" = 1',
-        fin[0] === 'exportando' && fin[1] === 1 && Math.max(...lam) <= 1,
-        detalle,
+        '3 copias: el último aviso de "laminando" es exactamente 1 y ninguno pasa de 1',
+        lam.at(-1) === 1 && Math.max(...lam) === 1,
+        `(último ${lam.at(-1)}, máx ${Math.max(...lam)}; último aviso de todos ${JSON.stringify(fin)})`,
     );
     const terceros = [0, 1, 2].map(k => lam.some(v => v > k / 3 && v <= (k + 1) / 3));
     revisar('3 copias: hay avisos en cada tercio (un widget cada uno)', terceros.every(Boolean), `(${terceros})`);

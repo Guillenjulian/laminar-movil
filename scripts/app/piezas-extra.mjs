@@ -4,6 +4,8 @@
 //   inclinada (giro de 45°, no múltiplo de 90°) y lo gira 90° en Z; agrega una segunda igual, laminan juntas y
 //   la capa 2 del G-code tiene que caer en las posiciones de `acomodar` con la huella REAL (la que mide el
 //   visor), no con la caja de 8 esquinas, que daría otras X.
+//   El toque de "apoyar cara" de la pieza 2 va en 0,62/0,62 del lienzo: depende del encuadre del visor en el Pixel 7
+//   (cámara y posiciones del acomodo). Una aserción previa avisa si cae fuera de la pieza 2.
 //   Precondición: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
 //   Deja: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
 //
@@ -78,7 +80,13 @@ async function apoyarCara(pagina, fx, fy) {
     await pagina.tap('#apoyarCara');
     const l = await pagina.locator('#visor canvas').boundingBox();
     await pagina.touchscreen.tap(l.x + l.width * fx, l.y + l.height * fy);
-    await pagina.waitForFunction(() => document.getElementById('ayudaCara').hidden, null, { timeout: 5000 });
+    await pagina
+        .waitForFunction(() => document.getElementById('ayudaCara').hidden, null, { timeout: 5000 })
+        .catch(() => {
+            throw new Error(
+                `apoyar cara: el toque en ${fx}/${fy} del lienzo no cayó en ninguna pieza (¿cambió el encuadre?)`,
+            );
+        });
 }
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
@@ -95,7 +103,15 @@ export async function probarAcomodoConGiros(ctx) {
     );
     await pagina.setInputFiles('#archivoPieza', techo);
     await pagina.waitForFunction(() => document.querySelectorAll('#listaPiezas .chip').length === 2);
-    await apoyarCara(pagina, 0.62, 0.62); // la segunda queda a la derecha, al frente
+    await pagina.tap('#listaPiezas li:nth-child(2) .chip'); // la activa es la 2: a ella se aplica el giro
+    // El visor no re-encuadra: con 2 piezas la 2 queda a la derecha y al frente, en 0,62/0,62 del lienzo (Pixel 7).
+    // Si cambia la cámara y el toque cae en la pieza 1 (ya apoyada) o en el vacío, esto falla con un mensaje claro.
+    await apoyarCara(pagina, 0.62, 0.62);
+    revisar(
+        'techo 2: el toque cayó en la pieza 2 y la apoyó (40,0 × 14,1 × 14,1 mm antes de girarla)',
+        (await medidas(pagina)) === '40,0 × 14,1 × 14,1 mm',
+        await medidas(pagina),
+    );
     await pagina.tap('[data-rotar="z"]');
     revisar('techo 2: lo mismo que la 1', (await medidas(pagina)) === '14,1 × 40,0 × 14,1 mm', await medidas(pagina));
     const esperado = await laminarYRevisar(ctx);
