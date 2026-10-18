@@ -7,6 +7,8 @@
 // Precondición: paso 1 con el cubo de ejemplo cargado (una sola pieza), sin zonas; soportes en 'no'.
 // Deja: paso 2 con el cubo cargado, una zona marcada y soportes en 'no'.
 
+import { tocarLienzo } from '../lib/visor.mjs';
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarSoportesTipo(ctx) {
     const { page: pagina, ok: revisar } = ctx;
@@ -14,8 +16,7 @@ export async function probarSoportesTipo(ctx) {
     const zonas = async () => (await pagina.textContent('#tipoSoportesZonas')).trim();
 
     await pagina.tap('#bloqueoMarcar');
-    const caja = await pagina.locator('#visor canvas').boundingBox();
-    await pagina.touchscreen.tap(caja.x + caja.width / 2, caja.y + caja.height / 2);
+    await tocarLienzo(pagina);
     await pagina.tap('#bloqueoMarcar');
     await pagina.tap('#siguiente');
 

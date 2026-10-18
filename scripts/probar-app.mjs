@@ -31,6 +31,15 @@ import { probarVisorDiferido } from './app/visor-diferido.mjs';
 import { probarVistaLiviana } from './app/vista-liviana.mjs';
 import { probarOffline } from './app/offline.mjs';
 import { probarAcomodoConGiros, probarPrecioTrasRecargar } from './app/piezas-extra.mjs';
+import { probarBloqueos } from './app/bloqueos.mjs';
+import { probarSoportesTipo } from './app/soportes-tipo.mjs';
+import { probarSoportesEstado } from './app/soportes-estado.mjs';
+import { probarVisorBloqueos } from './app/visor-bloqueos.mjs';
+
+// Vuelve del paso 2 al 1: probarSoportesTipo termina en el paso 2 y probarCancelar también parte del 2.
+const volverAlPaso1 = async ctx => {
+    await ctx.page.goBack();
+};
 
 const AREAS = [
     probarModelo,
@@ -39,7 +48,10 @@ const AREAS = [
     probarPiezas,
     probarCopias,
     probarAcomodoConGiros,
+    probarBloqueos, // ADR 0004: zonas sin soporte (paso 1, cubo, 100 %); deja el paso 1
     probarConfig,
+    volverAlPaso1,
+    probarSoportesTipo, // ADR 0004: selector de tipo (parte del paso 1 con el cubo y soportes 'no'); deja el paso 2
     probarCancelar,
     probarPersonalizar,
     probarLaminarCubo,
@@ -56,6 +68,8 @@ const AREAS = [
     probarTransformar,
     probarTorres,
     probarPrecioTrasRecargar,
+    probarSoportesEstado, // ADR 0004: migración de preferencias y laminar con árbol y una zona (recarga la página)
+    probarVisorBloqueos, // ADR 0004: toque con punto y marcas en un visor de prueba (no usa el estado de la app)
     probarVisorDiferido,
     probarVistaLiviana,
     probarOffline,

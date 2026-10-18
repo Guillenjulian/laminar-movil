@@ -6,7 +6,8 @@
 //   2. zona sin soporte con 'normal' (una y dos copias) y con 'arbol': ninguna extrusión de soporte dentro de la
 //      sección de la esfera y, con 'arbol', nada flotando;
 //   3. sin zonas y sin árbol el G-code es idéntico al del Kiri sin puente (T0.c) y en producción no se registra nada.
-// Lo llama scripts/probar-motor.mjs dentro de su `try` (se registra en T6).
+// El signo de `pos` en la cama local está en soportes-signo.mjs.
+// Lo llama scripts/probar-motor.mjs dentro de su `try`.
 
 import { sinFecha } from './gcode-capas.mjs';
 
@@ -71,7 +72,7 @@ export function extrusionesDe(gcode) {
     return salida;
 }
 
-const esSoporte = e => e.tipo.includes('support');
+export const esSoporte = e => e.tipo.includes('support');
 const suma = (lista, f) => lista.reduce((s, e) => s + f(e), 0);
 
 // Puntos de una extrusión cada 0,5 mm (de inicio a fin), en el marco local de la copia que está en `pos`.
@@ -96,7 +97,7 @@ const copiaDe = (e, posiciones) =>
 // Cuántas muestras de soporte caen dentro de la sección de alguna esfera. La sección se toma con su radio mínimo
 // dentro del alto de la capa (la capa de Kiri se corta en algún z entre `z - alto` y `z`) y menos 0,05 mm; las
 // secciones de menos de 1 mm de radio no cuentan (el cierre del contorno de Kiri las tapa: el polo de la esfera).
-function dentroDeZonas(extr, zonas, posiciones, alto) {
+export function dentroDeZonas(extr, zonas, posiciones, alto) {
     let n = 0;
     for (const e of extr.filter(esSoporte)) {
         const pos = copiaDe(e, posiciones);
@@ -139,12 +140,12 @@ function flotantes(extr, alto, radio = 5.05) {
 }
 
 // Alto de capa: la diferencia entre capas que más se repite (hay alguna extrusión suelta a otra altura en la primera).
-const altoDe = extr => {
+export const altoDe = extr => {
     const zs = [...new Set(extr.map(e => +e.z.toFixed(3)))].sort((a, b) => a - b);
     const difs = zs.slice(1).map((z, i) => +(z - zs[i]).toFixed(3));
     return difs.sort((a, b) => difs.filter(d => d === b).length - difs.filter(d => d === a).length)[0];
 };
-const f = (n, d = 1) => n.toFixed(d).replace('.', ',');
+export const f = (n, d = 1) => n.toFixed(d).replace('.', ',');
 
 // Geometría del soporte árbol de la T sola: bajo la tapa, fuera de la pieza, dentro de la cama y sin nada en el aire.
 function revisarArbol({ revisar }, ea) {

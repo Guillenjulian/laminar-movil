@@ -9,14 +9,14 @@
 // Precondición: paso 1 con el cubo de ejemplo cargado (una sola pieza), escala 100 %, sin zonas.
 // Deja: paso 1 con el cubo de ejemplo cargado, escala 100 %, sin zonas y fuera del modo "marcar".
 
+import { tocarLienzo } from '../lib/visor.mjs';
+
 const AVISO = 'Se quitaron las zonas sin soporte porque cambió la pieza';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarBloqueos(ctx) {
     const { page: pagina, ok: revisar, visible } = ctx;
     const chips = pagina.locator('#bloqueoLista .chip');
-    const caja = await pagina.locator('#visor canvas').boundingBox();
-    const centro = { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 };
     const pulsado = () => pagina.getAttribute('#bloqueoMarcar', 'aria-pressed');
 
     revisar('zonas: el panel se ve con un modelo', await visible('#bloqueosPanel'));
@@ -28,7 +28,7 @@ export async function probarBloqueos(ctx) {
     await pagina.tap('#bloqueoMarcar');
     revisar('zonas: el modo "marcar" queda con aria-pressed', (await pulsado()) === 'true');
     await pagina.tap('#bloqueoRadioMas');
-    await pagina.touchscreen.tap(centro.x, centro.y);
+    await tocarLienzo(pagina);
     const textos = await chips.allTextContents();
     revisar(
         'zonas: un toque sobre la pieza agrega la chip "Zona 1 · 9 mm"',
@@ -43,7 +43,7 @@ export async function probarBloqueos(ctx) {
     );
 
     await radioYEscala(ctx, chips, pulsado);
-    await quitarUna(pagina, centro);
+    await quitarUna(pagina);
     const foco = await pagina.evaluate(() => document.activeElement?.id);
     revisar(
         'zonas: quitar deja la lista vacía y el foco en "marcar"',
@@ -53,9 +53,9 @@ export async function probarBloqueos(ctx) {
 }
 
 /** Marca una zona y la quita con su botón. */
-async function quitarUna(pagina, centro) {
+async function quitarUna(pagina) {
     await pagina.tap('#bloqueoMarcar');
-    await pagina.touchscreen.tap(centro.x, centro.y);
+    await tocarLienzo(pagina);
     await pagina.tap('#bloqueoLista .chip-quitar');
 }
 
