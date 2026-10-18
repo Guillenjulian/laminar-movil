@@ -14,7 +14,8 @@
 // Mensajes que manda:
 //   { tipo: 'progreso', etapa: 'leyendo'|'reduciendo'|'laminando'|'preparando'|'exportando', valor: 0..1 }
 //   { tipo: 'listo', gcode: string, info: { tiempo, filamento, capas, triangulos, tamano, decimado, copias, ganchos } }
-//   (`ganchos`: lo que registraron los ganchos de soportes, ver soportes-kiri.js)
+//   (`ganchos` sólo viaja si `proceso.laminarDiagnostico` es true, algo que sólo pone prueba-motor.html: lo que
+//   registraron los ganchos de soportes, ver soportes-kiri.js. Esa clave no llega a Kiri ni al G-code.)
 //   { tipo: 'error', mensaje: string }
 
 import '../../vendor/kiri/src/kiri/run/worker.js';
@@ -136,13 +137,14 @@ async function exportar(settings) {
 }
 
 async function laminar(msg) {
-    const { dispositivo, proceso, maxTriangulos = Infinity } = msg;
+    const { dispositivo, maxTriangulos = Infinity } = msg;
+    const { laminarDiagnostico = false, ...proceso } = msg.proceso;
     progreso('leyendo', 0);
     const piezas = piezasDe(msg);
     const r = prepararPiezas(piezas, dispositivo, maxTriangulos, v => progreso('reduciendo', v));
     msg.stl = null; // prepararPiezas ya soltó el `stl` de cada pieza
     conBloqueos(piezas, r.widgets);
-    reiniciarGanchos();
+    reiniciarGanchos(laminarDiagnostico);
     const settings = armarSettings(dispositivo, proceso);
     await subirWidgets(r.widgets, settings);
     const capas = await laminarWidgets(r.widgets.length, settings);
@@ -150,6 +152,7 @@ async function laminar(msg) {
     // Modo jarrón: Kiri deja cada vuelta plana; la convertimos en espiral.
     const gcode = proceso.sliceFillType === 'vase' ? espiralar(lineas.join('\n')) : lineas.join('\n');
     const info = { tiempo: salida.time, filamento: salida.distance, capas };
+    const ganchos = resumenGanchos();
     return {
         gcode,
         info: {
@@ -158,7 +161,7 @@ async function laminar(msg) {
             tamano: r.tamano,
             decimado: r.decimado,
             copias: r.widgets.length,
-            ganchos: resumenGanchos(),
+            ...(ganchos && { ganchos }),
         },
     };
 }

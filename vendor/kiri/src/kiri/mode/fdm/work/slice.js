@@ -589,7 +589,7 @@ export function sliceOne(settings, widget, onupdate, ondone) {
 
         // convert shadows to trees, when specified
         // PARCHE laminar-movil: soportes árbol (ADR 0004)
-        const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol(stack, widget.anno?.bloqueos, {
+        const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
             lineWidth, sliceHeight, angulo: process.sliceSupportAngle,
         });
 
@@ -612,7 +612,7 @@ export function sliceOne(settings, widget, onupdate, ondone) {
                 POLY.subtract(shadow, clips, rem, null, slice.z, minArea, { wasm: false });
                 shadow = rem;
             }
-            shadow = globalThis.laminarMovil?.sinBloqueos(shadow, slice.z, widget.anno?.bloqueos) ?? shadow; // PARCHE laminar-movil
+            shadow = globalThis.laminarMovil?.sinBloqueos?.(shadow, slice.z, widget.anno?.bloqueos, minArea) ?? shadow; // PARCHE laminar-movil
             // pump shadow to clean to clean it up
             if (true) {
                 let bump = lineWidth * 2;

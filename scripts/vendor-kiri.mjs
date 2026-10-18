@@ -192,7 +192,7 @@ parchar(
             // console.log('TREE OUTPUT');
         }`,
     `        // PARCHE laminar-movil: soportes árbol (ADR 0004)
-        const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol(stack, widget.anno?.bloqueos, {
+        const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
             lineWidth, sliceHeight, angulo: process.sliceSupportAngle,
         });`,
     'soportes árbol: stub de sliceSupportTree',
@@ -210,7 +210,7 @@ parchar(
 parchar(
     'kiri/mode/fdm/work/slice.js',
     '            // pump shadow to clean to clean it up',
-    `            shadow = globalThis.laminarMovil?.sinBloqueos(shadow, slice.z, widget.anno?.bloqueos) ?? shadow; // PARCHE laminar-movil
+    `            shadow = globalThis.laminarMovil?.sinBloqueos?.(shadow, slice.z, widget.anno?.bloqueos, minArea) ?? shadow; // PARCHE laminar-movil
             // pump shadow to clean to clean it up`,
     'zonas sin soporte: antes de limpiar el shadow',
 );
