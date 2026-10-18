@@ -96,6 +96,7 @@ async function revisarSinPausas(ctx) {
     const info = await zip.file(ENTRADAS.sliceInfo).async('string');
     revisar('Bambu: slice_info.config con printer_model_id N2S', /printer_model_id" value="N2S"/.test(info));
     revisar('Bambu: el filamento es PLA', /type="PLA"/.test(info));
+    revisar('Bambu: el código de filamento de PLA es GFL99', /tray_info_idx="GFL99" type="PLA"/.test(info), info);
     revisar(
         'Bambu: los botones quedan habilitados',
         !(await pagina.isDisabled('#descargar')) && !(await pagina.isDisabled('#compartir')),
@@ -153,6 +154,11 @@ async function revisarOtroMaterial(ctx) {
     const { zip, gcode } = await abrir(bytes);
     const info = await zip.file(ENTRADAS.sliceInfo).async('string');
     revisar('Bambu con PETG: slice_info con type="PETG"', /type="PETG"/.test(info) && !/type="PLA"/.test(info));
+    revisar(
+        'Bambu con PETG: el código de filamento es GFG99 (no GFL99)',
+        /tray_info_idx="GFG99" type="PETG"/.test(info),
+        info,
+    );
     revisar('Bambu con PETG: sigue sin pausas', !gcode.includes('M400 U1'));
     await pagina.goBack();
     await pagina.tap('label.opcion:has(input[value="pla"])');

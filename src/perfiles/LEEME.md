@@ -17,6 +17,8 @@
   velocidad (lo usan el importador y "Mi impresora").
 - `materiales.json`: materiales comunes a todas las impresoras (PLA, PLA+, PETG, TPU, ABS, ASA).
   Cada uno trae `nombre`, `descripcion`, `densidad` (g/cm³, para los gramos y el costo),
+  `bambu` (código de filamento genérico, `tray_info_idx`, que escribe el `.gcode.3mf` de las Bambu: PLA y PLA+ `GFL99`,
+  PETG `GFG99`, ABS `GFB99`, ASA `GFB98`, TPU `GFU99`; si falta, `GFL99`),
   `proceso` (pisa a la calidad: por eso el TPU imprime lento aunque elijas Rápido) y, opcionales,
   `aviso` (se muestra al elegirlo) y `avisoBowden` (si la impresora retrae más de 2 mm).
   El precio del rollo lo carga cada usuario en el paso 2 y queda en el celu.

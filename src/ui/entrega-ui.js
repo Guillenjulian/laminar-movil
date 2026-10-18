@@ -36,13 +36,14 @@ export function entregaDe() {
 function infoBambu(imp) {
     const { info, archivo } = estado.resultado;
     const ext = imp.dispositivo.extruders[0];
+    const mat = materialesUI.material(estado.material);
     return {
         nombre: archivo.replace(/\.gcode$/i, ''),
         tiempo: info.tiempo,
         gramos: materialesUI.gramosDe(info.filamento, ext.extFilament, estado.material),
         metros: info.filamento / 1000,
         boquilla: ext.extNozzle,
-        filamento: { tipo: materialesUI.material(estado.material).nombre, color: '#FFFFFF', trayInfoIdx: 'GFL99' },
+        filamento: { tipo: mat.nombre, color: '#FFFFFF', trayInfoIdx: mat.bambu || 'GFL99' },
         soportes: estado.soportes,
     };
 }

@@ -612,9 +612,7 @@ Lo construido (T1 a T7) sigue el plan. Estas son las diferencias reales:
   miniaturas (ver "Fuera de v1").
 - **Prueba de perfiles.** `scripts/motor/bambu-perfiles.mjs` revisa que cada `{variable}` del G-code esté en una lista
   blanca de las que reemplaza Kiri (`VARIABLES_KIRI`), además de las temperaturas y la pausa.
-- **Filamento fijo (pendiente).** `infoBambu` en `entrega-ui.js` pone `color: '#FFFFFF'` y `trayInfoIdx: 'GFL99'` para
-  todos los materiales. Sólo el `tipo` sale del material. El ADR pide el código de cada uno (PETG `GFG99`, ABS
-  `GFB99`, etc.): hay que mapearlo antes de T9.
+- El `tray_info_idx` sale de `materiales.json` (`bambu`); el color sigue fijo en #FFFFFF.
 
 Pendientes de una persona:
 

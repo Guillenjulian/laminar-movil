@@ -270,7 +270,7 @@ Esto queda pendiente de validar a mano:
 - [ ] **Compartir en Android (Chrome) e iOS (Safari)**: qué MIME acepta `canShare` para el `.gcode.3mf` (`application/octet-stream`, `application/zip`, `model/3mf`).
 - [ ] Las miniaturas: que la pantalla de la impresora y Bambu Studio las muestren.
 - [ ] Volver con "Adelante" al paso 4 después de cambiar el material: que el archivo que se descarga o comparte tenga el G-code del material nuevo.
-- [ ] Filamento: el código de bandeja y el color de `slice_info.config` son fijos (`GFL99`, `#FFFFFF`) para todos los materiales; hay que mapearlos antes de imprimir PETG u otro material.
+- [ ] Filamento: el color de `slice_info.config` es fijo (`#FFFFFF`) para todos los materiales. El código de bandeja (`tray_info_idx`) ya sale de `materiales.json` (`bambu`); validar esos códigos contra un `slice_info.config` real de Bambu Studio.
 
 ### Otros
 

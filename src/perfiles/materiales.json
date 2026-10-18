@@ -1,11 +1,12 @@
 {
     "_nota": "Materiales disponibles para todas las impresoras. Se aplican DESPUÉS de la calidad (ver LEEME.md), así que lo que ponga un material en 'proceso' pisa a la calidad (por ejemplo, las velocidades del TPU). Las temperaturas se recortan a los límites de cada impresora.",
     "_nota_valores": "Temperaturas: un valor cómodo dentro del rango que recomiendan los fabricantes de filamento en la etiqueta del rollo (eSUN, Grilon3, Printalot, Prusament, Polymaker y similares); cada marca y color cambia unos grados, así que conviene ajustarlas con una torre de temperatura. Densidades: las de las hojas técnicas, redondeadas a dos decimales. Ventilador de 0 a 255 (128 = 50 %); la primera capa va siempre sin ventilador para que pegue mejor.",
-    "_nota_campos": "nombre y descripcion se ven en el paso 2; densidad (g/cm³) sirve para calcular los gramos y el costo; aviso (opcional) se muestra al elegirlo; avisoBowden (opcional) se muestra si la impresora retrae más de 2 mm (extrusor Bowden).",
+    "_nota_campos": "nombre y descripcion se ven en el paso 2; densidad (g/cm³) sirve para calcular los gramos y el costo; bambu es el código de filamento genérico (tray_info_idx) que escribe el .gcode.3mf de las Bambu; aviso (opcional) se muestra al elegirlo; avisoBowden (opcional) se muestra si la impresora retrae más de 2 mm (extrusor Bowden).",
     "pla": {
         "nombre": "PLA",
         "descripcion": "El de todos los días: fácil de imprimir, no se deforma y casi no tiene olor. No aguanta el calor (se ablanda arriba de 55 °C, ojo con el auto al sol).",
         "densidad": 1.24,
+        "bambu": "GFL99",
         "_nota": "Rango típico: boquilla 190–220 °C, cama 50–60 °C, ventilador al 100 %.",
         "proceso": {
             "outputTemp": 200,
@@ -20,6 +21,7 @@
         "nombre": "PLA+",
         "descripcion": "PLA mejorado: un poco más tenaz y menos quebradizo. Se imprime casi igual, con unos grados más.",
         "densidad": 1.24,
+        "bambu": "GFL99",
         "_nota": "Rango típico: boquilla 205–230 °C, cama 55–65 °C, ventilador al 100 %. La densidad varía según la marca (1,20–1,25).",
         "proceso": {
             "outputTemp": 215,
@@ -34,6 +36,7 @@
         "nombre": "PETG",
         "descripcion": "Más resistente al calor, a los golpes y a la intemperie que el PLA. Bueno para piezas útiles y de exterior.",
         "densidad": 1.27,
+        "bambu": "GFG99",
         "aviso": "El PETG se pega muchísimo al PEI liso y al vidrio: usá pegamento en barra como separador. Puede dejar algunos hilitos.",
         "_nota": "Rango típico: boquilla 220–250 °C, cama 70–85 °C, ventilador 30–60 %. Z-hop chico para que la boquilla no arrastre material sobre la pieza.",
         "proceso": {
@@ -50,6 +53,7 @@
         "nombre": "TPU (95A)",
         "descripcion": "Flexible, tipo goma: fundas, burletes, ruedas, patas antideslizantes.",
         "densidad": 1.21,
+        "bambu": "GFU99",
         "aviso": "Imprimí lento; sólo con extrusor directo.",
         "avisoBowden": "TPU con extrusor Bowden suele trabarse: el filamento se dobla dentro del tubo. Si lo probás igual, andá todavía más lento.",
         "_nota": "Rango típico: boquilla 210–230 °C, cama 40–60 °C, 20–30 mm/s y retracción corta (0–1 mm) para que no se enrosque en el extrusor. outputMaxFlowrate bajo (mm³/s) frena cualquier tramo que se pase.",
@@ -73,6 +77,7 @@
         "nombre": "ABS",
         "descripcion": "Aguanta calor (hasta ~95 °C) y se puede lijar o alisar con acetona. Difícil en impresoras abiertas.",
         "densidad": 1.04,
+        "bambu": "GFB99",
         "aviso": "Necesita gabinete cerrado y buena ventilación (larga olor y gases). En una impresora abierta, como la Ender 3 V3 SE, puede despegarse o rajarse.",
         "_nota": "Rango típico: boquilla 230–260 °C, cama 90–110 °C, ventilador apagado (0–20 %): enfriarlo rápido hace que se raje entre capas.",
         "proceso": {
@@ -88,6 +93,7 @@
         "nombre": "ASA",
         "descripcion": "Como el ABS pero resiste el sol y la lluvia sin ponerse amarillo. Ideal para exterior.",
         "densidad": 1.07,
+        "bambu": "GFB98",
         "aviso": "Necesita gabinete cerrado y buena ventilación (larga olor y gases). En una impresora abierta, como la Ender 3 V3 SE, puede despegarse o rajarse.",
         "_nota": "Rango típico: boquilla 240–260 °C, cama 90–110 °C, ventilador 0–20 % (acá ~10 %).",
         "proceso": {
