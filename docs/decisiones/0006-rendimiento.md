@@ -6,7 +6,15 @@
 
 ## Estado
 
-Propuesto
+Aceptado por el CTO el 2026-10-18, con estas decisiones:
+
+- `chunkSizeWarningLimit: 600`; el control real es `test:chunks` en la CI.
+- **T0 y T4 van juntas** (la medición es la aceptación de T4). Los niveles se calibran con un G-code grande que
+  genera la propia prueba (laminado por Kiri o sintético realista); no se commitea un G-code de decenas de MB.
+- El aviso de "vista simplificada" tiene una prueba de punta a punta en T6, forzando `navigator.deviceMemory` con
+  `addInitScript` de Playwright (sin ganchos de prueba en el código de producción).
+- Confirmado: mientras el visor carga, el acomodo usa la caja de 8 esquinas y `alListo` reacomoda.
+- El chunk `motor` (205 kB) queda fuera de v1 y pasa a la deuda del MAPA.
 
 ## Contexto
 

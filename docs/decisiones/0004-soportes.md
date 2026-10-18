@@ -6,7 +6,14 @@
 
 ## Estado
 
-Propuesto.
+Aceptado por el CTO el 2026-10-18, con estas decisiones:
+
+- **Opción (a)** (árbol propio simplificado), con el plan B (c) por el mismo contrato si T4 no converge.
+- **Sólo esfera en v1**; la caja entra después por `forma` sin romper el contrato.
+- **Panel de zonas en el paso 1** (donde está el visor) y **selector de tipo en el paso 2**.
+- **Las zonas se vacían con aviso** al cambiar escala, rotación o "apoyar cara". Queda como deuda: la escala de la
+  app es uniforme, así que más adelante se pueden transformar con `matrizPieza` en vez de vaciarlas.
+- **T0 es un spike que puede frenar todo:** si (b) o (d) fallan, se vuelve a este ADR antes de la ola 1.
 
 ## Contexto
 
