@@ -8,7 +8,7 @@ export default [
     },
     js.configs.recommended,
     {
-        languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.browser },
+        languageOptions: { ecmaVersion: 2022, sourceType: 'module' },
         rules: {
             'no-unused-vars': [
                 'error',
@@ -24,7 +24,17 @@ export default [
         },
     },
     {
-        files: ['scripts/**', 'vite.config.js', 'eslint.config.js'],
+        files: ['src/**/*.js'],
+        ignores: ['src/**/*.worker.js', 'src/sw.js'],
+        languageOptions: { globals: globals.browser },
+    },
+    {
+        files: ['scripts/**'],
+        // node + browser: los page.evaluate() de las pruebas usan document/window dentro de Chromium.
+        languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    },
+    {
+        files: ['vite.config.js', 'eslint.config.js'],
         languageOptions: { globals: globals.node },
     },
     { files: ['src/**/*.worker.js'], languageOptions: { globals: globals.worker } },
