@@ -33,64 +33,18 @@ import {
     guardarPreferencias,
     cargarPreferencias,
 } from './ui/estado.js';
+import { iniciarNavegacion, mostrar, irA, abrirHoja, cerrarHojas, alMostrarPaso } from './ui/navegacion.js';
 
 let visor = null; // visor del modelo (paso 1)
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
 
-// ---------------------------------------------------------------------------
-// Navegación entre pasos. Usamos el historial del navegador para que el botón
-// "atrás" del celu vuelva al paso anterior en vez de salir de la app.
-
-// `hoja` es una pantalla que se abre encima ('impresoras' o 'mi'), con su nivel
-// (cuántas hojas hay abiertas) para poder cerrarlas todas juntas.
-function mostrar(paso, hoja = null) {
-    $('hojaImpresoras').hidden = hoja !== 'impresoras';
-    $('hojaMiImpresora').hidden = hoja !== 'mi';
-    $('hojaLitofania').hidden = hoja !== 'litofania';
-    if (paso === estado.paso && estado.yaMostrado) return;
-    estado.yaMostrado = true;
-    estado.paso = paso;
-    document.querySelectorAll('.pantalla, .acciones > div').forEach(el => {
-        el.hidden = Number(el.dataset.paso) !== paso;
-    });
-    document.querySelectorAll('.pasos li').forEach(li => {
-        const n = Number(li.dataset.paso);
-        li.classList.toggle('actual', n === paso);
-        li.classList.toggle('hecho', n < paso);
-    });
-    $('atras').hidden = paso === 1;
-    visor?.pausar(paso !== 1);
-    visorCapas?.pausar(paso !== 4);
-    if (paso !== 4) pararReproduccion();
-    $('main').scrollTo(0, 0);
-}
-
-function irA(paso, { reemplazar = false } = {}) {
-    history[reemplazar ? 'replaceState' : 'pushState']({ paso }, '');
-    mostrar(paso);
-}
-
-function abrirHoja(hoja) {
-    const nivel = (history.state?.nivel || 0) + 1;
-    history.pushState({ paso: estado.paso, hoja, nivel }, '');
-    mostrar(estado.paso, hoja);
-}
-
-// Cierra todas las hojas abiertas (vuelve en el historial lo necesario).
-function cerrarHojas() {
-    const nivel = history.state?.nivel || 0;
-    if (nivel) history.go(-nivel);
-}
-
-window.addEventListener('popstate', e => {
-    if (estado.paso === 3) estado.cancelar?.abort();
-    mostrar(e.state?.paso || 1, e.state?.hoja);
+// PUENTE R1/R3: pausa los visores y la reproducción según el paso (pasa a paso1 y vista-capas).
+alMostrarPaso(p => {
+    visor?.pausar(p !== 1);
+    visorCapas?.pausar(p !== 4);
+    if (p !== 4) pararReproduccion();
 });
-document.querySelectorAll('[data-cerrar]').forEach(b => {
-    b.onclick = () => history.back();
-});
-$('atras').onclick = () => history.back();
-history.replaceState({ paso: 1 }, '');
+iniciarNavegacion();
 
 // ---------------------------------------------------------------------------
 // Paso 1: subir el STL
