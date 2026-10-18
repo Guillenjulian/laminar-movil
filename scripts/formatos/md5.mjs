@@ -2,7 +2,7 @@
 // bloque y con 5 MB pseudoaleatorios, independencia del troceado, mayúsculas y cierre.
 
 import { createHash } from 'node:crypto';
-import { Md5, md5Hex } from '../../src/motor/md5.js';
+import { Md5, md5Hex, TABLA_K } from '../../src/motor/md5.js';
 
 const codificar = s => new TextEncoder().encode(s);
 const referencia = bytes => createHash('md5').update(bytes).digest('hex');
@@ -84,8 +84,55 @@ function rendimiento(revisar) {
 
 /** @param {{ revisar: (nombre: string, condicion: boolean, detalle?: string) => void }} ctx */
 export function probarMd5({ revisar }) {
+    console.log('\n▶ MD5');
     vectoresYBordes(revisar);
     troceado(revisar);
     cierre(revisar);
+    largoYTabla(revisar);
     rendimiento(revisar);
+}
+
+// Referencia independiente (BigInt, sin Int32Array ni tablas del módulo): MD5 de un mensaje de `largo` bytes cuyo
+// único bloque en juego es el último, con ceros antes del 0x80 y el estado inicial del RFC. Sirve para fijar `largo`
+// a mano (no hay forma de hashear 512 MB reales en una prueba) y ejercitar los 32 bits altos del largo en bits.
+function md5SoloRelleno(largo) {
+    const M = 0xffffffffn;
+    const bloque = new Uint8Array(64);
+    bloque[largo % 64] = 0x80;
+    new DataView(bloque.buffer).setBigUint64(56, BigInt(largo) * 8n, true);
+    const m = Array.from({ length: 16 }, (_, i) => BigInt(new DataView(bloque.buffer).getUint32(i * 4, true)));
+    const ini = [0x67452301n, 0xefcdab89n, 0x98badcfen, 0x10325476n];
+    let [a, b, c, d] = ini;
+    const rot = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+    for (let i = 0; i < 64; i++) {
+        const [f, g] = [
+            [(b & c) | (~b & M & d), i],
+            [(d & b) | (~d & M & c), (5 * i + 1) % 16],
+            [b ^ c ^ d, (3 * i + 5) % 16],
+            [c ^ (b | (~d & M)), (7 * i) % 16],
+        ][i >> 4];
+        const k = BigInt(Math.floor(Math.abs(Math.sin(i + 1)) * 2 ** 32));
+        const s = BigInt(rot[(i >> 4) * 4 + (i % 4)]);
+        const t = (a + f + k + m[g]) & M;
+        [a, d, c] = [d, c, b];
+        b = (b + (((t << s) | (t >> (32n - s))) & M)) & M;
+    }
+    return [ini[0] + a, ini[1] + b, ini[2] + c, ini[3] + d]
+        .map(w => (w & M).toString(16).padStart(8, '0').match(/../g).reverse().join(''))
+        .join('');
+}
+
+function largoYTabla(revisar) {
+    // largo cerca de 2^32 bits (2^29 bytes) y por encima (2^33 bytes): prueban la palabra alta del largo en bits
+    for (const largo of [2 ** 29, 2 ** 29 + 3, 2 ** 33 + 5]) {
+        const m = new Md5();
+        m.largo = largo;
+        const real = m.hex();
+        revisar(`md5: largo fijado a ${largo} bytes (palabra alta del largo)`, real === md5SoloRelleno(largo), real);
+    }
+    const formula = Int32Array.from({ length: 64 }, (_, i) => Math.floor(Math.abs(Math.sin(i + 1)) * 2 ** 32));
+    revisar(
+        'md5: TABLA_K literal coincide con la fórmula floor(2^32 × |sen(i + 1)|)',
+        TABLA_K.every((k, i) => k === formula[i]),
+    );
 }
