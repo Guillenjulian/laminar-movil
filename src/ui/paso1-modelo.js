@@ -38,6 +38,20 @@ export function iniciarPaso1() {
         cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar }),
     });
     conectarSubida();
+    conectarTransformacion();
+}
+
+/**
+ * Pone la cama del visor con la impresora elegida y recalcula los avisos del modelo.
+ * Callback de impresoras ("alElegir"). No hace nada si el visor aún no existe.
+ * @returns {void}
+ */
+export function alCambiarImpresora() {
+    if (visor) {
+        const d = buscarImpresora(estado.impresoraId).dispositivo;
+        visor.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
+    }
+    actualizarAvisoModelo();
 }
 
 /**
@@ -168,4 +182,103 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }) {
     activarElegirCara(false);
     aplicarTransformacion();
     $('siguiente').disabled = false;
+}
+
+// --- Modelo en la cama: avisos, escala, rotaciones y "apoyar cara" ---
+
+/** Avisos sobre el modelo: si es muy pesado (se va a simplificar) o si no entra en la cama. */
+function actualizarAvisoModelo() {
+    if (!estado.vista) return;
+    const { triangulos } = estado.vista;
+    const tamano = tamanoActual();
+    const imp = buscarImpresora(estado.impresoraId);
+    const d = imp.dispositivo;
+    const avisos = [];
+    const noEntra = tamano.x > d.bedWidth || tamano.y > d.bedDepth || tamano.z > d.maxHeight;
+    if (noEntra) {
+        avisos.push(
+            `<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
+                'Rotalo o achicalo con los botones de abajo.',
+        );
+    }
+    $('ajustarCama').hidden = !noEntra;
+    const max = maxTriangulos();
+    if (triangulos > max) {
+        avisos.push(
+            `<b>Modelo pesado:</b> tiene ${formato.triangulos(triangulos)}. Para que el celu no se quede ` +
+                `sin memoria, antes de laminar lo vamos a simplificar a unos ${formato.triangulos(max)}. ` +
+                'Se pueden perder detalles muy finos.',
+        );
+    }
+    $('avisoModelo').innerHTML = avisos.join('<br><br>');
+    $('avisoModelo').hidden = avisos.length === 0;
+}
+
+/** Tamaño del modelo como va a quedar en la cama. */
+function tamanoActual() {
+    return visor?.tamanoModelo() || estado.vista.tamano;
+}
+
+/** Aplica rotación y escala al visor y refresca escala, textos, "restablecer" y avisos. */
+function aplicarTransformacion() {
+    visor.ponerTransformacion(matrizModelo());
+    const pct = Math.round(estado.escala * 1000) / 10;
+    $('escala').value = pct;
+    $('datosModelo').textContent =
+        `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
+    $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
+    actualizarAvisoModelo();
+}
+
+/** Cambia la escala (entre 0,01 y 20) y reaplica la transformación; ignora valores no positivos. */
+function ponerEscala(s) {
+    if (!(s > 0)) return;
+    estado.escala = Math.min(20, Math.max(0.01, s));
+    aplicarTransformacion();
+}
+
+/** "Apoyar cara": el usuario toca una cara y el modelo gira para que quede sobre la cama. */
+function activarElegirCara(activo) {
+    estado.eligiendoCara = activo;
+    $('apoyarCara').classList.toggle('activo', activo);
+    $('apoyarCara').textContent = activo ? 'Cancelar' : 'Apoyar cara';
+    $('ayudaCara').hidden = !activo;
+    visor?.elegirCara(activo, normal => {
+        // La normal viene en coordenadas de la impresora; la escala es uniforme, así
+        // que alcanza con agregar la rotación que la lleva hacia abajo.
+        estado.rotacion = transformar.multiplicar(transformar.rotacionQueApoya(normal), estado.rotacion);
+        activarElegirCara(false);
+        aplicarTransformacion();
+    });
+}
+
+/** Cablea escala, rotaciones, "ajustar a la cama", "restablecer" y "apoyar cara". */
+function conectarTransformacion() {
+    $('escalaMenos').onclick = () => ponerEscala(Math.round(estado.escala * 10 - 1) / 10 || 0.05);
+    $('escalaMas').onclick = () => ponerEscala(Math.round(estado.escala * 10 + 1) / 10);
+    $('escala').addEventListener('change', e => ponerEscala(Number(e.target.value) / 100));
+
+    document.querySelectorAll('[data-rotar]').forEach(b => {
+        b.onclick = () => {
+            estado.rotacion = transformar.multiplicar(transformar.rotacion90(b.dataset.rotar), estado.rotacion);
+            aplicarTransformacion();
+        };
+    });
+
+    // "Achicar para que entre": la escala más grande que entra en la cama (con un 2 % de margen).
+    $('ajustarCama').onclick = () => {
+        const d = buscarImpresora(estado.impresoraId).dispositivo;
+        const t = tamanoActual(),
+            s = estado.escala;
+        const factor = Math.min(d.bedWidth / t.x, d.bedDepth / t.y, d.maxHeight / t.z) * 0.98;
+        ponerEscala(Math.floor(s * factor * 100) / 100);
+    };
+
+    $('restablecerModelo').onclick = () => {
+        estado.rotacion = transformar.identidad();
+        estado.escala = 1;
+        activarElegirCara(false);
+        aplicarTransformacion();
+    };
+    $('apoyarCara').onclick = () => activarElegirCara(!estado.eligiendoCara);
 }
