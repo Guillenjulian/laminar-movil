@@ -121,7 +121,8 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `impresoras/*.json` | Perfiles armados a mano (`estado: revisado`) |
 | `impresoras/kiri/*.json` | 50 importadas de Kiri (`estado: importado`; la K1 y la Kobra 2 las tapa su perfil revisado, así que la app lista 48). **Generados**: no editar a mano |
 | `materiales.json` · `opciones.json` | Materiales (temperaturas, densidad, avisos) · patrones, densidades, adhesiones |
-| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `valoresDeAvanzado()`, `avanzadoAProceso()`, `COSTURAS` |
+| `perfiles.js` | `armarConfiguracion()`: combina impresora → calidad → material → adhesión → personalizado → avanzado → soportes, y recorta las temperaturas. `avanzadoAProceso()`, `COSTURAS`. Re-exporta todo lo de `catalogo.js` (los demás módulos siguen importando de acá) |
+| `catalogo.js` | Catálogo de impresoras: glob de los JSON, `reemplaza`/`idVigente`, `listaImpresoras`, `ponerImpresorasPropias`, `existeImpresora`, `buscarImpresora`, `IMPRESORA_INICIAL`; y lo que se lee de un perfil: `lineasPausa`, `valoresDeCalidad`, `valoresDeAvanzado`, `esBowden`. Importa sólo `generico` y `materiales.json` (no `perfiles`) |
 | `cambios.js` | Cambios por altura (ADR 0002), funciones puras sin imports: `validarCambios`, `cambiosARangos` (mm → `process.ranges` de Kiri), `resumenCambios`, `avisosPostLaminado` |
 | `torres.js` | Configuración de las torres de calibración (ADR 0002): `valoresSugeridos` (según `hotendMax` y Bowden), `armarTorre`, `configuracionDeTorre` (bloque 0 en Avanzado, el resto como `cambios`). Importa `motor/torres`, `cambios` y `perfiles` |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
@@ -227,8 +228,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - ESLint 9.x está deprecado: migrar a ESLint 10.
-- Warnings de `npm run lint` (6, 0 errores; no bloquean). Funciones: `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
-- `src/perfiles/perfiles.js` tiene 310 líneas físicas (el lint no lo marca porque no cuenta blancos ni comentarios): dividir antes de agregarle algo (por ejemplo, sacar `idVigente`, `reemplaza` y la búsqueda de impresoras a `impresoras-catalogo.js`).
+- Warnings de `npm run lint` (5, 0 errores; no bloquean). Funciones: `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
 - Piezas y copias (ADR 0003):
   - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).
   - H4: en el paso 2 no se avisa si al cambiar de impresora dejan de entrar las piezas; el error recién aparece al laminar (paso 3).
