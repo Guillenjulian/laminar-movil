@@ -14,12 +14,14 @@ function medida(valor, nombre, def, max) {
 /** Bloques de una torre: [{ desdeMm, hastaMm }] de abajo hacia arriba.
  *  @param {{ bloques?: number, altoBloqueMm?: number }} [op] bloques 3..8 (def 5), altoBloqueMm 6..15 (def 10)
  *  @returns {{ desdeMm: number, hastaMm: number }[]} */
-export function bloquesDeTorre({ bloques = 5, altoBloqueMm = 10 } = {}) {
+export function bloquesDeTorre(op) {
+    const { bloques = 5, altoBloqueMm = 10 } = op ?? {};
     if (!Number.isInteger(bloques) || bloques < 3 || bloques > 8) {
         throw new Error('La cantidad de bloques tiene que ser un entero entre 3 y 8.');
     }
-    if (!(altoBloqueMm >= 6 && altoBloqueMm <= 15))
+    if (!(altoBloqueMm >= 6 && altoBloqueMm <= 15)) {
         throw new Error('El alto del bloque tiene que estar entre 6 y 15 mm.');
+    }
     return Array.from({ length: bloques }, (_, i) => ({ desdeMm: i * altoBloqueMm, hastaMm: (i + 1) * altoBloqueMm }));
 }
 
@@ -81,7 +83,8 @@ function siluetaTemperatura(bloques, ancho, voladizo) {
  *            voladizoMm?: number }} [op] bloques 3..8 (def 5), altoBloqueMm 6..15 (def 10), anchoMm 20,
  *            profundidadMm 15, voladizoMm 5 (menor que el alto del bloque)
  *  @returns {{ vertices: Float32Array, alturaMm: number, bloques: {desdeMm:number,hastaMm:number}[] }} */
-export function generarTorreTemperatura(op = {}) {
+export function generarTorreTemperatura(opciones) {
+    const op = opciones ?? {};
     const bloques = bloquesDeTorre(op);
     const ancho = medida(op.anchoMm, 'El ancho', 20, 200);
     const prof = medida(op.profundidadMm, 'La profundidad', 15, 200);
@@ -90,7 +93,7 @@ export function generarTorreTemperatura(op = {}) {
     const { anillo, tris } = siluetaTemperatura(bloques, ancho, voladizo);
     const mapa = (u, v, w) => [u, w, v]; // silueta en (x, z), profundidad en Y (un espejo)
     const vertices = aFloat32(extruir(anillo, tris, prof, mapa, true));
-    return { vertices, alturaMm: bloques.length * bloques[0].hastaMm, bloques };
+    return { vertices, alturaMm: bloques.at(-1).hastaMm, bloques };
 }
 
 /** Torre de retracción: DOS columnas cuadradas de `ladoMm` separadas `separacionMm` (hueco entre caras en
@@ -98,11 +101,12 @@ export function generarTorreTemperatura(op = {}) {
  *  @param {{ bloques?: number, altoBloqueMm?: number, ladoMm?: number, separacionMm?: number }} [op]
  *         ladoMm def 10, separacionMm def 35
  *  @returns {{ vertices: Float32Array, alturaMm: number, bloques: {desdeMm:number,hastaMm:number}[] }} */
-export function generarTorreRetraccion(op = {}) {
+export function generarTorreRetraccion(opciones) {
+    const op = opciones ?? {};
     const bloques = bloquesDeTorre(op);
     const lado = medida(op.ladoMm, 'El lado de la columna', 10, 100);
     const separacion = medida(op.separacionMm, 'La separación', 35, 200);
-    const alturaMm = bloques.length * bloques[0].hastaMm;
+    const alturaMm = bloques.at(-1).hastaMm;
     const triangulos = [];
     for (const x0 of [0, lado + separacion]) {
         const anillo = [

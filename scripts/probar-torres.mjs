@@ -45,6 +45,19 @@ function cerrada(v) {
     return [...aristas].every(k => aristas.has(k.split('|').reverse().join('|')));
 }
 
+// Triángulos de área cero (degenerados).
+function caras0(v) {
+    let n = 0;
+    for (let i = 0; i < v.length; i += 9) {
+        const [a, b, c] = [0, 3, 6].map(k => [v[i + k], v[i + k + 1], v[i + k + 2]]);
+        const u = b.map((x, k) => x - a[k]),
+            w = c.map((x, k) => x - a[k]);
+        const cruz = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+        if (Math.hypot(...cruz) < 1e-9) n++;
+    }
+    return n;
+}
+
 function revisarMalla(nombre, torre, e) {
     const { vertices: v, alturaMm, bloques } = torre;
     const [[x0, x1], [y0, y1], [z0, z1]] = [0, 1, 2].map(k => rango(v, k));
@@ -56,6 +69,7 @@ function revisarMalla(nombre, torre, e) {
     revisar(`${nombre}: volumen positivo ${volumen(v).toFixed(2)}`, casi(volumen(v), e.volumen, 0.05));
     revisar(`${nombre}: z mínimo 0, máximo ${e.alto}`, casi(z0, 0) && casi(z1, e.alto));
     revisar(`${nombre}: X/Y ${x1 - x0} × ${y1 - y0}`, casi(x1 - x0, e.x) && casi(y1 - y0, e.y));
+    revisar(`${nombre}: 0 caras de área cero`, caras0(v) === 0);
     revisar(`${nombre}: alturaMm y bloques`, casi(alturaMm, e.alto) && bloques.length === e.n);
 }
 
@@ -108,10 +122,15 @@ const lanza = f => {
     try {
         f();
     } catch (e) {
-        return e instanceof Error && e.message.length > 5;
+        return e.constructor === Error && /tiene que (ser|estar)/.test(e.message);
     }
     return false;
 };
+const sinOpciones = [bloquesDeTorre, generarTorreTemperatura, generarTorreRetraccion];
+revisar(
+    'null y undefined se tratan como sin opciones (usan defaults)',
+    sinOpciones.every(f => !lanza(() => f(null)) && !lanza(() => f())),
+);
 const todos = (ops, f) => ops.every(op => lanza(() => f(op)));
 const malos = [
     { bloques: 2 },
