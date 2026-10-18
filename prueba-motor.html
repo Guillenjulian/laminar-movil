@@ -80,14 +80,19 @@
                 personal = {},
                 limite,
                 transformacion,
+                cambios,
+                stlBase64, // un STL ya armado (lo usan las pruebas que necesitan una malla propia)
             } = {}) => {
-                const stl = await obtenerSTL(caso);
+                const stl = stlBase64
+                    ? Uint8Array.from(atob(stlBase64), c => c.charCodeAt(0)).buffer
+                    : await obtenerSTL(caso);
                 const { dispositivo, proceso, avisos } = armarConfiguracion({
                     impresoraId,
                     calidad,
                     material,
                     soportes,
                     personal,
+                    cambios,
                 });
                 const inicio = performance.now();
                 const r = await laminar({

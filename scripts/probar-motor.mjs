@@ -11,6 +11,7 @@ import { preview, createServer } from 'vite';
 import fs from 'node:fs';
 import { buscarChromium } from './lib/chromium.mjs';
 import { insertarPausas } from '../src/motor/pausas.js';
+import { probarCambios } from './motor/cambios.mjs';
 
 // El lector de la vista previa es un worker: lo cargamos en Node simulando `self`.
 globalThis.self ??= {};
@@ -600,6 +601,8 @@ try {
         d ? `(${d.original} → ${d.final} triángulos, celda ${d.precisionMm.toFixed(3)} mm)` : '',
     );
     revisar('esfera de 80 mm de alto', pesada.g.zMax >= 79 && pesada.g.zMax <= 81, `Z máx ${pesada.g.zMax}`);
+
+    await probarCambios({ laminar, revisar }); // cambios por altura (ADR 0002)
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());
