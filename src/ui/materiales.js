@@ -65,7 +65,13 @@ export function dibujarTarjeta(contenedor, config) {
     });
 }
 
-// Gramos de un largo de filamento (mm) del material `id`, con su densidad (1,24 g/cm³ si no la trae).
+/**
+ * Gramos de un largo de filamento, con la densidad del material.
+ * @param {number} mmFilamento largo de filamento usado (mm)
+ * @param {number} diametro diámetro del filamento (mm)
+ * @param {string} id id del material (`materiales.json`); si no existe, PLA
+ * @returns {number} gramos (densidad del material, o 1,24 g/cm³ si no la trae)
+ */
 export function gramosDe(mmFilamento, diametro, id) {
     return formato.gramos(mmFilamento, diametro, material(id).densidad || 1.24);
 }

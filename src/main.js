@@ -17,6 +17,7 @@ import { iniciarPaso1, alCambiarImpresora, elegirOtroModelo, mostrarRecientes } 
 import { iniciarPaso3 } from './ui/paso3-laminar.js';
 import { iniciarPaso4, mostrarResultado } from './ui/paso4-resultado.js';
 import { iniciarVistaCapas } from './ui/vista-capas.js';
+import { programarPrecarga } from './ui/entrega-ui.js';
 import { registrarServiceWorker } from './ui/actualizacion.js';
 
 // 1. Listeners.
@@ -34,7 +35,7 @@ iniciarPaso2({ irAPaso1 });
 alMostrarPaso(paso => paso === 2 && dibujarOpciones());
 iniciarPaso3({ alTerminar: mostrarResultado });
 iniciarPaso4({ alOtroModelo: elegirOtroModelo });
-iniciarVistaCapas();
+iniciarVistaCapas({ alCambiarPausas: programarPrecarga });
 
 // 2. Preferencias.
 await Promise.all([cargarPreferencias(), preciosListos]);

@@ -34,7 +34,7 @@ export async function probarDescargaBambu(ctx) {
     await revisarUnaPausa(ctx);
     await marcarPausa(ctx, 30);
     await revisarDosPausas(ctx);
-    await ctx.page.goBack();
+    await revisarOtroMaterial(ctx);
     await elegirYLaminar(ctx, 'creality-ender-3-v3-se');
     await revisarEnder(ctx);
     await ctx.page.goBack();
@@ -77,6 +77,10 @@ async function revisarSinPausas(ctx) {
         'Bambu: #nombreArchivo muestra el .gcode.3mf',
         (await pagina.textContent('#nombreArchivo')) === `${NOMBRE}.gcode.3mf`,
     );
+    revisar(
+        'Bambu: el botón dice "Compartir archivo"',
+        (await pagina.textContent('#compartir')) === 'Compartir archivo',
+    );
     const { nombre, bytes } = await descargar(ctx);
     revisar('Bambu: la descarga se llama *.gcode.3mf', nombre === `${NOMBRE}.gcode.3mf`, nombre);
     const { zip, gcode, md5 } = await abrir(bytes);
@@ -90,6 +94,7 @@ async function revisarSinPausas(ctx) {
     revisar('Bambu: el MD5 es el de plate_1.gcode', md5 === md5De(gcode), md5);
     const info = await zip.file(ENTRADAS.sliceInfo).async('string');
     revisar('Bambu: slice_info.config con printer_model_id N2S', /printer_model_id" value="N2S"/.test(info));
+    revisar('Bambu: el filamento es PLA', /type="PLA"/.test(info));
     revisar(
         'Bambu: los botones quedan habilitados',
         !(await pagina.isDisabled('#descargar')) && !(await pagina.isDisabled('#compartir')),
@@ -135,14 +140,59 @@ async function revisarDosPausas(ctx) {
     revisar('Bambu con dos pausas: el MD5 sigue coincidiendo', md5 === md5De(gcode));
 }
 
+// Otro material y a laminar de nuevo: el archivo no puede ser el del resultado anterior (slice_info con PETG, sin pausas).
+async function revisarOtroMaterial(ctx) {
+    const { page: pagina, ok: revisar } = ctx;
+    await pagina.goBack();
+    await pagina.tap('label.opcion:has(input[value="petg"])');
+    await pagina.tap('#laminar');
+    await ctx.esperarResultado();
+    const { bytes } = await descargar(ctx);
+    const { zip, gcode } = await abrir(bytes);
+    const info = await zip.file(ENTRADAS.sliceInfo).async('string');
+    revisar('Bambu con PETG: slice_info con type="PETG"', /type="PETG"/.test(info) && !/type="PLA"/.test(info));
+    revisar('Bambu con PETG: sin las pausas del resultado anterior', !gcode.includes('M400 U1'));
+    await pagina.goBack();
+    await pagina.tap('label.opcion:has(input[value="pla"])');
+}
+
+/** Cuenta los `File` con contenido que arma la app (los vacíos de canShare no cuentan), sin tocar el código de la app:
+ *  envuelve `window.File` en la página. @returns {Promise<void>} */
+const contarArchivos = pagina =>
+    pagina.evaluate(() => {
+        const Original = window.File;
+        window.__archivos = 0;
+        window.__FileOriginal = Original;
+        window.File = class extends Original {
+            constructor(partes, ...resto) {
+                super(partes, ...resto);
+                if (partes.some(p => (p.size ?? p.length) > 0)) window.__archivos++;
+            }
+        };
+    });
+const archivosArmados = pagina => pagina.evaluate(() => window.__archivos);
+
 async function revisarEnder(ctx) {
     const { page: pagina, ok: revisar } = ctx;
     revisar(
         'Ender: #nombreArchivo sigue siendo el .gcode',
         (await pagina.textContent('#nombreArchivo')) === `${NOMBRE}.gcode`,
     );
+    revisar(
+        'Ender: el botón sigue diciendo "Compartir G-code"',
+        (await pagina.textContent('#compartir')) === 'Compartir G-code',
+    );
+    await contarArchivos(pagina);
     await marcarPausa(ctx, 10);
+    await pagina.waitForTimeout(1500); // más que la espera de la precarga (500 ms)
+    revisar(
+        'Ender: no se arma nada antes de tocar Descargar',
+        (await archivosArmados(pagina)) === 0,
+        `${await archivosArmados(pagina)} archivos`,
+    );
     const { nombre, bytes } = await descargar(ctx);
+    revisar('Ender: se arma al tocar Descargar', (await archivosArmados(pagina)) === 1);
+    await pagina.evaluate(() => (window.File = window.__FileOriginal));
     const texto = bytes.toString('utf8');
     revisar('Ender: la descarga sigue llamándose *.gcode', nombre === `${NOMBRE}.gcode`, nombre);
     revisar(

@@ -19,6 +19,7 @@ import { buscarImpresora, lineasPausa } from '../perfiles/perfiles.js';
  * @property {() => (object|null)} visor visor de la vista previa (o null).
  * @property {(n: number) => void} irACapa muestra la capa n.
  * @property {() => void} pararReproduccion detiene la reproducción.
+ * @property {() => void} alCambiarPausas se llama después de cada cambio real de pausas (agregar o quitar).
  */
 
 /** @type {DepsPausas|null} */
@@ -43,6 +44,7 @@ export function conectarPausas(d) {
             estado.modoColor = 'filamento'; // con pausas, lo natural es ver los colores
         }
         dibujarPausas();
+        d.alCambiarPausas();
         d.irACapa(n);
     };
     conectarLista(d);
@@ -60,7 +62,7 @@ export function conectarPausas(d) {
  * @param {DepsPausas} d lo que necesita de vista-capas.
  * @returns {void}
  */
-function conectarLista({ irACapa, pararReproduccion }) {
+function conectarLista({ irACapa, pararReproduccion, alCambiarPausas }) {
     $('listaPausas').onclick = e => {
         const b = e.target.closest('button[data-capa]');
         if (!b) return;
@@ -68,6 +70,7 @@ function conectarLista({ irACapa, pararReproduccion }) {
         if (b.classList.contains('quitar')) {
             estado.pausas.delete(n);
             dibujarPausas();
+            alCambiarPausas();
         }
         pararReproduccion();
         irACapa(n);

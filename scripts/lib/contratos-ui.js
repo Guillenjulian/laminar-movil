@@ -103,7 +103,7 @@ export const CONTRATOS = {
         importa: ['perfiles/cambios', 'ui/util-dom'],
     },
     'ui/vista-capas': {
-        exports: { iniciarVistaCapas: 0, armarVistaPrevia: 0 },
+        exports: { iniciarVistaCapas: 1, armarVistaPrevia: 0 },
         importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config', 'ui/pausas-ui'),
     },
     'ui/pausas-ui': {

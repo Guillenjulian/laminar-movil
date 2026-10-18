@@ -14,15 +14,7 @@ import { resumenPersonal } from './paso2-config.js';
 import * as formato from './formato.js';
 import * as materialesUI from './materiales.js';
 import { nombreEntrega } from './entrega.js';
-import {
-    entregaDe,
-    esperarArchivo,
-    paraCompartir,
-    precargar,
-    programarPrecarga,
-    puedeCompartir,
-    soltarEntrega,
-} from './entrega-ui.js';
+import { entregaDe, esperarArchivo, paraCompartir, precargar, puedeCompartir, soltarEntrega } from './entrega-ui.js';
 import { buscarImpresora, materiales } from '../perfiles/perfiles.js';
 import { avisosPostLaminado } from '../perfiles/cambios.js';
 
@@ -37,16 +29,16 @@ function avisosDeCambios() {
 
 /** Comparte el archivo con la hoja del sistema. Si el gesto venció mientras se armaba el .gcode.3mf
  *  (`NotAllowedError`), avisa en el mismo botón: el archivo ya quedó en el cache.
- *  @param {string} etiqueta texto original del botón @returns {Promise<void>} */
-async function compartir(etiqueta) {
-    $('compartir').textContent = etiqueta;
+ *  @returns {Promise<void>} */
+async function compartir() {
+    $('estadoEntrega').textContent = '';
     let archivo;
     try {
         archivo = await esperarArchivo($('compartir'));
         await navigator.share({ files: [paraCompartir(archivo)], title: archivo.name });
     } catch (err) {
         if (err.name === 'NotAllowedError' && archivo) {
-            $('compartir').textContent = 'Listo el archivo. Tocá Compartir otra vez';
+            $('estadoEntrega').textContent = 'Listo el archivo. Tocá Compartir otra vez';
         } else if (err.name !== 'AbortError') alert('No se pudo compartir: ' + err.message);
     }
 }
@@ -75,12 +67,8 @@ async function descargar() {
  *  @param {{alOtroModelo: () => void}} callbacks
  *  @returns {void} */
 export function iniciarPaso4({ alOtroModelo }) {
-    const etiqueta = $('compartir').textContent;
-    $('compartir').onclick = () => compartir(etiqueta);
+    $('compartir').onclick = compartir;
     $('descargar').onclick = descargar;
-    // Con pausas nuevas el archivo cambia: se vuelve a armar por adelantado, sin tocar pausas-ui.
-    $('pausarCapa').addEventListener('click', programarPrecarga);
-    $('listaPausas').addEventListener('click', programarPrecarga);
 
     $('otro').onclick = () => {
         soltarEntrega();
@@ -93,6 +81,7 @@ export function iniciarPaso4({ alOtroModelo }) {
 /** Llena el resumen, los avisos y el botón Compartir/Descargar con `estado.resultado` y arma la
  *  vista previa (armarVistaPrevia). @returns {void} */
 export function mostrarResultado() {
+    soltarEntrega(); // el archivo del resultado anterior ya no sirve
     const { info, gcode, avisos, archivo } = estado.resultado;
     const { formato: salida } = entregaDe();
     const imp = buscarImpresora(estado.impresoraId);
@@ -123,8 +112,9 @@ export function mostrarResultado() {
 
     // "Compartir" sólo si el navegador puede compartir archivos (Android/iOS sí; la mayoría de las PCs no).
     $('compartir').hidden = !puedeCompartir(archivo);
+    $('compartir').textContent = salida === 'gcode.3mf' ? 'Compartir archivo' : 'Compartir G-code';
+    $('estadoEntrega').textContent = '';
     $('descargar').classList.toggle('primario', $('compartir').hidden);
+    armarVistaPrevia(); // reinicia las pausas: la precarga va después, con las pausas de ahora
     precargar();
-
-    armarVistaPrevia();
 }

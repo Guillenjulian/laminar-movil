@@ -24,9 +24,10 @@ let reproduccion = null;
  * Cablea #capa, #capaMenos, #capaMas, #soloCapa, #reproducir, #pausarCapa, #listaPausas y #modoColor;
  * se suscribe a alMostrarPaso (pausa el visor si paso ≠ 4 y para la reproducción).
  * Llamar una vez, después de iniciarNavegacion().
+ * @param {{alCambiarPausas: () => void}} callbacks `alCambiarPausas`: lo llama cada cambio de pausas (main: precarga del paso 4).
  * @returns {void}
  */
-export function iniciarVistaCapas() {
+export function iniciarVistaCapas({ alCambiarPausas }) {
     alMostrarPaso(p => {
         visorCapas?.pausar(p !== 4);
         if (p !== 4) pararReproduccion();
@@ -37,6 +38,7 @@ export function iniciarVistaCapas() {
         visor: () => visorCapas,
         irACapa,
         pararReproduccion,
+        alCambiarPausas,
     });
 }
 

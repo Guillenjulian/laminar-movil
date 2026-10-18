@@ -16,7 +16,8 @@ import { buscarImpresora, lineasPausa, salidaDe } from '../perfiles/perfiles.js'
 const MIMES_3MF = ['application/octet-stream', 'application/zip', 'model/3mf'];
 const MS_PRECARGA = 500; // espera tras cambiar las pausas antes de armar el archivo por adelantado
 
-/** Último archivo armado: `{ resultado, clave, promesa }`. Guarda el File y nada más (no el string ni el zip). */
+/** Último .gcode.3mf armado: `{ clave, promesa }` (la promesa da un File). No guarda el resultado, el string ni el zip.
+ *  `mostrarResultado` lo suelta con cada resultado nuevo, así que no hace falta saber de qué resultado es. */
 let cache = null;
 /** MIME que aceptó `canShare` para el archivo (lo fija `puedeCompartir`); null = el del archivo. */
 let mimeCompartir = null;
@@ -46,20 +47,22 @@ function infoBambu(imp) {
     };
 }
 
-/** Archivo a entregar con las pausas de ahora (.gcode, o .gcode.3mf en las Bambu). Se arma una vez por
- *  combinación de pausas: la clave es la impresora, el material y los offsets ordenados; si cambia, se rearma.
+/** Archivo a entregar con las pausas de ahora (.gcode, o .gcode.3mf en las Bambu). El .gcode.3mf se arma una vez
+ *  por combinación de pausas (clave = impresora + offsets ordenados; si cambia, se rearma) y se guarda; el .gcode
+ *  plano se arma en cada pedido y no se guarda, como antes.
  *  @returns {Promise<File>} */
 export function archivoEntrega() {
     const resultado = estado.resultado;
     const { imp, formato: tipo } = entregaDe();
     const pausas = [...estado.pausas.values()].sort((x, y) => x.offset - y.offset);
-    const clave = [resultado.impresoraId, estado.material, estado.soportes, ...pausas.map(p => p.offset)].join('|');
-    if (cache?.resultado === resultado && cache.clave === clave) return cache.promesa;
+    const clave = [resultado.impresoraId, ...pausas.map(p => p.offset)].join('|');
+    if (tipo === 'gcode.3mf' && cache?.clave === clave) return cache.promesa;
     const salida = { formato: tipo, pausa: lineasPausa(imp), modelo: imp.modeloBambu };
     const promesa = armarEntrega(resultado, pausas, salida, tipo === 'gcode.3mf' ? infoBambu(imp) : undefined, f =>
         avance?.(f),
     );
-    cache = { resultado, clave, promesa };
+    if (tipo !== 'gcode.3mf') return promesa;
+    cache = { clave, promesa };
     promesa.catch(() => cache?.promesa === promesa && (cache = null)); // un fallo no se queda en el cache
     return promesa;
 }
