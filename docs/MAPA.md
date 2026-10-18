@@ -228,6 +228,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
 - Warnings de `npm run lint` (12, 0 errores; no bloquean). Funciones: `crearAvanzado` (`src/ui/avanzado.js`), `prepararLitofania` (`src/ui/litofania.js`), `generarLitofania` (`src/motor/litofania.js`), `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`), `agrupar` (`src/motor/decimar.js`), `leerOBJ` y `leerXML3MF` (`src/motor/formatos.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
+- `src/perfiles/perfiles.js` tiene 310 líneas físicas (el lint no lo marca porque no cuenta blancos ni comentarios): dividir antes de agregarle algo (por ejemplo, sacar `idVigente`, `reemplaza` y la búsqueda de impresoras a `impresoras-catalogo.js`).
 - Piezas y copias (ADR 0003):
   - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).
   - H4: en el paso 2 no se avisa si al cambiar de impresora dejan de entrar las piezas; el error recién aparece al laminar (paso 3).

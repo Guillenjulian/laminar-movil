@@ -6,7 +6,7 @@
 
 ## Estado
 
-Implementado (T0–T10). Aceptado por el CTO el 2026-10-18.
+Implementado (T0–T11; T11 se hizo dentro de T10). Aceptado por el CTO el 2026-10-18.
 
 Cambio del CTO sobre T0: el riesgo R1 se mide **antes** de construir la UI. Se suma
 **T0** (dev motor, ola 1, en paralelo con T1–T3): prueba en el Kiri real con dos widgets en `track.pos` distintos y
