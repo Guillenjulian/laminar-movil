@@ -66,7 +66,7 @@ function dibujarListaImpresoras() {
                     g.items
                         .map(
                             i =>
-                                `<button type="button" class="opcion impresora ${i.id === estado.impresoraId ? 'elegida' : ''}" data-id="${i.id}">
+                                `<button type="button" class="opcion impresora ${i.id === estado.impresoraId ? 'elegida' : ''}" data-id="${escapar(i.id)}">
             <span><b>${escapar(i.nombre)}</b><br><small>${detalleImpresora(i)}</small></span>
         </button>`,
                         )

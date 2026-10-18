@@ -98,6 +98,8 @@ navegacion      → estado, util-dom
 paso1-modelo    → estado, navegacion, util-dom, ui/visor, ui/litofania, ui/formato, motor/motor,
                   motor/transformar, perfiles/perfiles, almacen, config
 impresoras      → estado, navegacion, util-dom, perfiles/perfiles, perfiles/generico
+                  (enmienda: perfiles/generico pasó a formulario-impresora; + formulario-impresora)
+formulario-impresora → estado, navegacion, util-dom, perfiles/perfiles, perfiles/generico (enmienda)
 paso2-config    → estado, impresoras, util-dom, ui/avanzado, ui/materiales, ui/iconos-relleno,
                   perfiles/perfiles
 vista-capas     → estado, navegacion, util-dom, ui/visor, ui/formato, motor/motor, motor/tipos-linea,
@@ -296,6 +298,8 @@ Privadas: `opcion(grupo, valor, titulo, detalle, marcado)`, `dibujarMaterial`, `
   `ui/iconos-relleno`, `perfiles/perfiles` (`opciones`, `valoresDeCalidad`).
 
 #### 3.5 `src/ui/impresoras.js` — ~250 líneas
+
+> Ver enmienda al final: el formulario de "Mi impresora" se extrajo a `formulario-impresora.js`.
 
 **Responsabilidad:** elegir la impresora (hoja con búsqueda), mostrar la tarjeta de la elegida y administrar "Mi impresora" (formulario, copiar, editar, borrar).
 
@@ -642,3 +646,18 @@ diferencia son imports, JSDoc de contrato y funciones extraídas. Si `paso1-mode
 
 **Reversa:** cada tarea de la ola 2 es un commit independiente; revertir R*n* restaura el código viejo en
 `main.js` (los módulos nuevos quedan sin uso, sin efectos).
+
+## Enmienda (2026-10-18): formulario-impresora.js
+
+`impresoras.js` llegó a 288 líneas, así que se aplicó el plan B de la sección 3.5: el formulario de
+"Mi impresora" (crear, copiar, editar, borrar) vive ahora en `src/ui/formulario-impresora.js`
+(refactor puro, sin cambio de comportamiento).
+
+- **Export:** `iniciarFormularioImpresora({ elegir })`, con `elegir: (id: string) => void`. Cablea
+  `#nuevaImpresora`, el botón Editar/Copiar de `#impresoraElegida`, `#borrarImpresora` y `#formImpresora`.
+- **Callback `elegir(id)`:** se llama al guardar (id de la propia) y al borrar la elegida
+  (`IMPRESORA_INICIAL`), antes de cerrar las hojas. `impresoras.js` lo implementa con su
+  `elegirImpresora(id, alElegir)`, así el módulo nuevo no importa a `impresoras.js` (sin ciclos).
+- **Aristas:** `impresoras → formulario-impresora`; `formulario-impresora → estado, navegacion,
+  util-dom, perfiles/perfiles, perfiles/generico`. `impresoras` ya no importa `perfiles/generico`.
+- Tamaños finales: `impresoras.js` ~102 líneas, `formulario-impresora.js` ~199.
