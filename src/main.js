@@ -25,11 +25,11 @@ iniciarPaso1();
 const preciosListos = materialesUI.iniciarMateriales();
 iniciarImpresoras({
     alElegir: () => {
+        alCambiarImpresora(); // reacomoda: paso 2 lee estado.entra al dibujar
         dibujarOpciones();
-        alCambiarImpresora();
     },
 });
-iniciarPaso2();
+iniciarPaso2({ irAPaso1: () => history.back() });
 // Al entrar al paso 2 se redibuja: el modelo nuevo (y su torre, si es una) cambia lo que muestra.
 alMostrarPaso(paso => paso === 2 && dibujarOpciones());
 iniciarPaso3({ alTerminar: mostrarResultado });

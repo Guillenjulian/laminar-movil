@@ -46,7 +46,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación de las piezas cargadas como modelo (las agregadas, en T10; las copias no): 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
 | `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda) y su tarjeta; cablea el formulario de "Mi impresora" | `estado`, `navegacion`, `util-dom`, `formulario-impresora`, `perfiles/perfiles` |
 | `src/ui/formulario-impresora.js` | Formulario de "Mi impresora": crear, copiar un perfil como propio, editar y borrar (`iniciarFormularioImpresora`); avisa con el callback `elegir(id)` | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
-| `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
+| `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2({ irAPaso1 })`, `dibujarOpciones`); `dibujarAvisoEntran`: aviso `#avisoEntranPaso2` (role=status) con "Ir al paso 1" y Laminar deshabilitado si con la impresora elegida no entran las piezas | `estado`, `acomodo`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
 | `src/ui/paso3-laminar.js` | Acomoda las piezas (`acomodarPiezas`; si no entran muestra el error y no lamina), lanza el laminado de `piezasParaMotor()` (con la configuración de la torre si hay una), muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `perfiles/torres`, `config`, `acomodo` |
 | `src/ui/paso4-resultado.js` | Resumen del resultado (con "N piezas" si hay copias), avisos (incluye los de cambios por altura fuera de la pieza, `avisosPostLaminado`) y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles`, `perfiles/cambios` |
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor y las capas | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
@@ -73,7 +73,7 @@ Grafo de dependencias de `src/ui/` (ADR 0001, sección 2; `A → B` = A importa 
 ```
 Nivel 6   main.js ──► (todos los de abajo)
 Nivel 5   paso4-resultado ──► vista-capas, paso2-config
-Nivel 4   paso2-config ──► impresoras
+Nivel 4   paso2-config ──► impresoras, acomodo
 Nivel 3   impresoras ──► formulario-impresora
 Nivel 3   paso1-modelo ──► ajuste-modelo, piezas-ui, recientes, navegacion
 Nivel 2   piezas-ui ──► acomodo, copias-ui
@@ -232,7 +232,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - Warnings de `npm run lint` (3, 0 errores; no bloquean). Funciones: `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`).
 - Piezas y copias (ADR 0003):
   - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).
-  - H4: en el paso 2 no se avisa si al cambiar de impresora dejan de entrar las piezas; el error recién aparece al laminar (paso 3).
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
   - No hay prueba de piezas con impresoras `originCenter` ni de cama de cinta (R1 del ADR 0003 lo deja pendiente).
   - `progreso` y `cancelación` con más de un widget (N > 1) no tienen prueba propia.

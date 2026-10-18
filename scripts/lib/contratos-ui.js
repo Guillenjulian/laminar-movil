@@ -76,9 +76,10 @@ export const CONTRATOS = {
         importa: conBase(PERFILES, 'perfiles/generico'),
     },
     'ui/paso2-config': {
-        exports: { iniciarPaso2: 0, dibujarOpciones: 0, resumenPersonal: 1 },
+        exports: { iniciarPaso2: 0, dibujarOpciones: 0, dibujarAvisoEntran: 0, resumenPersonal: 1 },
         importa: [
             'ui/estado',
+            'ui/acomodo',
             'ui/util-dom',
             'ui/impresoras',
             'ui/avanzado',

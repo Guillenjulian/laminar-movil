@@ -164,30 +164,47 @@ async function probarFueraPorPieza({ page: pagina, ok: revisar }) {
     await pagina.tap('#listaPiezas li:nth-child(2) .chip-quitar');
 }
 
-/** Paso 2 -> impresora más chica donde ya no entran 2 copias: laminar da el error del paso 3 y no hay paso 4. */
+/** Paso 2 -> impresora más chica donde ya no entran 2 copias: el paso 2 avisa, Laminar queda deshabilitado,
+ *  "Ir al paso 1" vuelve al paso 1 y al volver a la Ender el aviso desaparece y Laminar se habilita. */
 async function probarImpresoraChica({ page: pagina, ok: revisar, visible }) {
     await pagina.fill('#escala', '450'); // 90 mm: 2 copias entran en la Ender (220) y no en la Prusa mini (180)
     await pagina.locator('#escala').blur();
     await pagina.tap('#copiasMas');
     revisar('impresora chica: con 2 copias de 90 mm entran en la Ender', await entranTodas({ page: pagina, visible }));
     await pagina.tap('#siguiente');
+    revisar(
+        'impresora chica: en la Ender el paso 2 no avisa y Laminar está habilitado',
+        !(await visible('#avisoEntranPaso2')) && (await pagina.isEnabled('#laminar')),
+    );
     await pagina.tap('#cambiarImpresora');
     await pagina.fill('#buscarImpresora', 'prusa mini');
     await pagina.tap('[data-id="kiri-prusa-mini"]');
-    await pagina.tap('#laminar');
-    await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
     revisar(
-        'impresora chica: laminar da "Las piezas no entran en la cama…", en 0 %, con "Volver" y sin paso 4',
-        /^Las piezas no entran en la cama/.test(await pagina.textContent('#errorLaminado')) &&
-            (await pagina.textContent('#porcentaje')) === '0 %' &&
-            (await pagina.textContent('#cancelar')) === 'Volver' &&
-            !(await visible('section[data-paso="4"]')),
-        await pagina.textContent('#errorLaminado'),
+        'impresora chica: el paso 2 avisa que no entran y Laminar queda deshabilitado',
+        (await visible('#avisoEntranPaso2')) &&
+            /^Con esta impresora no entran todas las piezas/.test(await pagina.textContent('#textoEntranPaso2')) &&
+            (await pagina.getAttribute('#avisoEntranPaso2', 'role')) === 'status' &&
+            (await pagina.isDisabled('#laminar')),
+        await pagina.textContent('#textoEntranPaso2'),
     );
-    await pagina.tap('#cancelar'); // vuelve al paso 2: se deja la impresora como estaba
+    await pagina.tap('#irPaso1');
+    revisar(
+        'impresora chica: "Ir al paso 1" lleva al paso 1 (y "Siguiente" queda deshabilitado)',
+        (await visible('#conModelo')) && (await pagina.isDisabled('#siguiente')),
+    );
+    await volverALaEnder({ page: pagina, ok: revisar, visible });
+}
+
+/** Vuelve al paso 2 por el historial, elige la Ender y deja el cubo de 20 mm con 1 copia. */
+async function volverALaEnder({ page: pagina, ok: revisar, visible }) {
+    await pagina.goForward(); // "Siguiente" no deja pasar: se vuelve al paso 2 por el historial
     await pagina.tap('#cambiarImpresora');
     await pagina.fill('#buscarImpresora', 'v3 se');
     await pagina.tap('[data-id="creality-ender-3-v3-se"]');
+    revisar(
+        'impresora chica: al volver a la Ender desaparece el aviso y Laminar se habilita',
+        !(await visible('#avisoEntranPaso2')) && (await pagina.isEnabled('#laminar')),
+    );
     await pagina.goBack();
     await pagina.tap('#restablecerModelo');
     await pagina.tap('#copiasMenos');

@@ -327,6 +327,10 @@ h2:first-child {
     border-color: var(--error-borde);
 }
 
+.aviso-entran p {
+    margin: 0 0 8px;
+}
+
 /* --- Modelos recientes --- */
 .recientes {
     list-style: none;
