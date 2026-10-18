@@ -123,7 +123,7 @@ function enfocarPaso1() {
         x => x.offsetParent,
     );
     if (!el) return;
-    el.tabIndex = -1;
+    if (el.tagName === 'H2') el.tabIndex = -1; // los botones ya son enfocables: no los sacamos del orden de tabulación
     el.focus();
 }
 
