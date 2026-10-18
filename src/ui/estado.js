@@ -1,6 +1,8 @@
 // Única fuente del estado de la app y su persistencia (elecciones del paso 2 e impresoras propias).
 // Flujo: los módulos de la interfaz importan `estado` (un solo objeto, por referencia) y lo leen en el
 // momento, sin cachearlo; `cargarPreferencias` lo rellena al arrancar y `guardar*` lo envían a IndexedDB.
+// Las piezas de la cama viven en `estado.piezas` (ADR 0003); `nombre`, `stl`, `vista`, `rotacion` y `escala`
+// son accesores de la pieza activa, así que el código de un solo modelo no cambia.
 // No toca el DOM al importarse.
 
 import { COLORES_FILAMENTO } from '../motor/tipos-linea.js';
@@ -98,11 +100,12 @@ export function matrizPieza(p) {
 }
 
 /**
- * Matriz 3×3 final de la pieza activa.
+ * Matriz 3×3 final de la pieza activa (identidad si no hay pieza).
  * @returns {number[]}
  */
 export function matrizModelo() {
-    return matrizPieza(piezaActiva());
+    const p = piezaActiva();
+    return p ? matrizPieza(p) : transformar.identidad();
 }
 
 /**
@@ -125,7 +128,12 @@ export function piezasParaMotor() {
     }));
 }
 
-/** Define un accesor de `estado` sobre la pieza activa (sin pieza: `inicial()` y el setter no hace nada). */
+/**
+ * Define un accesor de `estado` sobre la pieza activa (sin pieza: `inicial()` y el setter no hace nada).
+ * @param {string} clave campo de la pieza
+ * @param {() => *} inicial valor que devuelve el getter si no hay pieza
+ * @returns {PropertyDescriptor}
+ */
 function accesor(clave, inicial) {
     return {
         enumerable: true,

@@ -151,15 +151,6 @@ async function leerModelo(nombre, buffer, tipo, generar) {
 
 /** Llena `estado`, crea el visor si falta, pone cama y modelo y actualiza los textos del paso. */
 function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre, origen) {
-    const pieza = crearPieza({
-        nombre,
-        stl: buffer,
-        vista: { triangulos, tamano },
-        transformacion: transformacion ?? almacen.normalizarTransformacion(),
-        origen: torre ? 'torre' : origen,
-    });
-    estado.piezas = [pieza];
-    estado.activa = pieza.id;
     estado.resultado = null;
     estado.torre = torre; // la torre fija sus alturas: sin escala ni rotación
     estado.cambios = []; // los cambios por altura dependen del modelo
@@ -171,6 +162,16 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
     visor.ponerModelo(vertices);
 
+    // La pieza se crea al final de lo que puede fallar (el visor): si algo lanza, queda el modelo anterior.
+    const pieza = crearPieza({
+        nombre,
+        stl: buffer,
+        vista: { triangulos, tamano },
+        transformacion: transformacion ?? almacen.normalizarTransformacion(),
+        origen: torre ? 'torre' : origen,
+    });
+    estado.piezas = [pieza];
+    estado.activa = pieza.id;
     $('nombreModelo').textContent = nombre;
     ajuste.cancelarCara();
     ajuste.aplicar();

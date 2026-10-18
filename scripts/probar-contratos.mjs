@@ -1,4 +1,5 @@
 // Prueba de contrato de los módulos nuevos de src/ui/ (ADR 0001, T0): `npm run test:contratos`.
+// Al final también corren las pruebas de estado (accesores de `estado.piezas`, scripts/probar-estado.mjs).
 // Flujo: autoprueba del detector de ciclos; levanta Vite en middleware (sólo ssrLoadModule, sin puertos);
 // por módulo del contrato: si no existe se saltea (CONTRATOS_ESTRICTO=1 lo hace error), si existe se
 // importa con document/window "trampa" y se chequea que no los toque y que exports y aridades coincidan;
