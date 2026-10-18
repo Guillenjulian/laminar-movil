@@ -2,7 +2,7 @@
 //
 //   puntoEnPoligono     ¿el punto está dentro de un polígono? (par-impar)
 //   distanciaAPoligono  distancia firmada de un punto al borde de un conjunto de polígonos
-//   circulo             polígono regular que aproxima un círculo
+//   circulo             polígono regular que aproxima un círculo (único dueño: bloqueos.js lo reusa)
 //   areaPoligono        área con signo (fórmula del cordón)
 //
 // Un polígono es un array de puntos `{x, y}` en mm, con el anillo cerrado de forma implícita (el último punto no

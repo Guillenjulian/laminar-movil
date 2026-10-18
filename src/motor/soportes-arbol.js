@@ -20,14 +20,7 @@ import { marcarViables } from './soportes-poda.js';
 /** @typedef {import('./geometria-2d.js').Punto} Punto */
 /** @typedef {import('./geometria-2d.js').Poligono} Poligono */
 
-/**
- * Zona sin soporte (ADR 0004, sección Contratos > Tipos): sólo esfera en la v1.
- * @typedef {object} Bloqueo
- * @property {number} id
- * @property {'esfera'} forma
- * @property {{x:number, y:number, z:number}} centro  mm, marco de la pieza
- * @property {number} radio  mm
- */
+/** @typedef {import('./bloqueos.js').Bloqueo} Bloqueo */
 
 /** Radio mínimo en anchos de línea: el octágono mide 2·r·cos(π/LADOS) entre lados y tiene que dar ≥ 2 anchos. */
 const RADIO_MIN_FACTOR = 1 / Math.cos(Math.PI / LADOS);

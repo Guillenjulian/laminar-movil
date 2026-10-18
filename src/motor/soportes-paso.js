@@ -9,8 +9,9 @@
 // campos de la poda (ver `soportes-poda.js`). El contexto `ctx` es `{op, capa, deriva, crece}`.
 
 import { distanciaAPoligono } from './geometria-2d.js';
+import { radioSeccion, FACTOR_SECCION } from './bloqueos.js';
 
-/** @typedef {import('./soportes-arbol.js').Bloqueo} Bloqueo */
+/** @typedef {import('./bloqueos.js').Bloqueo} Bloqueo */
 
 /** Lados del polígono de cada tronco. Las direcciones de deriva son las mismas que sus vértices. */
 export const LADOS = 8;
@@ -22,16 +23,16 @@ const DIRECCIONES = Array.from({ length: LADOS }, (_, k) => [
 const FACTOR_VECINO = 6; // un nodo se acerca a otro que esté a menos de FACTOR_VECINO × radio
 
 /**
- * ¿El círculo (x, y, r) a la altura z toca la sección de alguna esfera bloqueada? La sección de una esfera de
- * radio R a distancia dz de su centro es un círculo de radio √(R² − dz²).
+ * ¿El círculo (x, y, r) a la altura z toca la sección de alguna esfera bloqueada? Se compara con el polígono
+ * circunscripto que usa `seccionBloqueos` (vértices a `radioSeccion × FACTOR_SECCION`), así que un círculo que
+ * pasa esta prueba nunca cae dentro de la sección que se resta de la sombra.
  * @param {Bloqueo[]} bloqueos
  * @returns {boolean}
  */
 function tocaBloqueo(bloqueos, x, y, z, r) {
     for (const b of bloqueos) {
-        const dz = z - b.centro.z;
-        if (Math.abs(dz) >= b.radio) continue;
-        if (Math.hypot(x - b.centro.x, y - b.centro.y) < Math.sqrt(b.radio * b.radio - dz * dz) + r) return true;
+        const rs = radioSeccion(b, z);
+        if (rs > 0 && Math.hypot(x - b.centro.x, y - b.centro.y) < rs * FACTOR_SECCION + r) return true;
     }
     return false;
 }

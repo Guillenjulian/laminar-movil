@@ -3,15 +3,21 @@
 // Una esfera `Bloqueo` ({ id, forma:'esfera', centro:{x,y,z}, radio }) está en el marco local de la pieza, en mm.
 // Acá vive la parte pura: validar lo que llega, cortar la esfera a una altura (un círculo) y restarlo de la
 // sombra. La resta de polígonos de verdad la pone el puente con Kiri (`POLY.subtract`), que entra por parámetro.
+// Punto, Poligono y el círculo son de `geometria-2d.js`.
 
-/** @typedef {{x:number, y:number}} Punto  mm */
-/** @typedef {Punto[]} Poligono  anillo cerrado implícito */
+import { circulo } from './geometria-2d.js';
+
+/** @typedef {import('./geometria-2d.js').Punto} Punto */
+/** @typedef {import('./geometria-2d.js').Poligono} Poligono */
 /** @typedef {{id:number, forma:'esfera', centro:{x:number,y:number,z:number}, radio:number}} Bloqueo */
 
 export const RADIO_MIN_MM = 2;
 export const RADIO_MAX_MM = 40;
 export const RADIO_INICIAL_MM = 8;
 export const MAX_BLOQUEOS = 20; // por pieza
+export const LADOS_SECCION = 16; // lados del polígono con que se dibuja la sección de una esfera
+/** Los vértices de la sección están a `radioSeccion × FACTOR_SECCION`: es lo más lejos que llega el polígono. */
+export const FACTOR_SECCION = 1 / Math.cos(Math.PI / LADOS_SECCION);
 
 const esNumero = n => typeof n === 'number' && Number.isFinite(n);
 
@@ -40,37 +46,33 @@ export function validarBloqueos(datos) {
 }
 
 /**
- * Polígono regular de `lados` vértices CIRCUNSCRIPTO al círculo de radio `r`: los vértices están a r/cos(π/lados)
- * y los puntos medios de los lados caen justo en `r`. Así la zona bloqueada nunca queda más chica que la esfera
- * (decisión del CTO). Su área es lados·r²·tan(π/lados): con 16 lados, ~1,3 % más que el círculo ideal. Antihorario.
- * @param {{x:number, y:number}} c
- * @param {number} r
- * @param {number} lados
- * @returns {Poligono}
+ * Radio (mm) de la sección de una esfera a la altura `z`: √(R² − dz²), el círculo ideal en que la corta el plano.
+ * Vale 0 si |dz| ≥ R: la esfera no cruza el plano (a lo sumo lo toca en un punto) y no aporta nada.
+ * @param {Bloqueo} bloqueo
+ * @param {number} z  mm, marco local de la pieza
+ * @returns {number}
  */
-function circulo(c, r, lados) {
-    const paso = (2 * Math.PI) / lados;
-    const rv = r / Math.cos(Math.PI / lados);
-    return Array.from({ length: lados }, (_, i) => ({
-        x: c.x + rv * Math.cos(i * paso),
-        y: c.y + rv * Math.sin(i * paso),
-    }));
+export function radioSeccion(bloqueo, z) {
+    const dz = z - bloqueo.centro.z;
+    return Math.abs(dz) >= bloqueo.radio ? 0 : Math.sqrt(bloqueo.radio * bloqueo.radio - dz * dz);
 }
 
 /**
- * Secciones de los bloqueos a la altura `z`: un círculo (polígono circunscripto) de radio √(R² − dz²) por esfera que la cruza.
- * Si |dz| ≥ R la esfera no cruza el plano (a lo sumo lo toca en un punto) y no aporta nada.
+ * Secciones de los bloqueos a la altura `z`: un polígono regular de `lados` lados por esfera que la cruza,
+ * CIRCUNSCRIPTO al círculo de radio `radioSeccion`: los vértices están a r/cos(π/lados) y los puntos medios de los
+ * lados caen justo en r, así la zona bloqueada nunca queda más chica que la esfera (decisión del CTO). Su área es
+ * lados·r²·tan(π/lados): con 16 lados, ~1,3 % más que el círculo ideal. Antihorario. (Es el `circulo` de
+ * `geometria-2d.js` con el radio agrandado.) Con `lados` distinto de LADOS_SECCION, FACTOR_SECCION no vale.
  * @param {Bloqueo[]|undefined} bloqueos
  * @param {number} z  mm
- * @param {number} [lados=16]
+ * @param {number} [lados=LADOS_SECCION]
  * @returns {Poligono[]}  vacío si ninguna esfera cruza esa altura
  */
-export function seccionBloqueos(bloqueos, z, lados = 16) {
+export function seccionBloqueos(bloqueos, z, lados = LADOS_SECCION) {
     const secciones = [];
     for (const b of bloqueos ?? []) {
-        const dz = z - b.centro.z;
-        if (Math.abs(dz) >= b.radio) continue;
-        secciones.push(circulo(b.centro, Math.sqrt(b.radio * b.radio - dz * dz), lados));
+        const r = radioSeccion(b, z);
+        if (r > 0) secciones.push(circulo(b.centro, r / Math.cos(Math.PI / lados), lados));
     }
     return secciones;
 }
