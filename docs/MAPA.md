@@ -70,10 +70,10 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 
 | Archivo | Responsabilidad |
 |---|---|
-| `motor.js` | API para la interfaz: `laminar`, `leerParaVista`, `leerRecorridos`, `convertirAStl`, `litofaniaAStl`. Un worker por tarea, cancelable con `AbortSignal` |
+| `motor.js` | API para la interfaz: `laminar`, `leerParaVista`, `leerRecorridos`, `convertirAStl`, `litofaniaAStl`, `torreAStl`. Un worker por tarea, cancelable con `AbortSignal` |
 | `laminador.worker.js` | STL → transformación → decimación → centrado → Kiri (slice, prepare, export) → G-code |
 | `vista.worker.js` | Lee el STL para mostrarlo (cuenta, mide y simplifica sólo para dibujar) |
-| `convertir.worker.js` | OBJ/3MF/litofanía → STL binario |
+| `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración → STL binario |
 | `recorridos.worker.js` | G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa |
 | `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |
@@ -123,7 +123,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
 | `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` |
-| `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, 50 impresoras, malla pesada y cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa) | `scripts/probar-motor.mjs` + `prueba-motor.html` + `scripts/motor/cambios.mjs` |
+| `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, 50 impresoras, malla pesada y cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa) y torres de calibración (casos 10-11: M104 y retracción por bloque) | `scripts/probar-motor.mjs` + `prueba-motor.html` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` |
 | `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` (orquestador) + `scripts/app/*.mjs` + `scripts/lib/` |
 | `npm run lint` | ESLint (recomendado + límites de tamaño como aviso: 300 líneas por archivo, 40 por función); `npm run lint:fix` aplica los arreglos automáticos | `eslint.config.js` |
 | `npm run format:check` | Prettier (4 espacios, comillas simples, 120 columnas); `npm run format` lo aplica | `.prettierrc.json` |

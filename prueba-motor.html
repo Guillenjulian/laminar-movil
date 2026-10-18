@@ -45,7 +45,7 @@
         <p id="estado">Listo para probar.</p>
         <pre id="salida"></pre>
         <script type="module">
-            import { laminar } from './src/motor/motor.js';
+            import { laminar, torreAStl } from './src/motor/motor.js';
             import {
                 armarConfiguracion,
                 listaImpresoras,
@@ -56,6 +56,7 @@
             window.buscarImpresora = buscarImpresora;
             // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
             window.ponerImpresorasPropias = ponerImpresorasPropias;
+            import { armarTorre, configuracionDeTorre } from './src/perfiles/torres.js';
             import { maxTriangulos } from './src/config.js';
             import { esfera, te, tubo } from './src/prueba/mallas.js';
 
@@ -106,6 +107,27 @@
                 r.ms = Math.round(performance.now() - inicio);
                 r.avisos = avisos;
                 return r;
+            };
+
+            // Torre de calibración: su configuración (perfiles/torres.js importa JSON, que Node no carga sin más).
+            window.configTorre = op => {
+                const torre = armarTorre(op);
+                return { torre, config: configuracionDeTorre(torre) };
+            };
+
+            // Torre de calibración en el worker (ADR 0002, T7). Con `cancelar` aborta enseguida.
+            window.torreStl = async (op, cancelar) => {
+                const control = new AbortController();
+                const p = torreAStl(op, { signal: control.signal });
+                if (cancelar) control.abort();
+                try {
+                    const { stl } = await p;
+                    const bytes = new Uint8Array(stl);
+                    const base64 = btoa(Array.from(bytes, b => String.fromCharCode(b)).join(''));
+                    return { bytes: bytes.length, triangulos: new DataView(stl).getUint32(80, true), base64 };
+                } catch (err) {
+                    return { error: err.name };
+                }
             };
 
             document.querySelectorAll('[data-caso]').forEach(

@@ -98,3 +98,11 @@ export async function litofaniaAStl({ grises, ancho, alto, anchoMm, minMm, maxMm
     );
     return { stl: r.stl };
 }
+
+// Arma una torre de calibración (ver torres.js). `tipo` es 'temperatura' o 'retraccion'; el resto son las
+// opciones de la torre (bloques, altoBloqueMm, ...). Devuelve { stl: ArrayBuffer }; se puede cancelar con `signal`.
+export async function torreAStl({ tipo, ...opciones }, { signal } = {}) {
+    const worker = new Worker(new URL('./convertir.worker.js', import.meta.url), { type: 'module' });
+    const r = await correr(worker, { tipo: 'torre', tipoTorre: tipo, ...opciones }, [], { signal });
+    return { stl: r.stl };
+}
