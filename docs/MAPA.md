@@ -111,7 +111,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `rotacion`, `escala` | Transformación del modelo | sí, en recientes (500 ms o al salir) |
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
-| `cambios` | Cambios por altura (`Cambio[]`, ADR 0002); se pasan a `armarConfiguracion` y, tras laminar, a `avisosPostLaminado` (paso 4) | no |
+| `resultado` | `{ gcode, info, archivo, impresoraId, capas, cambios }` del último laminado (`capas`: alturas de capa usadas; `cambios`: los efectivos y validados, o los de la torre) | no |
 | `cambios` | Cambios por altura (`Cambio[]`, ADR 0002); se pasan a `armarConfiguracion`; tras laminar, los efectivos y validados van a `estado.resultado.cambios` y a `avisosPostLaminado` (paso 4). Se vacían al cargar un modelo | no |
 | `torre` | Torre de calibración cargada (`Torre` + `aviso` + `resumen`, ADR 0002) o `null`; si existe, `paso3-laminar` usa `configuracionDeTorre` por encima de Avanzado, Personalizar, soportes y cambios | no |
 | `pausas`, `coloresFilamento`, `modoColor` | Pausas y colores de la vista previa | no |

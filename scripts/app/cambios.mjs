@@ -2,11 +2,12 @@
 // La prueba que lamina con un cambio y revisa el M104 la hace T9.
 //
 // Flujo: vuelve al paso 2, agrega 2 cambios, quita 1, prende Altura variable (la sección queda
-// deshabilitada), la apaga, quita el cambio que queda, lamina con uno desde 100 mm (aviso), lo quita y avanza.
+// deshabilitada), la apaga, quita el cambio que queda, lamina el cubo con uno desde 100 mm (el paso 4
+// avisa), carga una torre de temperatura y lamina (no avisa: los cambios de la torre caen dentro de la
+// pieza), vuelve al cubo y lamina otra vez.
 //
 // Precondición: paso 4 (tras probarAvanzado), sin cambios por altura.
-// Lamina el cubo con un cambio fuera de la pieza y revisa el aviso del paso 4.
-// Deja: paso 4 visible, sin cambios por altura y con Altura variable apagada.
+// Deja: paso 4 visible con el resultado del cubo sin aviso, sin cambios por altura y con Altura variable apagada.
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarCambios(ctx) {
@@ -37,12 +38,11 @@ export async function probarCambios(ctx) {
     await pagina.tap('[data-quitar="0"]');
     revisar('cambios: sin cambios', (await resumen()) === 'Cambios por altura', await resumen());
     await probarAviso(ctx);
-    await pagina.goForward();
-    revisar('cambios: adelante vuelve al resultado', await visible('section[data-paso="4"]'));
+    await probarTorre(ctx);
+    revisar('cambios: de vuelta en el resultado del cubo', await visible('section[data-paso="4"]'));
 }
 
 /** Un cambio "desde 100 mm" en el cubo de 20 mm: tras laminar, el paso 4 avisa que no se aplicó.
- *  Lamina una vez más (cubo chico) y vuelve al paso 2 a quitar el cambio.
  *  @param {import('../lib/app.mjs').Ctx} ctx */
 async function probarAviso({ page: pagina, ok: revisar, visible, esperarResultado }) {
     await pagina.tap('#cambAgregar');
@@ -56,8 +56,35 @@ async function probarAviso({ page: pagina, ok: revisar, visible, esperarResultad
         (await visible('#avisoResultado')) && aviso.includes('desde 100 mm') && aviso.includes('no se aplicó'),
         aviso,
     );
-    await pagina.goBack();
-    await pagina.tap('[data-quitar="0"]');
+}
+
+/** Con una torre, el paso 4 avisa sólo de los cambios efectivos (los de la torre, que caen dentro de la pieza),
+ *  no de los del usuario (cargar la torre los vacía). Después vuelve al cubo y lamina de nuevo.
+ *  @param {import('../lib/app.mjs').Ctx} ctx */
+async function probarTorre({ page: pagina, ok: revisar, visible, esperarResultado, elegirArchivo }) {
+    await pagina.goBack(); // paso 2
+    await pagina.goBack(); // paso 1
+    await pagina.tap('#otroModelo');
+    await pagina.tap('#botonTorre');
+    await pagina.tap('#formTorre button[type="submit"]');
+    await pagina.waitForFunction(() => /torre/i.test(document.getElementById('nombreModelo').textContent), null, {
+        timeout: 60000,
+    });
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await esperarResultado();
+    const aviso = await pagina.textContent('#avisoResultado');
+    revisar(
+        'cambios: la torre no avisa de cambios ocultos',
+        !(await visible('#avisoResultado')) || !aviso.includes('no se aplicó'),
+        aviso,
+    );
+    await pagina.goBack(); // paso 2
+    await pagina.goBack(); // paso 1
+    await elegirArchivo('public/ejemplos/cubo-20mm.stl');
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await esperarResultado();
 }
 
 /** Campos vacíos: no se guardan como 0 sino como "sin valor" (error), y "Quitar" lo refleja.

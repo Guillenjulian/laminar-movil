@@ -15,7 +15,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - `armarConfiguracion` acepta `cambios` por altura y los convierte en `proceso.ranges` de Kiri (ADR 0002, T2).
 - ADR 0001 (`docs/decisiones/0001-dividir-main.md`): división de `main.js`.
 - Cambios por altura (ADR 0002): a partir de cierta altura en mm cambian el relleno, la temperatura, la velocidad, el ventilador y la retracción. Tras laminar, el paso 4 avisa de los que quedan por encima de la pieza.
-- Torres de calibración de temperatura y de retracción (ADR 0002), generadas en el celu y laminadas con los cambios por altura.
+- Torres de calibración de temperatura y de retracción (ADR 0002): hoja "Torre de calibración" en el paso 1, con un valor por bloque; ocultan escala y rotación, no entran en recientes y se laminan con los cambios por altura.
 - Los modelos recientes recuerdan su escala y rotación: al abrirlos vuelven con la misma transformación (se guarda 500 ms después del último cambio; los recientes viejos abren sin transformar).
 
 ### Cambiado

@@ -11,6 +11,7 @@
 // Importarlo no toca el DOM: los manejadores se registran en `iniciarPaso3`.
 
 import { laminar } from '../motor/motor.js';
+import { validarCambios } from '../perfiles/cambios.js';
 import { armarConfiguracion } from '../perfiles/perfiles.js';
 import { configuracionDeTorre } from '../perfiles/torres.js';
 import { maxTriangulos } from '../config.js';
@@ -58,19 +59,22 @@ async function mantenerPantalla() {
 
 /**
  * Arma la configuración del motor (dispositivo, proceso y avisos) con lo que el usuario eligió.
- * @returns {{dispositivo: object, proceso: object, avisos: string[]}}
+ * @returns {{dispositivo: object, proceso: object, avisos: string[], cambios: object[]}}
  */
 function configuracionActual() {
     // Si hay una torre de calibración, lo que ella fija (Avanzado, relleno, cambios) pisa lo del usuario.
     const t = estado.torre ? configuracionDeTorre(estado.torre) : null;
-    return armarConfiguracion({
+    const usados = t ? t.cambios : estado.cambios;
+    const config = armarConfiguracion({
         impresoraId: estado.impresoraId,
         calidad: estado.calidad,
         material: estado.material,
         soportes: t ? t.soportes : estado.soportes,
         personal: { ...estado.personal, ...t?.personal, avanzado: { ...estado.avanzado, ...t?.avanzado } },
-        cambios: t ? t.cambios : estado.cambios,
+        cambios: usados,
     });
+    // `cambios`: los efectivos (los de la torre si hay una) y ya validados; el paso 4 avisa sólo de esos.
+    return { ...config, cambios: validarCambios(usados).cambios };
 }
 
 /**
@@ -87,10 +91,10 @@ function prepararPantallaLaminado() {
 
 /**
  * Corre el motor sobre una copia del STL y arma el resultado (gcode, info, avisos, nombre de archivo).
- * @param {{dispositivo: object, proceso: object, avisos: string[], signal: AbortSignal}} config
+ * @param {{dispositivo: object, proceso: object, avisos: string[], cambios: object[], signal: AbortSignal}} config
  * @returns {Promise<object>} lo que devuelve `laminar`, más `avisos`, `archivo` e `impresoraId`.
  */
-async function ejecutarLaminado({ dispositivo, proceso, avisos, signal }) {
+async function ejecutarLaminado({ dispositivo, proceso, avisos, cambios, signal }) {
     const r = await laminar({
         stl: estado.stl.slice(0), // copia: el original queda para volver a laminar
         dispositivo,
@@ -107,7 +111,7 @@ async function ejecutarLaminado({ dispositivo, proceso, avisos, signal }) {
         archivo: `${base}_${estado.calidad}.gcode`,
         impresoraId: estado.impresoraId,
         capas: { sliceHeight: proceso.sliceHeight, firstSliceHeight: proceso.firstSliceHeight },
-        cambios: estado.cambios.map(c => ({ ...c })), // los usados (el paso 4 avisa de los que no aplicaron)
+        cambios: cambios.map(c => ({ ...c })),
     };
 }
 

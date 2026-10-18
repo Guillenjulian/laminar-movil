@@ -57,7 +57,7 @@ function filaPropiedad(i, c, clave, apagado) {
         <label><input type="checkbox" data-i="${i}" data-on="${clave}" ${activa ? 'checked' : ''} ${apagado ? 'disabled' : ''}> ${p.texto}</label>
         <span><input type="number" inputmode="decimal" aria-label="${p.texto} (${p.unidad})" data-i="${i}" data-k="${clave}"
             min="${p.min}" max="${p.max}" step="${p.paso}" value="${valor}" ${sinValor}> ${p.unidad}</span>
-    </div>${ayuda}<small data-sinvalor ${vacio}>sin valor: se ignora</small></div>`;
+    </div>${ayuda}<small data-sinvalor aria-live="polite" ${vacio}>sin valor: se ignora</small></div>`;
 }
 
 /** Texto accesible de "Quitar". @param {number|string} desde altura (mm) o '' @returns {string} */

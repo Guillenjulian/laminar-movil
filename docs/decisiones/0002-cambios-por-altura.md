@@ -13,7 +13,7 @@ Desvíos respecto del plan:
 - La regla de capas (mm a índice de capa) se aplica por piso, con la altura de la primera capa y la de las demás.
 - Las pruebas de las mallas de torre viven en su propia suite, `test:torres`, no en `test:cambios`.
 - La UI de torre usa un valor por bloque (no una lista de cambios editable) y la sección "Cambios por altura" se oculta cuando hay una torre.
-- `avisosPostLaminado` se llama desde `paso4-resultado.js` con `info.tamano.z` y las alturas de capa de `armarConfiguracion` (sin tocar `paso3-laminar.js` ni el worker).
+- `avisosPostLaminado` se llama desde `paso4-resultado.js` con lo que `paso3-laminar.js` guarda en `estado.resultado`: `capas` (alturas de capa del proceso usado) y `cambios` (los efectivos y ya validados; con torre, los de la torre). La altura de la pieza sale de `info.tamano.z`.
 
 ## Contexto
 

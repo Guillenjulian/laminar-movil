@@ -75,7 +75,7 @@ export const CONTRATOS = {
     },
     'ui/paso3-laminar': {
         exports: { iniciarPaso3: 1 },
-        importa: conBase(MOTOR, PERFILES, 'perfiles/torres', 'config'),
+        importa: conBase(MOTOR, PERFILES, 'perfiles/cambios', 'perfiles/torres', 'config'),
     },
     'ui/paso4-resultado': {
         exports: { iniciarPaso4: 1, mostrarResultado: 0 },

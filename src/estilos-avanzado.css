@@ -75,6 +75,10 @@
 .cambio input:disabled {
     opacity: 0.5;
 }
+.cambio-bloque small {
+    display: block;
+    color: var(--suave);
+}
 #cambErrores div + div {
     margin-top: 4px;
 }
