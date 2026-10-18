@@ -46,9 +46,11 @@ function crearCola() {
             ordenes.push([nombre, args]);
         },
         reproducir(visor) {
-            const pendientes = ordenes;
-            ordenes = [];
-            for (const [nombre, args] of pendientes) visor[nombre](...args);
+            // Una por vez: si una tira, las que siguen quedan para el reintento (la que tiró se descarta).
+            while (ordenes.length) {
+                const [nombre, args] = ordenes.shift();
+                visor[nombre](...args);
+            }
         },
     };
 }
@@ -117,11 +119,18 @@ function armar(cargar) {
     function crearVisor(contenedor, opciones = {}) {
         const cola = crearCola();
         let visorReal = null;
+        let creado = null;
+        // Cualquier excepción (sin WebGL, una orden que tira, alListo) deja el visor en 'error' con el aviso.
         const quedarListo = modulo => {
-            visorReal = modulo.crearVisor(contenedor);
-            cola.reproducir(visorReal);
-            aviso.listo();
-            opciones.alListo?.();
+            try {
+                creado ??= modulo.crearVisor(contenedor);
+                cola.reproducir(creado);
+                visorReal = creado;
+                aviso.listo();
+                opciones.alListo?.();
+            } catch {
+                aviso.error();
+            }
         };
         const empezar = () => {
             aviso.cargando();

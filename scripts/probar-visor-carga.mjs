@@ -24,12 +24,17 @@ function contenedorFalso() {
 }
 
 // Visor real de mentira: anota cada llamada y contesta tamanoModelo con una medida fija.
-function visorFalso(registro) {
+function visorFalso(registro, tira = new Set()) {
     return new Proxy(
         {},
         {
             get: (_, nombre) =>
-                nombre === 'tamanoModelo' ? () => ({ x: 1, y: 2, z: 3 }) : (...a) => registro.push([nombre, ...a]),
+                nombre === 'tamanoModelo'
+                    ? () => ({ x: 1, y: 2, z: 3 })
+                    : (...a) => {
+                          if (tira.has(nombre)) throw new Error('orden rota');
+                          registro.push([nombre, ...a]);
+                      },
         },
     );
 }
@@ -37,7 +42,7 @@ function visorFalso(registro) {
 // Cargador que se resuelve o falla cuando la prueba lo decide.
 function cargadorManual() {
     const registro = [];
-    const c = { registro, creados: 0, pedidos: 0, esperando: [] };
+    const c = { registro, creados: 0, pedidos: 0, esperando: [], tira: new Set(), noCrea: false };
     c.cargar = () => {
         c.pedidos++;
         return new Promise((resolver, rechazar) => c.esperando.push({ resolver, rechazar }));
@@ -45,7 +50,8 @@ function cargadorManual() {
     const modulo = {
         crearVisor: () => {
             c.creados++;
-            return visorFalso(registro);
+            if (c.noCrea) throw new Error('sin WebGL');
+            return visorFalso(registro, c.tira);
         },
     };
     c.llegar = async () => {
@@ -71,12 +77,13 @@ async function probarCola() {
     visor.ponerModelo(v1, 0);
     visor.ponerTransformacion([1, 0, 0, 0, 1, 0, 0, 0, 1], 0);
     await c.llegar();
-    const nombres = c.registro.map(([n]) => n);
-    revisar(
-        'se reproduce en orden',
-        json(nombres) === json(['ponerModelo', 'quitarModelo', 'ponerModelo', 'ponerTransformacion']),
-        json(nombres),
-    );
+    const esperado = [
+        ['ponerModelo', v1, 0],
+        ['quitarModelo', 0],
+        ['ponerModelo', v1, 0],
+        ['ponerTransformacion', [1, 0, 0, 0, 1, 0, 0, 0, 1], 0],
+    ];
+    revisar('se reproduce en orden, con sus argumentos', json(c.registro) === json(esperado), json(c.registro));
     revisar('los argumentos van por referencia', c.registro[0][1] === v1);
 }
 
@@ -171,10 +178,72 @@ async function probarYaCargado() {
     await c.llegar();
     const visor = crear(contenedorFalso());
     revisar('crea el visor real enseguida', c.creados === 2);
+    const antes = c.registro.length;
     visor.ponerModelo(new Float32Array(9), 4);
-    revisar('las llamadas van directo, sin cola', c.registro.at(-1)[0] === 'ponerModelo' && c.registro.at(-1)[2] === 4);
+    revisar(
+        'las llamadas van directo, sin cola (sincrónico)',
+        c.registro.length === antes + 1 && c.registro.at(-1)[0] === 'ponerModelo' && c.registro.at(-1)[2] === 4,
+    );
     revisar('tamanoModelo ya da el valor real', visor.tamanoModelo(4)?.z === 3);
     revisar('no volvió a pedir el módulo', c.pedidos === 1);
+}
+
+async function probarExcepciones() {
+    console.log('Excepciones al quedar listo');
+    const rechazos = [];
+    const alRechazo = e => rechazos.push(e);
+    process.on('unhandledRejection', alRechazo);
+    const c1 = cargadorManual();
+    c1.noCrea = true;
+    const cont1 = contenedorFalso();
+    let listos = 0;
+    armarVisorCarga(c1.cargar)(cont1, { alListo: () => listos++ });
+    await c1.llegar();
+    revisar(
+        'si crearVisor real tira: data-visor error y aviso',
+        cont1.dataset.visor === 'error' && /reintentar/.test(cont1.aviso.textContent),
+    );
+    const c2 = cargadorManual();
+    c2.tira.add('ponerCama');
+    const cont2 = contenedorFalso();
+    const visor = armarVisorCarga(c2.cargar)(cont2, { alListo: () => listos++ });
+    visor.ponerCama({ x: 1 });
+    visor.ponerModelo(new Float32Array(9), 0);
+    await c2.llegar();
+    revisar('si una orden encolada tira: error y aviso', cont2.dataset.visor === 'error' && !cont2.aviso.hidden);
+    revisar('no se llamó a alListo', listos === 0);
+    c2.tira.clear();
+    cont2.aviso.clics.forEach(fn => fn());
+    await new Promise(r => setTimeout(r, 0));
+    revisar(
+        'el reintento sigue con el resto de la cola',
+        cont2.dataset.visor === 'listo' && c2.registro.length === 1 && c2.registro[0][0] === 'ponerModelo',
+        json(c2.registro),
+    );
+    revisar('el reintento no creó otro visor real', c2.creados === 1);
+    await new Promise(r => setTimeout(r, 5));
+    process.off('unhandledRejection', alRechazo);
+    revisar('sin unhandledrejection', rechazos.length === 0, String(rechazos[0]));
+}
+
+async function probarConcurrencia() {
+    console.log('Dos crearVisor antes de que llegue el módulo');
+    const c = cargadorManual();
+    const crear = armarVisorCarga(c.cargar);
+    const cont1 = contenedorFalso();
+    const cont2 = contenedorFalso();
+    const v1 = crear(cont1);
+    const v2 = crear(cont2);
+    v1.ponerCama({ x: 1 });
+    v2.ponerCama({ x: 2 });
+    await c.llegar();
+    revisar('el cargador se llamó una sola vez', c.pedidos === 1, `pedidos=${c.pedidos}`);
+    revisar('las dos instancias quedaron listo', cont1.dataset.visor === 'listo' && cont2.dataset.visor === 'listo');
+    const camas = c.registro
+        .filter(([n]) => n === 'ponerCama')
+        .map(([, m]) => m.x)
+        .sort();
+    revisar('cada cola se reprodujo', json(camas) === json([1, 2]), json(c.registro));
 }
 
 // Los nombres de `armarApi` (visor.js) más los de visor-recorridos (menos `esfera`), leídos del fuente.
@@ -207,6 +276,8 @@ await probarConsulta();
 await probarAlListo();
 await probarFallo();
 await probarYaCargado();
+await probarExcepciones();
+await probarConcurrencia();
 probarNombres();
 
 if (fallas) {
