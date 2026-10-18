@@ -34,7 +34,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
 | `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config`, `recientes` |
 | `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación: 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
-| `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda), su tarjeta y "Mi impresora" (formulario, copiar, editar, borrar) | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
+| `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda) y su tarjeta; cablea el formulario de "Mi impresora" | `estado`, `navegacion`, `util-dom`, `formulario-impresora`, `perfiles/perfiles` |
+| `src/ui/formulario-impresora.js` | Formulario de "Mi impresora": crear, copiar un perfil como propio, editar y borrar (`iniciarFormularioImpresora`); avisa con el callback `elegir(id)` | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
 | `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
 | `src/ui/paso3-laminar.js` | Lanza el laminado (con la configuración de la torre si hay una), muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `perfiles/torres`, `config` |
 | `src/ui/paso4-resultado.js` | Resumen del resultado, avisos (incluye los de cambios por altura fuera de la pieza, `avisosPostLaminado`) y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles`, `perfiles/cambios` |
@@ -56,10 +57,11 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 Grafo de dependencias de `src/ui/` (ADR 0001, sección 2; `A → B` = A importa B):
 
 ```
-Nivel 5   main.js ──► (todos los de abajo)
-Nivel 4   paso4-resultado ──► vista-capas, paso2-config
-Nivel 3   paso2-config ──► impresoras
-Nivel 2   paso1-modelo   impresoras   vista-capas   paso3-laminar   ──► navegacion
+Nivel 6   main.js ──► (todos los de abajo)
+Nivel 5   paso4-resultado ──► vista-capas, paso2-config
+Nivel 4   paso2-config ──► impresoras
+Nivel 3   impresoras ──► formulario-impresora
+Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
 Nivel 1   navegacion ──► estado
 Nivel 0   estado, util-dom, actualizacion, cambios, torres ──► hojas ya existentes (avanzado, formato, materiales,
                                               litofania, visor, motor/*, perfiles/*, almacen, config)
@@ -180,7 +182,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
 | Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |
 | La vista previa por capas no responde | `iniciarVistaCapas()` en `src/ui/vista-capas.js` |
-| No se puede elegir o guardar una impresora | `iniciarImpresoras()` en `src/ui/impresoras.js` |
+| No se puede elegir una impresora | `iniciarImpresoras()` en `src/ui/impresoras.js` |
+| "Mi impresora" (crear, copiar, editar, borrar) no guarda o no abre | `iniciarFormularioImpresora()` en `src/ui/formulario-impresora.js` |
 | "Atrás" sale de la app o no cierra la hoja; el paso no cambia | `iniciarNavegacion()` y `mostrar()` en `src/ui/navegacion.js` |
 | Las preferencias o "Mi impresora" no se guardan o no vuelven al abrir | `cargarPreferencias`, `guardarPreferencias` y `guardarPropias` en `src/ui/estado.js` |
 | El precio del rollo no se guarda | `iniciarMateriales()` en `src/ui/materiales.js` |
@@ -189,7 +192,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - `src/ui/vista-capas.js` supera las 300 líneas físicas (317); el lint no lo marca porque no cuenta blancos ni comentarios. Plan B: `pausas-ui.js` (ADR 0001).
-- `src/ui/impresoras.js` (288 líneas) está cerca del límite: plan B = `formulario-impresora.js` (ADR 0001).
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
 - Funciones y archivos largos marcados por `npm run lint` (warnings, no bloquean): `visor.js` (`crearVisor`, 310 líneas; el archivo, 313), `crearAvanzado`, `prepararLitofania`, `armarConfiguracion`, `espiral.js` (`espiralar`, `vueltaDesde`), `recorridos.worker.js` (`leer`), `laminador.worker.js` (`laminar`), `litofania.js` (`generarLitofania`), `decimar.js` (`agrupar`), `formatos.js` (`leerOBJ`, `leerXML3MF`), y los archivos `scripts/probar-motor.mjs` (541 líneas) y `scripts/probar-formatos.mjs` (320).
