@@ -268,6 +268,32 @@ function probarInvalidas({ revisar }) {
     revisar('Infinity da error', noEntran.test(intenta(con({ x: Infinity, y: 0 }))));
 }
 
+// Cada widget lleva las zonas sin soporte de SU pieza (ADR 0004), en copias propias y validadas.
+function probarBloqueos({ revisar, igual }) {
+    console.log('\n▶ prepararPiezas: bloqueos por widget');
+    const zona = { id: 7, forma: 'esfera', centro: { x: 1, y: 2, z: 3 }, radio: 5 };
+    const con = {
+        ...pieza(stlPrisma(10, 10, 10), [
+            { x: -30, y: 0 },
+            { x: 30, y: 0 },
+        ]),
+        bloqueos: [zona],
+    };
+    const sin = pieza(stlPrisma(10, 10, 10), [{ x: 0, y: 40 }]);
+    const { widgets } = prepararPiezas([con, sin], cama, Infinity);
+    revisar(
+        'las dos copias de la pieza con zona la llevan',
+        igual(widgets[0].bloqueos, [zona]) && igual(widgets[1].bloqueos, [zona]),
+    );
+    revisar(
+        'cada copia tiene su propio arreglo',
+        widgets[0].bloqueos !== widgets[1].bloqueos && widgets[0].bloqueos[0] !== widgets[1].bloqueos[0],
+    );
+    revisar('la pieza sin bloqueos manda []', igual(widgets[2].bloqueos, []));
+    const basura = { ...pieza(stlPrisma(10, 10, 10), [O]), bloqueos: [zona, { forma: 'caja' }, null] };
+    revisar('lo inválido se descarta', igual(prepararPiezas([basura], cama, Infinity).widgets[0].bloqueos, [zona]));
+}
+
 export function probarPreparar(ctx) {
     probarUna(ctx);
     probarVarias(ctx);
@@ -275,4 +301,5 @@ export function probarPreparar(ctx) {
     probarAvance(ctx);
     probarCama(ctx);
     probarInvalidas(ctx);
+    probarBloqueos(ctx);
 }

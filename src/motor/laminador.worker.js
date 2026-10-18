@@ -75,15 +75,6 @@ function piezasDe(msg) {
     return [{ stl: msg.stl, transformacion: msg.transformacion, posiciones: [{ x: 0, y: 0 }] }];
 }
 
-// Pone en cada widget las zonas sin soporte de su pieza (copia propia por widget; mismo marco local para todas las
-// copias: la posición en la cama es `track.pos`). Los widgets salen de prepararPiezas en el orden pieza × copia.
-function conBloqueos(piezas, widgets) {
-    let k = 0;
-    for (const p of piezas) {
-        for (let c = 0; c < p.posiciones.length; c++) widgets[k++].bloqueos = structuredClone(p.bloqueos ?? []);
-    }
-}
-
 // La cama como rectángulo en el marco local del widget (el de sus cortes: centro de la pieza en 0, 0). `pos` es el
 // centro de la copia relativo al centro de la cama, y vale igual con origen en la esquina o en el centro. El árbol de
 // soportes (ADR 0004) la usa para no salirse (cama redonda: se usa su caja).
@@ -108,7 +99,7 @@ async function subirWidgets(widgets, settings) {
             group: id,
             vertices: w.vertices,
             meta: {},
-            anno: { bloqueos: w.bloqueos ?? [], cama: camaLocal(settings.device, w.pos) },
+            anno: { bloqueos: w.bloqueos, cama: camaLocal(settings.device, w.pos) },
             track: {
                 box: { w: x, h: y, d: z },
                 pos: w.pos,
@@ -156,7 +147,6 @@ async function laminar(msg) {
     const piezas = piezasDe(msg);
     const r = prepararPiezas(piezas, dispositivo, maxTriangulos, v => progreso('reduciendo', v));
     msg.stl = null; // prepararPiezas ya soltó el `stl` de cada pieza
-    conBloqueos(piezas, r.widgets);
     reiniciarGanchos(laminarDiagnostico);
     const settings = armarSettings(dispositivo, proceso);
     await subirWidgets(r.widgets, settings);

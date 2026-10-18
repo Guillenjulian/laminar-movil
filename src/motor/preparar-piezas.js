@@ -8,6 +8,7 @@ import { leerSTL } from './stl.js';
 import { decimar } from './decimar.js';
 import { aplicar, esIdentidad } from './transformar.js';
 import { repartirTriangulos } from './piezas.js';
+import { validarBloqueos } from './bloqueos.js';
 
 /** Tolerancia (mm) con la que una copia puede pasarse del borde de la cama. */
 export const TOLERANCIA_COPIA_MM = 0.5;
@@ -105,11 +106,13 @@ function cajaDelConjunto(cajas, centros) {
  * **Consume `p.stl`**: lo pone en `null` apenas lo lee, así el archivo y la malla no conviven en memoria.
  * Cada pieza se decima una sola vez; cada copia lleva su propio `Float32Array`, nunca compartido (la última
  * copia usa la malla de la pieza y las anteriores un `slice`).
- * @param {{stl:ArrayBuffer, transformacion?:number[], posiciones:{x:number,y:number}[]}[]} piezas
+ * @param {{stl:ArrayBuffer, transformacion?:number[], posiciones:{x:number,y:number}[], bloqueos?:object[]}[]} piezas
+ *   `bloqueos`: zonas sin soporte en el marco de la pieza (ADR 0004); cada copia recibe las suyas, validadas
  * @param {object} dispositivo perfil (bedWidth, bedDepth, maxHeight)
  * @param {number} maxTriangulos tope del conjunto, copias incluidas
  * @param {(valor:number)=>void} [alReducir] avance de la decimación (0..1)
- * @returns {{widgets: {vertices:Float32Array, pos:{x:number,y:number,z:number}, tamano:{x:number,y:number,z:number}}[],
+ * @returns {{widgets: {vertices:Float32Array, pos:{x:number,y:number,z:number}, tamano:{x:number,y:number,z:number},
+ *             bloqueos:object[]}[],
  *           triangulos:number, tamano:{x:number,y:number,z:number}, decimado:object|null}}
  *   `tamano`: x e y de la caja que abarca todo (con posiciones), z la altura de la más alta.
  *   `decimado`: `{original, final, precisionMm}` del conjunto (con copias) o `null` si no se decimó nada.
@@ -131,7 +134,8 @@ export function prepararPiezas(piezas, dispositivo, maxTriangulos, alReducir) {
         posiciones.forEach((p, c) => {
             validarCopia(tamano, p, dispositivo);
             const vertices = c === posiciones.length - 1 ? v : v.slice();
-            widgets.push({ vertices, pos: { x: p.x, y: p.y, z: 0 }, tamano: { ...tamano } });
+            const bloqueos = validarBloqueos(piezas[i].bloqueos); // una copia por widget, mismo marco local
+            widgets.push({ vertices, pos: { x: p.x, y: p.y, z: 0 }, tamano: { ...tamano }, bloqueos });
             cajas.push(tamano);
             centros.push(p);
         });
