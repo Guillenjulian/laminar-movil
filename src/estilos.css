@@ -281,6 +281,14 @@ h2:first-child {
     color: var(--suave);
     font-size: 1.4rem;
 }
+.solo-lectores {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
 .agregar-pieza {
     display: flex;
     flex-wrap: wrap;

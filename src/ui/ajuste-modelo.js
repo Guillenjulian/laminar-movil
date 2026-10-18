@@ -13,7 +13,7 @@ import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxTriangulos } from '../config.js';
 import * as formato from './formato.js';
 import { $ } from './util-dom.js';
-import { estado, matrizModelo } from './estado.js';
+import { estado, matrizModelo, piezaActiva } from './estado.js';
 
 /**
  * Crea el ajuste del modelo. No toca el DOM hasta `conectar()`.
@@ -39,7 +39,7 @@ export function crearAjuste(ctx) {
 
 /** Tamaño del modelo como va a quedar en la cama. */
 function tamanoActual(ctx) {
-    return ctx.visor()?.tamanoModelo() || estado.vista.tamano;
+    return ctx.visor()?.tamanoModelo(piezaActiva()?.id) || estado.vista.tamano;
 }
 
 /** Cambia la escala (entre 0,01 y 20) y reaplica; ignora valores no positivos. */
@@ -51,7 +51,7 @@ function ponerEscala(ctx, s) {
 
 /** Aplica rotación y escala al visor y refresca escala, textos, "restablecer" y avisos. */
 function aplicar(ctx) {
-    ctx.visor().ponerTransformacion(matrizModelo());
+    ctx.visor().ponerTransformacion(matrizModelo(), piezaActiva()?.id);
     const pct = Math.round(estado.escala * 1000) / 10;
     $('escala').value = pct;
     $('datosModelo').textContent =

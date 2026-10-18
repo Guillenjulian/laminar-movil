@@ -30,6 +30,7 @@ const ajuste = crearAjuste({ visor: () => visor, alCambiar: programarGuardado, t
 const piezas = crearPiezas({
     visor: () => visor,
     ajuste,
+    ejemplo: bufferEjemplo,
     leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
     elegirOtro: elegirOtroModelo,
 });
@@ -96,11 +97,15 @@ function conectarSubida() {
     $('foto').onchange = alElegirArchivo;
     $('otroModelo').onclick = elegirOtroModelo;
     $('siguiente').onclick = () => irA(2);
-    $('ejemplo').onclick = async () => {
-        const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
-        await cargarArchivo('cubo-20mm.stl', await r.arrayBuffer());
-    };
+    $('ejemplo').onclick = async () => cargarArchivo('cubo-20mm.stl', await bufferEjemplo());
     iniciarRecientes((nombre, stl, transformacion) => cargarArchivo(nombre, stl, { esStl: true, transformacion }));
+}
+
+/** Descarga el cubo de ejemplo (lo usan #ejemplo y "Agregar cubo de ejemplo"). */
+async function bufferEjemplo() {
+    const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
+    if (!r.ok) throw new Error('No se pudo descargar el ejemplo (' + r.status + ')');
+    return r.arrayBuffer();
 }
 
 /** Handler de #archivo y #foto: lee el archivo elegido y lo carga. */
@@ -168,9 +173,9 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     if (!visor) visor = crearVisor($('visor'));
     const imp = buscarImpresora(estado.impresoraId).dispositivo;
     visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
-    visor.ponerModelo(vertices);
 
-    // La pieza se crea después del visor: si ponerModelo lanza, estado no apunta a una pieza sin malla.
+    // La pieza se crea antes (para tener su id) pero entra en `estado` después del visor: si ponerModelo
+    // lanza, estado no apunta a una pieza sin malla.
     const pieza = crearPieza({
         nombre,
         stl: buffer,
@@ -178,9 +183,9 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
         transformacion: transformacion ?? almacen.normalizarTransformacion(),
         origen: torre ? 'torre' : origen,
     });
+    visor.ponerModelo(vertices, pieza.id);
     estado.piezas = [pieza];
     estado.activa = pieza.id;
-    pieza.idVisor = 0; // la malla va con id 0 (ajuste-modelo aún no usa ids; T10)
     $('nombreModelo').textContent = nombre;
     ajuste.cancelarCara();
     ajuste.aplicar();
