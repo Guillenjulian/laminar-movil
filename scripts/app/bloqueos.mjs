@@ -20,6 +20,10 @@ export async function probarBloqueos(ctx) {
     const pulsado = () => pagina.getAttribute('#bloqueoMarcar', 'aria-pressed');
 
     revisar('zonas: el panel se ve con un modelo', await visible('#bloqueosPanel'));
+    revisar(
+        'zonas: la nota del voladizo se ve',
+        (await pagina.textContent('#bloqueoNota')).includes('puede dejarlo sin ningún soporte'),
+    );
     revisar('zonas: radio inicial 8 mm', (await pagina.textContent('#bloqueoRadioNum')).trim() === '8');
     await pagina.tap('#bloqueoMarcar');
     revisar('zonas: el modo "marcar" queda con aria-pressed', (await pulsado()) === 'true');
@@ -31,9 +35,11 @@ export async function probarBloqueos(ctx) {
         textos.length === 1 && textos[0].includes('Zona 1 · 9'),
         textos,
     );
+    const idChip = await chips.first().getAttribute('data-zona');
     revisar(
-        'zonas: la chip se quita con un botón rotulado',
-        (await pagina.getAttribute('#bloqueoLista .chip-quitar', 'aria-label')) === 'Quitar zona 1, cubo-20mm.stl',
+        'zonas: la chip se quita con un botón rotulado cuyo id es el de la chip',
+        (await pagina.getAttribute('#bloqueoLista .chip-quitar', 'aria-label')) === 'Quitar zona 1, cubo-20mm.stl' &&
+            (await pagina.getAttribute('#bloqueoLista .chip-quitar', 'data-quitar')) === idChip,
     );
 
     await radioYEscala(ctx, chips, pulsado);

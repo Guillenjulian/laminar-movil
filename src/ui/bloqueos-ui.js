@@ -59,7 +59,7 @@ export function chipZona(zona, n, nombrePieza, elegida) {
  *   `sincronizar()` compara `firmaBloqueos` con la actual y vacía las zonas si cambió la pieza.
  */
 export function crearBloqueosUI(ctx) {
-    const est = { ...ctx, modo: false, radio: RADIO_INICIAL_MM, elegida: null };
+    const est = { ...ctx, conectado: false, modo: false, radio: RADIO_INICIAL_MM, elegida: null };
     return {
         conectar: () => conectar(est),
         dibujar: () => dibujar(est),
@@ -75,6 +75,8 @@ function pieza() {
 
 /** Cablea el botón de modo, el stepper y la lista (chips: elegir y quitar). */
 function conectar(est) {
+    if (est.conectado) return;
+    est.conectado = true;
     $('bloqueoMarcar').onclick = () => {
         est.modo = !est.modo;
         dibujar(est);
@@ -98,8 +100,8 @@ function conectar(est) {
 function tocar(est, { id, punto }) {
     const p = pieza();
     if (!est.modo || !p || p.id !== id) return;
+    // El tope no se chequea acá: `dibujar` apaga el modo al llegar a MAX_BLOQUEOS, y sin modo se sale arriba.
     const lista = (p.bloqueos ??= []);
-    if (lista.length >= MAX_BLOQUEOS) return;
     const zona = validarBloqueos([
         { id: est.nuevoId(), forma: 'esfera', centro: { x: punto.x, y: punto.y, z: punto.z }, radio: est.radio },
     ])[0];
@@ -168,6 +170,7 @@ function dibujar(est) {
     marcar.setAttribute('aria-pressed', String(est.modo));
     marcar.disabled = lleno;
     marcar.textContent = est.modo ? 'Tocá la pieza para marcar' : 'Marcar zona sin soporte';
+    for (const id of ['bloqueoRadioMenos', 'bloqueoRadioMas']) $(id).setAttribute('aria-describedby', 'bloqueoNota');
     $('bloqueoRadioNum').textContent = String(est.radio);
     $('bloqueoRadioMenos').disabled = est.radio <= RADIO_MIN_MM;
     $('bloqueoRadioMas').disabled = est.radio >= RADIO_MAX_MM;

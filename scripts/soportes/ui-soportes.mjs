@@ -1,87 +1,8 @@
-// Pruebas de la lógica de src/ui/bloqueos-ui.js y src/ui/soportes-tipo-ui.js (Node, con un DOM falso mínimo).
-// `estado.js` importa JSON, que Node no carga solo: se empaquetan los módulos reales con esbuild (como hace
-// vendor-kiri) y se importan desde memoria. Las corre scripts/probar-soportes.mjs.
+// Pruebas de la lógica de src/ui/bloqueos-ui.js y src/ui/soportes-tipo-ui.js (Node, con el DOM falso de dom-falso.mjs).
+// Las corre scripts/probar-soportes.mjs.
 
-import { build } from 'esbuild';
-import { fileURLToPath } from 'node:url';
 import { MAX_BLOQUEOS, validarBloqueos } from '../../src/motor/bloqueos.js';
-
-const raiz = fileURLToPath(new URL('../..', import.meta.url));
-const entrada = `
-export * from './src/ui/bloqueos-ui.js';
-export * from './src/ui/soportes-tipo-ui.js';
-export { estado, crearPieza } from './src/ui/estado.js';`;
-
-/** Carga los módulos reales empaquetados. */
-async function cargar() {
-    const r = await build({
-        stdin: { contents: entrada, resolveDir: raiz, sourcefile: 'entrada.js' },
-        bundle: true,
-        format: 'esm',
-        platform: 'node',
-        write: false,
-        logLevel: 'silent',
-        banner: { js: 'var __glob = () => ({});' },
-        define: { 'import.meta.glob': '__glob' }, // Vite lo resuelve en la app; acá no hay impresoras
-    });
-    const codigo = r.outputFiles[0].text;
-    return import(`data:text/javascript;base64,${Buffer.from(codigo).toString('base64')}`);
-}
-
-/** DOM falso: elementos por id; las listas de chips se leen del HTML que escribió el módulo. */
-function crearDom() {
-    const elementos = new Map();
-    const dom = { enfocado: null };
-    const elemento = id => {
-        const e = {
-            id,
-            hidden: false,
-            disabled: false,
-            textContent: '',
-            innerHTML: '',
-            attrs: {},
-            oyentes: {},
-            setAttribute: (k, v) => (e.attrs[k] = v),
-            getAttribute: k => e.attrs[k],
-            addEventListener: (tipo, fn) => (e.oyentes[tipo] = fn),
-            focus() {
-                dom.enfocado = id;
-            },
-            querySelectorAll(sel) {
-                const atributo = sel.match(/\[(data-[a-z]+)\]/)?.[1];
-                if (!atributo) return [];
-                const ids = [...this.innerHTML.matchAll(new RegExp(`${atributo}="(\\d+)"`, 'g'))].map(m => m[1]);
-                return ids.map(v => ({ focus: () => (dom.enfocado = `${atributo}:${v}`) }));
-            },
-            querySelector(sel) {
-                return sel === 'input:checked' ? { focus: () => (dom.enfocado = 'radio-marcado') } : null;
-            },
-        };
-        return e;
-    };
-    dom.$ = id => {
-        if (!elementos.has(id)) elementos.set(id, elemento(id));
-        return elementos.get(id);
-    };
-    globalThis.document = { getElementById: dom.$ };
-    return dom;
-}
-
-/** Evento de clic falso sobre un botón con ese atributo de datos. */
-const clic = (atributo, valor) => ({
-    target: { closest: sel => (sel === `[${atributo}]` ? { dataset: { [atributo.slice(5)]: String(valor) } } : null) },
-});
-
-/** Visor falso que recuerda la función de toque y las marcas. */
-function crearVisor() {
-    const v = { fn: null, marcas: [], quitadas: 0 };
-    v.alTocarPunto = fn => (v.fn = fn);
-    v.marcasBloqueo = {
-        poner: (z, pos) => v.marcas.push({ zonas: z.map(b => ({ ...b })), pos }),
-        quitar: () => v.quitadas++,
-    };
-    return v;
-}
+import { cargar, clic, crearDom, crearVisor } from './dom-falso.mjs';
 
 function agregar(t) {
     const { revisar, estado, $, J, pieza, visor } = t;
@@ -149,6 +70,24 @@ function quitar(t) {
     revisar('quitar saca la zona', pieza.bloqueos.length === 0 && $('bloqueoLista').innerHTML === '');
     revisar('sin zonas el foco vuelve al botón de marcar', dom.enfocado === 'bloqueoMarcar');
     revisar('las marcas se sacan del visor', visor.quitadas > 0);
+    for (const x of [1, 2, 3]) visor.fn({ id: pieza.id, punto: { x, y: 0, z: 1 } });
+    const [a, b, c] = pieza.bloqueos.map(z => z.id);
+    $('bloqueoLista').onclick(clic('data-quitar', a));
+    revisar(
+        'quitar la primera de 3 deja el foco en el quitar de la que ahora es la primera',
+        dom.enfocado === `data-quitar:${b}`,
+    );
+    $('bloqueoLista').onclick(clic('data-zona', c));
+    revisar('elegir una chip la deja con aria-pressed', $('bloqueoLista').innerHTML.includes('aria-pressed="true"'));
+    $('bloqueoLista').onclick(clic('data-zona', c));
+    revisar('elegirla de nuevo la suelta', !$('bloqueoLista').innerHTML.includes('aria-pressed="true"'));
+    $('bloqueoLista').onclick(clic('data-zona', c));
+    $('bloqueoLista').onclick(clic('data-quitar', c));
+    revisar('quitar la zona elegida limpia la elección', !$('bloqueoLista').innerHTML.includes('aria-pressed="true"'));
+    const radioB = pieza.bloqueos[0].radio;
+    $('bloqueoRadioMas').onclick();
+    revisar('sin elegida el stepper no toca la zona que queda', pieza.bloqueos[0].radio === radioB);
+    $('bloqueoLista').onclick(clic('data-quitar', b));
 }
 
 function firma(t) {
@@ -177,6 +116,7 @@ function limite(t) {
     pieza.rotacion = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     pieza.escala = 1;
     if ($('bloqueoMarcar').getAttribute('aria-pressed') !== 'true') $('bloqueoMarcar').onclick();
+    const enganchado = visor.fn; // el toque que el visor todavía tiene enganchado antes de llenar
     for (let i = 0; i < MAX_BLOQUEOS + 5; i++) visor.fn?.({ id: pieza.id, punto: { x: i, y: 0, z: 1 } });
     revisar(`no pasa de ${MAX_BLOQUEOS} zonas`, pieza.bloqueos.length === MAX_BLOQUEOS);
     revisar(
@@ -184,9 +124,32 @@ function limite(t) {
         $('bloqueoMarcar').disabled && $('bloqueoMarcar').getAttribute('aria-pressed') === 'false',
     );
     revisar('el visor suelta el toque', visor.fn === null);
+    enganchado({ id: pieza.id, punto: { x: 99, y: 0, z: 1 } });
+    revisar('un toque rezagado con el tope alcanzado no agrega', pieza.bloqueos.length === MAX_BLOQUEOS);
     revisar('explica el tope', $('bloqueoAyuda').textContent.includes(`Máximo ${MAX_BLOQUEOS} zonas`));
     $('bloqueoLista').onclick(clic('data-quitar', pieza.bloqueos[0].id));
     revisar('al quitar una se puede volver a marcar', !$('bloqueoMarcar').disabled);
+}
+
+function dosPiezas(t) {
+    const { revisar, estado, avisos, ui, visor } = t;
+    const { crearPieza, firmaPieza } = t.m;
+    console.log('\n▶ bloqueos-ui: sincronizar con dos piezas');
+    const nueva = () => {
+        const p = crearPieza({ nombre: 'x.stl', stl: new ArrayBuffer(0), vista: {} });
+        p.bloqueos = [{ id: p.id * 10, forma: 'esfera', centro: { x: 0, y: 0, z: 1 }, radio: 5 }];
+        p.firmaBloqueos = firmaPieza(p);
+        return p;
+    };
+    const [p1, p2] = [nueva(), nueva()];
+    estado.piezas = [p1, p2];
+    estado.activa = p1.id;
+    const antes = avisos.length;
+    p2.escala = 3; // cambia la que NO es la activa
+    ui.sincronizar();
+    revisar('solo se vacía la pieza que cambió', p1.bloqueos.length === 1 && p2.bloqueos.length === 0);
+    revisar('y avisa una sola vez', avisos.length === antes + 1);
+    revisar('la activa sigue en el visor con sus marcas', visor.marcas.at(-1).zonas.length === 1);
 }
 
 function texto(t) {
@@ -207,7 +170,7 @@ function texto(t) {
 }
 
 function tipo(t) {
-    const { revisar, estado, dom, $, nuevaPieza } = t;
+    const { revisar, estado, $, nuevaPieza } = t;
     const { crearTipoSoportes } = t.m;
     console.log('\n▶ soportes-tipo-ui');
     nuevaPieza();
@@ -216,6 +179,8 @@ function tipo(t) {
     tipo.conectar();
     estado.soportes = true; // preferencia vieja
     tipo.dibujar();
+    tipo.conectar();
+    revisar('conectar dos veces cablea una sola vez', $('tipoSoportes').nAdd === 1);
     revisar("un boolean viejo se dibuja como 'normal'", /value="normal"[^>]*checked/.test($('tipoSoportes').innerHTML));
     revisar(
         'hay tres opciones con ayuda',
@@ -224,22 +189,47 @@ function tipo(t) {
     );
     revisar(
         'con tipo normal y 2 zonas dice "2 zonas sin soporte"',
-        $('tipoSoportesZonas').textContent === '2 zonas sin soporte' && !$('tipoSoportesZonas').hidden,
+        $('tipoSoportesZonas').textContent === '2 zonas sin soporte',
     );
+    const html = $('tipoSoportes').innerHTML;
     const cambiar = valor => $('tipoSoportes').oyentes.change({ target: { name: 'tipoSoportes', value: valor } });
     cambiar('arbol');
     revisar("elegir Árbol guarda 'arbol' y avisa alCambiar", estado.soportes === 'arbol' && t.guardados === 1);
-    revisar('el foco queda en el radio elegido', dom.enfocado === 'radio-marcado');
+    revisar('al cambiar no se redibujan los radios (el foco no se pierde)', $('tipoSoportes').innerHTML === html);
+    revisar(
+        'la ayuda de cada radio está fuera del label',
+        !(html.match(/<label[^]*?<\/label>/g) ?? []).some(l => l.includes('<small')) &&
+            html.includes('aria-describedby'),
+    );
+    t.tipo = tipo;
+    t.html = html;
+    tipo2(t);
+}
+
+function tipo2(t) {
+    const { revisar, estado, $, J, tipo, html } = t;
+    const cambiar = valor => $('tipoSoportes').oyentes.change({ target: { name: 'tipoSoportes', value: valor } });
     cambiar('no');
     revisar(
         "con 'no' no hay aviso de zonas",
-        $('tipoSoportesZonas').textContent === '' && $('tipoSoportesZonas').hidden,
+        $('tipoSoportesZonas').textContent === '' && $('tipoSoportesZonas').hidden !== true,
     );
     cambiar('cualquiera');
     revisar("un valor raro se normaliza a 'no'", estado.soportes === 'no');
     estado.piezas[0].bloqueos = [{ id: 1 }];
     cambiar('normal');
     revisar('con una zona dice "1 zona sin soporte"', $('tipoSoportesZonas').textContent === '1 zona sin soporte');
+    estado.soportes = 'arbol';
+    tipo.dibujar();
+    const marcados = $('tipoSoportes')
+        .querySelectorAll('input')
+        .filter(r => r.checked)
+        .map(r => r.value);
+    revisar(
+        'dibujar de nuevo solo marca el tipo vigente',
+        J(marcados) === J(['arbol']) && $('tipoSoportes').innerHTML === html,
+    );
+    estado.soportes = 'normal';
     $('tipoSoportes').oyentes.change({ target: { name: 'otro', value: 'arbol' } });
     revisar('un cambio de otro control no toca el tipo', estado.soportes === 'normal');
 }
@@ -279,5 +269,5 @@ export default async function ({ revisar }) {
     t.pieza = t.nuevaPieza();
     t.ui.conectar();
     t.ui.dibujar();
-    for (const seccion of [agregar, radio, quitar, firma, limite, texto, tipo]) seccion(t);
+    for (const seccion of [agregar, radio, quitar, firma, limite, dosPiezas, texto, tipo]) seccion(t);
 }

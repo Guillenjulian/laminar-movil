@@ -21,12 +21,12 @@ export async function probarSoportesTipo(ctx) {
 
     const cuantas = await pagina.locator('#tipoSoportes input').count();
     revisar('soportes: tres opciones y "No" marcada', cuantas === 3 && (await radio('no').isChecked()));
-    revisar('soportes: con "No" no se avisa de zonas', !(await pagina.isVisible('#tipoSoportesZonas')));
+    revisar('soportes: con "No" no se avisa de zonas', (await zonas()) === '');
     await radio('arbol').check();
     revisar('soportes: Árbol queda marcado', await radio('arbol').isChecked());
     revisar('soportes: con Árbol y una zona dice "1 zona sin soporte"', (await zonas()) === '1 zona sin soporte');
     await radio('normal').check();
     revisar('soportes: con Normal también', (await zonas()) === '1 zona sin soporte');
     await radio('no').check();
-    revisar('soportes: de vuelta a "No" desaparece el aviso', !(await pagina.isVisible('#tipoSoportesZonas')));
+    revisar('soportes: de vuelta a "No" desaparece el aviso', (await zonas()) === '');
 }

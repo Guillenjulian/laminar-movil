@@ -50,36 +50,50 @@ export function zonasVigentes() {
  *   `dibujar()` marca el tipo de `estado.soportes` y muestra "N zonas sin soporte" si corresponde.
  */
 export function crearTipoSoportes(ctx) {
-    return { conectar: () => conectar(ctx), dibujar };
+    const est = { ...ctx, conectado: false, pintado: false };
+    return { conectar: () => conectar(est), dibujar: () => dibujar(est) };
 }
 
-/** Cablea el cambio de opción del grupo; el foco vuelve al radio elegido porque se redibuja. */
-function conectar(ctx) {
+/** Cablea el cambio de opción del grupo (una vez). Los radios no se redibujan: solo se actualiza el aviso. */
+function conectar(est) {
+    if (est.conectado) return;
+    est.conectado = true;
     $('tipoSoportes').addEventListener('change', e => {
         const { name, value } = /** @type {HTMLInputElement} */ (e.target);
         if (name !== 'tipoSoportes') return;
         estado.soportes = normalizarSoportes(value);
-        dibujar();
-        $('tipoSoportes').querySelector('input:checked')?.focus();
-        ctx.alCambiar();
+        avisarZonas();
+        est.alCambiar();
     });
 }
 
-/** HTML de una opción: radio con nombre y ayuda (la ayuda queda asociada al radio con aria-describedby). */
+/** HTML de una opción: radio con nombre, y la ayuda fuera del label, asociada con aria-describedby. */
 function opcion(tipo, marcado) {
     const { nombre, ayuda } = OPCIONES_SOPORTE[tipo];
-    return `<label class="opcion">
-        <input type="radio" name="tipoSoportes" value="${tipo}" aria-describedby="ayudaSoportes-${tipo}" ${marcado ? 'checked' : ''}>
-        <span><b>${nombre}</b><br><small id="ayudaSoportes-${tipo}">${ayuda}</small></span>
-    </label>`;
+    return `<div class="opcion-soporte">
+        <label class="opcion">
+            <input type="radio" name="tipoSoportes" value="${tipo}" aria-describedby="ayudaSoportes-${tipo}" ${marcado ? 'checked' : ''}>
+            <span><b>${nombre}</b></span>
+        </label>
+        <small id="ayudaSoportes-${tipo}">${ayuda}</small>
+    </div>`;
 }
 
-/** Marca el tipo vigente y muestra las zonas si cuentan. */
-function dibujar() {
-    const tipo = normalizarSoportes(estado.soportes);
-    $('tipoSoportes').innerHTML = TIPOS_SOPORTE.map(t => opcion(t, t === tipo)).join('');
+/** Texto de "N zonas sin soporte" en la región viva, que siempre está en el DOM (se vacía, no se oculta). */
+function avisarZonas() {
     const texto = textoZonasSinSoporte(zonasVigentes());
     const aviso = $('tipoSoportesZonas');
-    if (aviso.textContent !== texto) aviso.textContent = texto; // región viva: no re-anunciar si no cambió
-    aviso.hidden = !texto;
+    if (aviso.textContent !== texto) aviso.textContent = texto; // no re-anunciar si no cambió
+}
+
+/** Pinta los tres radios la primera vez; después solo marca el tipo vigente (p. ej. tras cargar preferencias). */
+function dibujar(est) {
+    const tipo = normalizarSoportes(estado.soportes);
+    if (!est.pintado) {
+        $('tipoSoportes').innerHTML = TIPOS_SOPORTE.map(t => opcion(t, t === tipo)).join('');
+        est.pintado = true;
+    } else {
+        for (const radio of $('tipoSoportes').querySelectorAll('input')) radio.checked = radio.value === tipo;
+    }
+    avisarZonas();
 }
