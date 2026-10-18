@@ -44,7 +44,7 @@ export const CONTRATOS = {
         ),
     },
     'ui/acomodo': {
-        exports: { acomodarPiezas: 0 },
+        exports: { acomodarPiezas: 1 },
         importa: ['config', 'motor/piezas', 'motor/transformar', PERFILES, 'ui/estado'],
     },
     'ui/ajuste-modelo': {

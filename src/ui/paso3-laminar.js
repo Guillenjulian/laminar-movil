@@ -5,7 +5,8 @@
 // avisa con `alTerminar` (que carga el paso 4) y después va al paso 4 reemplazando el historial.
 //
 // Flujo: #laminar -> empezarLaminado -> configuracionActual (desde estado) -> prepararPantallaLaminado
-// (paso 3, progreso en 0) -> acomodarPiezas (si no entran: error y no lamina) -> AbortController + mantenerPantalla -> ejecutarLaminado (motor, con
+// (paso 3, progreso en 0) -> acomodarPiezas (si no entran: error y no lamina; con una sola pieza y una copia
+// lo decide el worker) -> AbortController + mantenerPantalla -> ejecutarLaminado (motor, con
 // alProgresar = ponerProgreso) -> estado.resultado -> alTerminar() -> irA(4, reemplazar).
 // Error: se muestra el mensaje y el botón pasa a "Volver". #cancelar aborta y vuelve atrás.
 // Importarlo no toca el DOM: los manejadores se registran en `iniciarPaso3`.
@@ -139,7 +140,8 @@ function mostrarError(mensaje) {
 async function empezarLaminado(alTerminar) {
     const config = configuracionActual();
     prepararPantallaLaminado();
-    if (!acomodarPiezas().entra) {
+    const sola = estado.piezas.length === 1 && estado.piezas[0].copias === 1;
+    if (!acomodarPiezas().entra && !sola) {
         mostrarError('Las piezas no entran en la cama. Probá con menos copias o más chicas.');
         return;
     }

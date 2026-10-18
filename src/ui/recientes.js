@@ -8,7 +8,7 @@
 import * as almacen from '../almacen.js';
 import * as formato from './formato.js';
 import { $, escapar } from './util-dom.js';
-import { estado } from './estado.js';
+import { estado, piezaActiva } from './estado.js';
 import { alMostrarPaso } from './navegacion.js';
 
 const ESPERA_MS = 500;
@@ -63,12 +63,14 @@ export async function mostrarRecientes() {
 /**
  * Programa el guardado de rotación y escala de todas las piezas (ADR 0003, sección 5) en sus recientes
  * (500 ms después del último cambio). Capta los valores ahora, así cambiar de modelo antes no los mezcla.
- * Las copias no se guardan. Con la misma clave (nombre y bytes) gana la última pieza.
+ * Las copias no se guardan. Limitación de v1: si dos piezas comparten la clave (nombre y bytes) gana la activa.
  * @returns {void}
  */
 export function programarGuardado() {
     if (estado.torre) return; // la torre no entra en recientes
-    for (const p of estado.piezas.filter(q => q.origen === 'modelo')) {
+    const modelos = estado.piezas.filter(q => q.origen === 'modelo');
+    const orden = [...modelos.filter(q => q !== piezaActiva()), ...modelos.filter(q => q === piezaActiva())];
+    for (const p of orden) {
         const bytes = p.stl.byteLength;
         const transformacion = { rotacion: [...p.rotacion], escala: p.escala };
         pendientes.set(`${p.nombre}|${bytes}`, { nombre: p.nombre, bytes, transformacion });

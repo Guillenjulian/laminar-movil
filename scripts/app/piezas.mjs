@@ -6,7 +6,8 @@
 // (el visor ya no la dibuja y el foco va a "Agregar pieza"). Después: quitar la activa cuando es la primera,
 // el tope de MAX_PIEZAS (8) y que con una torre no se vea "Agregar pieza". Al final (T9), laminado: 2 cubos
 // se laminan acomodados (2 grupos de extrusión en la capa 2, en las X de `acomodar`, y "2 piezas" en el
-// resumen) y uno agrandado hasta que no entra da el error "Las piezas no entran en la cama" sin laminar.
+// resumen), dos agrandadas hasta que no entran dan el error "Las piezas no entran en la cama" sin laminar, y
+// una sola que no entra da el mensaje detallado del worker ("El modelo mide … no entra en la cama").
 //
 // Precondición: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
 // Deja: paso 1 con el cubo de ejemplo cargado (una sola pieza, sin chips), escala 100 %.
@@ -23,6 +24,7 @@ export async function probarPiezas(ctx) {
     await probarTorre(ctx);
     await probarLaminarVarias(ctx);
     await probarNoEntra(ctx);
+    await probarUnaNoEntra(ctx);
 }
 
 const chips = pagina => pagina.locator('#listaPiezas .chip');
@@ -233,4 +235,23 @@ async function probarNoEntra({ page: pagina, ok: revisar, visible }) {
         (await pagina.inputValue('#escala')) === '100' && (await medidas(pagina)) === '20,0 × 20,0 × 20,0 mm',
         await medidas(pagina),
     );
+}
+
+/** Una sola pieza que no entra: no la frena paso3 y el worker da su mensaje detallado. */
+async function probarUnaNoEntra({ page: pagina, ok: revisar }) {
+    await pagina.fill('#escala', '2000'); // 20 mm -> 400 mm
+    await pagina.locator('#escala').blur();
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
+    const texto = await pagina.textContent('#errorLaminado');
+    revisar(
+        'una pieza que no entra: mensaje detallado del worker',
+        /^El modelo mide .* no entra en la cama \(/.test(texto),
+        texto,
+    );
+    await pagina.tap('#cancelar');
+    await pagina.goBack();
+    await pagina.tap('#restablecerModelo');
+    revisar('una pieza que no entra: restaurada a 100 %', (await pagina.inputValue('#escala')) === '100');
 }

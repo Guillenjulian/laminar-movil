@@ -115,6 +115,8 @@ function acomodo(e, a, chequear) {
         'acomodarPiezas: con escala 2 (40 mm) sigue entrando, centros (-25, 0) y (25, 0)',
     );
     acomodoCopias(e, a, chequear);
+    acomodoCama(e, a, chequear);
+    acomodoMedir(e, a, chequear);
 }
 
 /** acomodarPiezas: copias, lo que no entra y el caso sin piezas. */
@@ -135,11 +137,70 @@ function acomodoCopias(e, a, chequear) {
     estado.piezas = [cubo(e, 200), cubo(e, 200)];
     const grande = a.acomodarPiezas();
     chequear(
-        !grande.entra && !estado.entra && grande.fuera.length > 0,
-        'acomodarPiezas: 200 mm más 200 mm no entra en 220 (fuera: ' + grande.fuera + ')',
+        !grande.entra && !estado.entra && mismo(grande.fuera, [1]),
+        'acomodarPiezas: 200 mm más 200 mm no entra en 220 (fuera exacto: [1], dio ' + grande.fuera + ')',
+    );
+    const chica = cubo(e, 20);
+    chica.copias = 2;
+    estado.piezas = [chica, cubo(e, 200)];
+    chequear(
+        mismo(a.acomodarPiezas().fuera, [0, 1]),
+        'acomodarPiezas: 2 copias de 20 mm y un cubo de 200: fuera son los índices globales [0, 1]',
     );
     estado.piezas = [];
     chequear(a.acomodarPiezas().entra && estado.entra, 'acomodarPiezas: sin piezas entra');
+}
+
+/** Pieza con caja `x × y × z` (mm) y rotación `rot` opcional. */
+function caja(e, x, y, z, rot = transformar.identidad()) {
+    return e.crearPieza({
+        nombre: 'k',
+        stl: buf(),
+        vista: { triangulos: 12, tamano: { x, y, z } },
+        transformacion: { rotacion: rot, escala: 1 },
+    });
+}
+
+/** acomodarPiezas: cama rectangular (Prusa MK4, 250 × 210 × 220) y pieza más alta que la impresora. */
+function acomodoCama(e, a, chequear) {
+    const { estado } = e;
+    estado.impresoraId = 'prusa-mk4';
+    estado.piezas = [caja(e, 230, 200, 10)];
+    chequear(a.acomodarPiezas().entra, 'acomodarPiezas: 230 × 200 entra en la MK4 (250 × 210) en ese sentido');
+    estado.piezas = [caja(e, 230, 200, 10, transformar.rotacion90('z'))];
+    chequear(
+        mismo(a.acomodarPiezas().fuera, [0]),
+        'acomodarPiezas: la misma pieza girada 90° (200 × 230) no entra en la MK4',
+    );
+    estado.piezas = [caja(e, 20, 20, 230)];
+    const alta = a.acomodarPiezas();
+    chequear(
+        !alta.entra && mismo(alta.fuera, [0]),
+        'acomodarPiezas: una pieza más alta que maxHeight (220) cae en fuera',
+    );
+    estado.impresoraId = 'creality-ender-3-v3-se';
+}
+
+/** acomodarPiezas: `medir` inyectado (huella exacta) o ausente (caja de 8 esquinas, conservadora), giro de 45°. */
+function acomodoMedir(e, a, chequear) {
+    const { estado } = e;
+    const c = Math.SQRT1_2;
+    const rot45 = [c, -c, 0, c, c, 0, 0, 0, 1];
+    const cerca = (p, x) => Math.abs(Math.abs(p.posiciones[0].x) - x) < 1e-9 && p.posiciones[0].y === 0;
+    const dos = [caja(e, 20, 20, 20, rot45), caja(e, 20, 20, 20, rot45)];
+    estado.piezas = dos;
+    const real = a.acomodarPiezas(() => ({ x: 20, y: 20, z: 20 }));
+    chequear(
+        real.entra && cerca(dos[0], 15) && cerca(dos[1], 15),
+        'acomodarPiezas(medir): con la huella real (20 mm) los centros son ±15',
+    );
+    a.acomodarPiezas();
+    const lado = 20 * Math.SQRT2;
+    chequear(
+        cerca(dos[0], (lado + 10) / 2) && cerca(dos[1], (lado + 10) / 2),
+        'acomodarPiezas sin medir: usa la caja de 8 esquinas girada 45° (28,28 mm), centros ±19,14',
+    );
+    estado.piezas = [];
 }
 
 /**
