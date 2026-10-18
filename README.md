@@ -69,6 +69,8 @@ npm run test:transformar  # matrices de escala/rotación (Node, sin navegador)
 npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
 ```
 
+La CI de GitHub Actions (`.github/workflows/ci.yml`) corre build, lint, format:check y todas las suites en cada PR y en cada push a `main`.
+
 Para probar en el celu en la misma red Wi-Fi: `npm run build && npx vite preview --host` y abrí la
 dirección que muestra. Ojo: el service worker (offline/instalación) sólo funciona con **HTTPS** o en
 `localhost`, así que para probar eso conviene deployar (es gratis, ver abajo).

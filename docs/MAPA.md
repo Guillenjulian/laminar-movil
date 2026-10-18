@@ -94,6 +94,10 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 
 Antes de cualquier commit: `npm run build` y las suites que toquen el área cambiada. Antes de integrar, todas.
 
+### CI
+
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:motor`, `test:app` y `test:contratos` (si existe). Un push nuevo al mismo PR cancela la corrida anterior.
+
 ## 5. Dónde buscar si algo falla
 
 | Síntoma | Mirar primero |
