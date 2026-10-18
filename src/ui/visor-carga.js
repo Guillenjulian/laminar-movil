@@ -55,31 +55,34 @@ function crearCola() {
     };
 }
 
-// El aviso dentro del contenedor ("Cargando…" a los 200 ms, o el error con reintento) y `data-visor`.
+// El aviso dentro del contenedor ("Cargando…" a los 200 ms, o el error con un botón para reintentar) y `data-visor`.
+// El contenedor aria-live está siempre en el DOM (vacío se oculta con :empty), así los lectores de pantalla
+// anuncian el texto cuando aparece.
 function crearAviso(contenedor, reintentar) {
-    const aviso = contenedor.ownerDocument.createElement('div');
+    const doc = contenedor.ownerDocument;
+    const aviso = doc.createElement('div');
     aviso.className = 'visor-estado';
     aviso.setAttribute('role', 'status');
-    aviso.addEventListener('click', () => {
-        if (contenedor.dataset.visor === 'error') reintentar();
-    });
+    aviso.setAttribute('aria-live', 'polite');
+    contenedor.appendChild(aviso);
     let demora = null;
-    const poner = (estado, texto, demorar) => {
+    const poner = (estado, texto, boton) => {
         clearTimeout(demora);
         contenedor.dataset.visor = estado;
-        aviso.textContent = texto;
-        aviso.hidden = demorar;
-        if (demorar) demora = setTimeout(() => (aviso.hidden = false), DEMORA_AVISO_MS);
-        if (!aviso.parentNode) contenedor.appendChild(aviso);
+        aviso.textContent = '';
+        if (boton) {
+            const b = doc.createElement('button');
+            b.type = 'button';
+            b.className = 'visor-estado-boton';
+            b.textContent = texto;
+            b.addEventListener('click', reintentar);
+            aviso.appendChild(b);
+        } else if (texto) demora = setTimeout(() => (aviso.textContent = texto), DEMORA_AVISO_MS);
     };
     return {
-        cargando: () => poner('cargando', TEXTO_CARGANDO, true),
-        error: () => poner('error', TEXTO_ERROR, false),
-        listo() {
-            clearTimeout(demora);
-            contenedor.dataset.visor = 'listo';
-            aviso.remove();
-        },
+        cargando: () => poner('cargando', TEXTO_CARGANDO, false),
+        error: () => poner('error', TEXTO_ERROR, true),
+        listo: () => poner('listo', '', false),
     };
 }
 
@@ -109,50 +112,57 @@ function armarFachada(real, cola) {
     return visor;
 }
 
+// alListo no puede marcar 'error' ni tirar la promesa: si falla, se informa en la consola.
+function avisarListo(alListo) {
+    try {
+        alListo?.();
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+// Un visor para `contenedor`: real en el mismo turno si el módulo ya estaba, o con cola hasta que llegue.
+function crearInstancia({ estado, pedir }, contenedor, opciones) {
+    const cola = crearCola();
+    let visorReal = null;
+    let creado = null;
+    // Cualquier excepción (sin WebGL, una orden que tira) deja el visor en 'error' con el aviso.
+    const quedarListo = modulo => {
+        try {
+            creado ??= modulo.crearVisor(contenedor);
+            cola.reproducir(creado);
+            visorReal = creado;
+            aviso.listo();
+        } catch {
+            return aviso.error();
+        }
+        avisarListo(opciones.alListo);
+    };
+    const empezar = () => {
+        aviso.cargando();
+        pedir().then(quedarListo, aviso.error);
+    };
+    const aviso = crearAviso(contenedor, empezar);
+    if (estado.modulo) {
+        // Ya estaba cargado: visor real en el mismo turno, sin cola. alListo va en un microtask
+        // para que el llamador alcance a guardar el visor antes de que se lo avisemos.
+        visorReal = estado.modulo.crearVisor(contenedor);
+        aviso.listo();
+        queueMicrotask(() => avisarListo(opciones.alListo));
+    } else empezar();
+    return armarFachada(() => visorReal, cola);
+}
+
 /**
  * Implementación con el cargador inyectado. Devuelve `crearVisor` y `precargar`, que comparten el mismo pedido.
  * @param {() => Promise<{ crearVisor: (contenedor: HTMLElement) => Record<string, Function> }>} cargar
  */
 function armar(cargar) {
-    const { estado, pedir } = crearPedido(cargar);
-
-    function crearVisor(contenedor, opciones = {}) {
-        const cola = crearCola();
-        let visorReal = null;
-        let creado = null;
-        // Cualquier excepción (sin WebGL, una orden que tira) deja el visor en 'error' con el aviso.
-        // alListo va aparte: si tira, el visor ya está listo y no se marca 'error' (se informa en la consola).
-        const quedarListo = modulo => {
-            try {
-                creado ??= modulo.crearVisor(contenedor);
-                cola.reproducir(creado);
-                visorReal = creado;
-                aviso.listo();
-            } catch {
-                return aviso.error();
-            }
-            try {
-                opciones.alListo?.();
-            } catch (error) {
-                console.error(error);
-            }
-        };
-        const empezar = () => {
-            aviso.cargando();
-            pedir().then(quedarListo, aviso.error);
-        };
-        const aviso = crearAviso(contenedor, empezar);
-        if (estado.modulo) {
-            // Ya estaba cargado: visor real en el mismo turno, sin cola. alListo va en un microtask
-            // para que el llamador alcance a guardar el visor antes de que se lo avisemos.
-            visorReal = estado.modulo.crearVisor(contenedor);
-            contenedor.dataset.visor = 'listo';
-            if (opciones.alListo) queueMicrotask(opciones.alListo);
-        } else empezar();
-        return armarFachada(() => visorReal, cola);
-    }
-
-    return { crearVisor, precargar: () => void pedir().catch(() => {}) };
+    const pedido = crearPedido(cargar);
+    return {
+        crearVisor: (contenedor, opciones = {}) => crearInstancia(pedido, contenedor, opciones),
+        precargar: () => void pedido.pedir().catch(() => {}),
+    };
 }
 
 /**

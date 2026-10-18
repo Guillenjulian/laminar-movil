@@ -163,7 +163,7 @@ h2:first-child {
     height: 100%;
     display: block;
 }
-/* Aviso mientras carga three.js (ADR 0006); con error se puede tocar para reintentar. */
+/* Aviso mientras carga three.js (ADR 0006); con error, un botón para reintentar. */
 .visor-estado {
     position: absolute;
     inset: 0;
@@ -174,13 +174,25 @@ h2:first-child {
     color: var(--suave);
     background: var(--tarjeta);
 }
-.visor-estado[hidden] {
+.visor-estado:empty {
     display: none;
 }
 .visor[data-visor='error'] .visor-estado {
     color: var(--texto);
     background: var(--error);
+}
+.visor-estado-boton {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--error-borde);
+    border-radius: var(--radio);
+    padding: 12px 16px;
     cursor: pointer;
+}
+.visor-estado-boton:focus-visible {
+    outline: 3px solid var(--acento);
+    outline-offset: 2px;
 }
 .ayuda-gestos {
     position: absolute;

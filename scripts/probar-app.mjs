@@ -27,6 +27,7 @@ import { probarImpresoras } from './app/impresoras.mjs';
 import { probarRecientes } from './app/recientes.mjs';
 import { probarTransformar } from './app/transformar.mjs';
 import { probarTorres } from './app/torres.mjs';
+import { probarVisorDiferido } from './app/visor-diferido.mjs';
 import { probarOffline } from './app/offline.mjs';
 import { probarAcomodoConGiros, probarPrecioTrasRecargar } from './app/piezas-extra.mjs';
 
@@ -54,6 +55,7 @@ const AREAS = [
     probarTransformar,
     probarTorres,
     probarPrecioTrasRecargar,
+    probarVisorDiferido,
     probarOffline,
 ];
 

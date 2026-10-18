@@ -50,4 +50,5 @@ mostrarRecientes();
 // 4. Tareas de fondo.
 almacen.pedirAlmacenamientoPersistente();
 registrarServiceWorker();
-(window.requestIdleCallback ?? (f => setTimeout(f, 1)))(precargarVisor);
+if (window.requestIdleCallback) requestIdleCallback(precargarVisor, { timeout: 3000 });
+else setTimeout(precargarVisor, 1);

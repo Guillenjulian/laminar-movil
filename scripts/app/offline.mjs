@@ -28,6 +28,12 @@ export async function probarOffline(ctx) {
     // Recargada sin red, la página no tiene el chunk del visor en memoria: lo tiene que traer del caché.
     await esperarVisor(pagina, '#visor');
     revisar('el visor 3D carga sin conexión', (await pagina.getAttribute('#visor', 'data-visor')) === 'listo');
+    // Que cargue no prueba que esté precacheado (el fetch del service worker no queda offline): se mira el caché.
+    const enCache = await pagina.evaluate(async () => {
+        const url = performance.getEntriesByType('resource').find(r => /\/assets\/visor-[^/]*\.js/.test(r.name))?.name;
+        return url ? !!(await caches.match(url, { ignoreSearch: true, ignoreVary: true })) : null;
+    });
+    revisar('el chunk del visor está en el caché del service worker', enCache === true, String(enCache));
     await pagina.tap('#siguiente');
     await pagina.tap('#laminar');
     await esperarResultado();
