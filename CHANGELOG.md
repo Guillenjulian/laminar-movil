@@ -15,6 +15,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Cambiado
 
 - El importador de Kiri sigue salteando `Bambu.A1` y `Bambu.P1S`, con el motivo de que el perfil revisado a mano es el que se usa.
+- La app arranca más liviana: three.js se carga aparte, cuando hace falta (y se precarga en segundo plano). El chunk principal pasa de 594 a 62 kB.
+- La vista previa de G-codes enormes se simplifica si no entra en la memoria del equipo, y avisa. Antes se cortaba: ahora se ven todas las capas.
 
 ## [0.3.0] - 2026-10-18
 

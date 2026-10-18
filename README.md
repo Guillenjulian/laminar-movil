@@ -69,8 +69,10 @@ Pruebas automáticas (usan Chromium; en otra máquina definí `CHROMIUM_PATH`):
 
 ```bash
 npm run build
+npm run test:chunks  # tamaño de los chunks del build: el principal y la carga inicial tienen tope, y el visor está en el service worker
 npm run test:motor   # lamina mallas de prueba y valida el G-code (perfil, calidades, soportes, malla de 1,2 M triángulos)
 npm run test:transformar  # matrices de escala/rotación (Node, sin navegador)
+npm run test:visor-carga  # fachada del visor que carga three.js bajo demanda (Node, sin navegador)
 npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
 ```
 

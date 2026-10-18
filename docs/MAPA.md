@@ -230,7 +230,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Macros `{...}` sin reemplazar | `dispositivo.gcodePre/Post` del perfil y el shim de QuickJS en `vendor-kiri.mjs` |
 | No abre offline | `src/sw.js` (lista de archivos, `ignoreVary`), `vite.config.js` |
 | La vista previa no coincide con las capas | `recorridos-lector.js` (detección de capa por cambio de Z en extrusión) |
-| La vista previa dice que está simplificada (o no avisa) | `recorridos-auto.js`, `recorridos-niveles.js`, `src/ui/aviso-vista.js` y `armarVistaPrevia()` en `src/ui/vista-capas.js` |
+| La vista previa dice "simplificada" (o no avisa) | `src/motor/recorridos-auto.js` y `src/ui/aviso-vista.js`; además `recorridos-niveles.js` y `armarVistaPrevia()` en `src/ui/vista-capas.js` |
+| El visor 3D no aparece o dice "No se pudo cargar" | `src/ui/visor-carga.js` (la fachada y el reintento) y la lista `ARCHIVOS` de `dist/sw.js` (la verifica `npm run test:chunks`) |
 | Modo jarrón sin espiral o capas raras | `espiral.js` y el comentario `; capa en espiral` que lee `recorridos-lector.js` |
 | La sección "Cambios por altura" no responde o no marca errores | `crearCambios()` en `src/ui/cambios.js` |
 | Un cambio por altura no se aplicó y no hay aviso en el paso 4 | `avisosDeCambios()` en `src/ui/paso4-resultado.js` y `avisosPostLaminado` en `src/perfiles/cambios.js` |

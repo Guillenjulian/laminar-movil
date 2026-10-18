@@ -6,7 +6,7 @@
 
 ## Estado
 
-Aceptado por el CTO el 2026-10-18, con estas decisiones:
+Implementado (T0 a T6). Aceptado por el CTO el 2026-10-18, con estas decisiones:
 
 - `chunkSizeWarningLimit: 600`; el control real es `test:chunks` en la CI.
 - **T0 y T4 van juntas** (la medición es la aceptación de T4). Los niveles se calibran con un G-code grande que
@@ -401,6 +401,8 @@ salir juntas, cada una en su rama y con su PR chico.
   ignora o se rompe al usarlo). Se cubre con la prueba que compara los nombres de ambos archivos.
 - **Medida inexacta mientras carga (`tamanoModelo` null).** Cubierta por `alListo` (re-aplica y re-acomoda); queda una
   ventana donde el acomodo usa la caja de 8 esquinas (más grande, nunca más chica, así que no hay falsos "entra").
+  El cableado de `piezas.reacomodar()` en `alListo` sólo lo cubre `ajuste.aplicar` (sin giros de 45° no hay diferencia
+  observable).
 - **Chunk viejo tras actualizar.** Una pestaña abierta con el chunk anterior puede pedir un archivo que ya no existe: el
   aviso con reintento lo cubre (y la actualización recarga la página). Se vigila en `offline.mjs` y en una prueba manual.
 - **Instalación del SW más grande o fallida.** Es el mismo peso total que hoy (el chunk del visor pasa de un archivo a
@@ -439,3 +441,25 @@ Fuera de v1:
   puede ocultar detalles finos (se avisa al usuario); las constantes de los niveles se afinan con datos reales.
 - **Reversa:** T3 es reversible cambiando dos líneas de `import` (volver a `./visor.js`); T4 y T6 se desactivan pidiendo
   siempre nivel 0 (el comportamiento de hoy, idéntico bit a bit).
+
+## Cómo quedó
+
+Medido con `npm run build` sobre `int-rend` (`43d2058`); `npm run test:chunks` pasa.
+
+| Medida | Antes (`d0f3de0`) | Ahora |
+|---|---|---|
+| Chunk principal (`main-*.js`) | 594 kB (gzip 158 kB) | 62 kB (gzip 22 kB) |
+| Carga inicial (principal + `motor`) | ~800 kB | ~268 kB |
+| Chunk del visor (`visor-*.js`) | dentro del principal | 535 kB (gzip 136 kB), dinámico y en la lista de `sw.js` |
+
+- Niveles calibrados: `DESVIO` 0,02 / 0,08 / 0,15 / 0,30 mm; `REDUCCION` [1, 0.88, 0.70, 0.52].
+- El nivel 0 es idéntico a la base: la prueba fija compara la cantidad de tramos, los tipos y un hash de las posiciones.
+- Un nivel mayor nunca da más tramos que el anterior. Es el respaldo del criterio del nivel 0 (las uniones que el nivel 0
+  ya haría se aceptan sin la comprobación completa).
+- El rendimiento del nivel 0 queda dentro del +10 % contra la base (`medir-recorridos`).
+- El aviso `#avisoVista` (`role=status`) está siempre en el DOM; sólo cambia su texto.
+- Pruebas de punta a punta nuevas en `test:app`:
+  - `visor-diferido`: el chunk se demora con `page.route` (contexto sin service worker); mientras tanto se gira la T y se
+    suma una copia, y al llegar `alListo` queda la medida real.
+  - `vista-liviana`: fuerza `navigator.deviceMemory = 1` y carga una esfera de 110 mm con relleno giroide; la vista entra
+    simplificada, con aviso, todas las capas y el deslizador hasta la última.
