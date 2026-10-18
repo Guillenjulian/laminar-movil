@@ -49,6 +49,9 @@ function filaPropiedad(i, c, clave, apagado) {
     </div>`;
 }
 
+/** Texto accesible de "Quitar". @param {number|string} desde altura (mm) o '' @returns {string} */
+const etiquetaQuitar = desde => (desde === '' ? 'Quitar este cambio' : `Quitar el cambio desde ${desde} mm`);
+
 /** HTML de un cambio (altura "desde" + propiedades + Quitar). @param {number} i @param {object} c
  *  @param {boolean} apagado todo deshabilitado @param {boolean} jarron sin relleno @returns {string} */
 function filaCambio(i, c, apagado, jarron) {
@@ -59,7 +62,7 @@ function filaCambio(i, c, apagado, jarron) {
         <div class="cambio-cabeza">
             <label>Desde <input type="number" inputmode="decimal" aria-label="Altura desde (mm)" data-i="${i}" data-k="desdeMm"
                 min="0" max="1000" step="0.5" value="${desde}" ${off}> mm</label>
-            <button type="button" class="boton enlace" data-quitar="${i}" aria-label="Quitar el cambio desde ${desde} mm" ${off}>Quitar</button>
+            <button type="button" class="boton enlace" data-quitar="${i}" aria-label="${etiquetaQuitar(desde)}" ${off}>Quitar</button>
         </div>
         ${props.join('')}
     </div>`;
@@ -73,7 +76,10 @@ function aplicarEdicion(c, campo) {
         if (campo.checked) c[on] = PROPIEDADES[on].inicial;
         else delete c[on];
     } else if (k === 'desdeMm') c.desdeMm = leerNumero(campo.value);
-    else c[k] = leerNumero(campo.value) / PROPIEDADES[k].factor;
+    else {
+        const v = leerNumero(campo.value);
+        c[k] = v === null ? null : v / PROPIEDADES[k].factor;
+    }
 }
 
 /** Valor que se ve en el campo de una propiedad ('' si no tiene). @param {object} c @param {string} k @returns {string|number} */
@@ -109,6 +115,10 @@ function dibujarTodo(estado, enfocar) {
  *  @param {object} c cambio @param {HTMLInputElement} campo @returns {void} */
 function editarCampo(c, campo) {
     aplicarEdicion(c, campo);
+    if (campo.dataset.k === 'desdeMm') {
+        const desde = Number.isFinite(c.desdeMm) ? c.desdeMm : '';
+        campo.closest('.cambio').querySelector('[data-quitar]').setAttribute('aria-label', etiquetaQuitar(desde));
+    }
     if (!campo.dataset.on) return;
     const numero = campo.closest('.cambio-prop').querySelector('[data-k]');
     numero.disabled = !campo.checked;

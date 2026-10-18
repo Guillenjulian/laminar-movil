@@ -23,6 +23,7 @@ export async function probarCambios(ctx) {
         await resumen(),
     );
     await captura('2-cambios');
+    await probarVacios(ctx);
     await pagina.tap('label.interruptor:has(#avAlturaVariable)');
     revisar(
         'cambios: altura variable deshabilita la sección',
@@ -36,4 +37,25 @@ export async function probarCambios(ctx) {
     revisar('cambios: sin cambios', (await resumen()) === 'Cambios por altura', await resumen());
     await pagina.goForward();
     revisar('cambios: adelante vuelve al resultado', await visible('section[data-paso="4"]'));
+}
+
+/** Campos vacíos: no se guardan como 0 sino como "sin valor" (error), y "Quitar" lo refleja.
+ *  @param {import('../lib/app.mjs').Ctx} ctx */
+async function probarVacios({ page: pagina, ok: revisar, visible }) {
+    await pagina.locator('[data-k="relleno"]').fill('');
+    await pagina.locator('[data-k="relleno"]').blur();
+    revisar(
+        'cambios: relleno vacío da error, no 0',
+        (await visible('#cambErrores')) && (await pagina.locator('[data-k="relleno"]').inputValue()) === '',
+        await pagina.textContent('#cambErrores'),
+    );
+    await pagina.locator('[data-k="desdeMm"]').fill('');
+    await pagina.locator('[data-k="desdeMm"]').blur();
+    revisar(
+        'cambios: "Quitar" sin altura',
+        (await pagina.getAttribute('[data-quitar="0"]', 'aria-label')) === 'Quitar este cambio',
+    );
+    await pagina.locator('[data-k="desdeMm"]').fill('10');
+    await pagina.locator('[data-k="relleno"]').fill('20');
+    await pagina.locator('[data-k="relleno"]').blur();
 }
