@@ -103,6 +103,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración → STL binario |
 | `recorridos.worker.js` | Worker de la vista previa: recibe el G-code, llama a `leer` y devuelve los recorridos (re-exporta `leer`, que usan las pruebas en Node) |
 | `recorridos-lector.js` | `leer`: G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa. Puro (sin `self`); la clase `Lector` guarda el estado y no arma objetos por línea (G-codes de millones de líneas) |
+| `recorridos-tramos.js` · `recorridos-lista.js` | Piezas de `leer`, puras: `Tramos` (guarda y une los tramos, lleva caja y capas) y `Lista` (array tipado que crece), `q` (cuantizado), `tipoDe`, `valor` |
 | `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
 | `formatos-3mf.js` | Lector de 3MF (`leer3MF`, `leerXML3MF`); `formatos.js` lo re-exporta |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |

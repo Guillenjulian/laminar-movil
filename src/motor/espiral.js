@@ -15,7 +15,7 @@
 // Las capas del fondo (con relleno sólido y viajes) quedan como están.
 //
 // Al principio de cada vuelta deja el comentario MARCA: el lector de la vista
-// previa (recorridos.worker.js) lo usa para saber dónde empieza cada capa, porque
+// previa (recorridos-lector.js) lo usa para saber dónde empieza cada capa, porque
 // la Z ya no salta.
 
 export const MARCA = '; capa en espiral';
@@ -27,8 +27,12 @@ const num = (linea, letra) => {
     return m ? +m[1] : NaN;
 };
 
-// Lee los ejes de una línea G0/G1 (sin el comentario). `soloZ`: es el cambio de capa de Kiri,
-// un movimiento que sólo mueve Z.
+/**
+ * Lee los ejes de una línea G0/G1 (sin el comentario). `soloZ`: es el cambio de capa de Kiri,
+ * un movimiento que sólo mueve Z.
+ * @param {string} linea línea G0/G1 completa
+ * @returns {{vx: number, vy: number, vz: number, ve: number, soloZ: boolean}} ejes (NaN si no vienen)
+ */
 function leerMovimiento(linea) {
     const sinComentario = linea.split(';')[0];
     const s = ' ' + sinComentario;
@@ -42,7 +46,12 @@ function leerMovimiento(linea) {
     };
 }
 
-// Anota en `est` dónde está la herramienta después de un movimiento (y dónde terminó la última extrusión).
+/**
+ * Anota en `est` dónde está la herramienta después de un movimiento (y dónde terminó la última extrusión).
+ * @param {{x: number, y: number, z: number, zExtrusion: number, xFin: number, yFin: number}} est estado de espiralar (se modifica)
+ * @param {{vx: number, vy: number, vz: number, ve: number}} mov resultado de leerMovimiento
+ * @returns {void}
+ */
 function registrarMovimiento(est, mov) {
     const { vx, vy, vz, ve } = mov;
     if (!isNaN(vx)) est.x = vx;
@@ -55,9 +64,16 @@ function registrarMovimiento(est, mov) {
     }
 }
 
-// Recorre las líneas desde `desde` mientras sean la vuelta (un viaje corto al principio y después
-// sólo extrusiones). Devuelve dónde se cortó (`k`), el largo extruido y cuántas extrusiones hubo;
-// o null si el viaje del principio es demasiado largo.
+/**
+ * Recorre las líneas desde `desde` mientras sean la vuelta (un viaje corto al principio y después
+ * sólo extrusiones).
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} desde primera línea a mirar
+ * @param {number} xFin X donde terminó la última extrusión
+ * @param {number} yFin Y donde terminó la última extrusión
+ * @returns {{k: number, largo: number, extrusiones: number}|null} dónde se cortó, el largo extruido y cuántas
+ *   extrusiones hubo; null si el viaje del principio es demasiado largo
+ */
 function recorrerVuelta(lineas, desde, xFin, yFin) {
     let largo = 0,
         px = xFin,
@@ -88,8 +104,13 @@ function recorrerVuelta(lineas, desde, xFin, yFin) {
     return { k, largo, extrusiones };
 }
 
-// ¿Hay más extrusión después de `desde`, antes del próximo cambio de Z? Entonces la capa
-// tiene relleno o varias islas y queda plana.
+/**
+ * ¿Hay más extrusión después de `desde`, antes del próximo cambio de Z? Entonces la capa
+ * tiene relleno o varias islas y queda plana.
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} desde primera línea a mirar
+ * @returns {boolean} true si hay otra extrusión
+ */
 function extruyeDespues(lineas, desde) {
     for (let j = desde; j < lineas.length; j++) {
         const s = ' ' + lineas[j].split(';')[0];
@@ -101,8 +122,14 @@ function extruyeDespues(lineas, desde) {
     return false;
 }
 
-// ¿Las líneas desde `desde` hasta el próximo movimiento de Z son una sola vuelta de pura
-// extrusión? Devuelve { fin, largo } o null.
+/**
+ * ¿Las líneas desde `desde` hasta el próximo movimiento de Z son una sola vuelta de pura extrusión?
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} desde primera línea de la vuelta
+ * @param {number} xFin X donde terminó la última extrusión
+ * @param {number} yFin Y donde terminó la última extrusión
+ * @returns {{fin: number, largo: number}|null} línea donde termina la vuelta y su largo extruido, o null
+ */
 function vueltaDesde(lineas, desde, xFin, yFin) {
     const r = recorrerVuelta(lineas, desde, xFin, yFin);
     if (!r || extruyeDespues(lineas, r.k)) return null;
@@ -113,8 +140,16 @@ function vueltaDesde(lineas, desde, xFin, yFin) {
     return { fin: k, largo: r.largo };
 }
 
-// Pasa una línea de la vuelta a espiral: la extrusión sube su Z según lo recorrido (`prog.recorrido`);
-// el acercamiento corto se queda a la Z de antes. `prog` lleva { px, py, recorrido }.
+/**
+ * Pasa una línea de la vuelta a espiral: la extrusión sube su Z según lo recorrido (`prog.recorrido`);
+ * el acercamiento corto se queda a la Z de antes.
+ * @param {string} l línea G1
+ * @param {{px: number, py: number, recorrido: number}} prog progreso de la vuelta (se modifica)
+ * @param {number} zBase Z al empezar la vuelta
+ * @param {number} sube cuánto sube la Z en toda la vuelta
+ * @param {number} largo largo extruido de la vuelta
+ * @returns {string} la línea, con Z si extruye
+ */
 function lineaEnEspiral(l, prog, zBase, sube, largo) {
     const { vx, vy, ve } = leerMovimiento(l);
     const nx = isNaN(vx) ? prog.px : vx;
@@ -128,8 +163,17 @@ function lineaEnEspiral(l, prog, zBase, sube, largo) {
     return l.replace(/^(G1(?:\s+[XY]-?[\d.]+)+)/, `$1 Z${zk.toFixed(4)}`);
 }
 
-// Escribe en `salida` la vuelta que empieza después de la línea `i` (el cambio de capa) con la
-// Z subiendo de a poco, y deja `est` donde termina la vuelta.
+/**
+ * Escribe en `salida` la vuelta que empieza después de la línea `i` (el cambio de capa) con la
+ * Z subiendo de a poco, y deja `est` donde termina la vuelta.
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} i índice del cambio de capa (sólo Z)
+ * @param {{fin: number, largo: number}} capa vuelta que devolvió vueltaDesde
+ * @param {number} vz Z de la capa nueva
+ * @param {{x: number, y: number, z: number, zExtrusion: number, xFin: number, yFin: number}} est estado (se modifica)
+ * @param {string[]} salida líneas de salida (se agregan)
+ * @returns {void}
+ */
 function convertirVuelta(lineas, i, capa, vz, est, salida) {
     const sube = vz - est.zExtrusion;
     const prog = { px: est.xFin, py: est.yFin, recorrido: 0 };
@@ -143,7 +187,14 @@ function convertirVuelta(lineas, i, capa, vz, est, salida) {
     est.z = est.zExtrusion = vz;
 }
 
-// Si la línea `i` (sólo Z) abre una vuelta que se puede convertir, devuelve { fin, largo }; si no, null.
+/**
+ * Si la línea `i` (sólo Z) abre una vuelta que se puede convertir, la devuelve.
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} i índice del cambio de capa (sólo Z)
+ * @param {number} vz Z de la capa nueva
+ * @param {{x: number, y: number, zExtrusion: number, xFin: number, yFin: number}} est estado de espiralar
+ * @returns {{fin: number, largo: number}|null} la vuelta, o null si la capa queda plana
+ */
 function vueltaConvertible(lineas, i, vz, est) {
     const capa = vueltaDesde(lineas, i + 1, est.xFin, est.yFin);
     const sube = vz - est.zExtrusion;
@@ -151,6 +202,11 @@ function vueltaConvertible(lineas, i, vz, est) {
     return ok ? capa : null;
 }
 
+/**
+ * Convierte en espiral las capas de un G-code de modo jarrón (ver la cabecera del archivo).
+ * @param {string} gcode G-code de Kiri en modo jarrón
+ * @returns {string} el G-code con la Z subiendo dentro de cada vuelta y MARCA al principio de cada una
+ */
 export function espiralar(gcode) {
     const lineas = gcode.split('\n');
     const salida = [];

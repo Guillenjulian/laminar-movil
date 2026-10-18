@@ -21,7 +21,7 @@ El usuario quiere "desde X mm cambiar relleno, temperatura o velocidad" y, encim
 genere sola torres de calibración (temperatura y retracción). Hoy `armarConfiguracion`
 (`src/perfiles/perfiles.js`) devuelve un único `proceso` para toda la pieza; `src/motor/pausas.js` es el
 único mecanismo "por capa", y trabaja sobre el G-code ya generado, usando offsets que salen de la vista
-previa (`recorridos.worker.js`).
+previa (`recorridos.worker.js`; hoy la lectura está en `recorridos-lector.js`, que el worker importa).
 
 Kiri:Moto 4.7.0 (en `vendor/kiri/`, sin parches sobre esta zona) ya tiene un mecanismo de **rangos por
 capa**. Lo verifiqué leyendo el código (números de línea de `vendor/kiri/src/kiri/`, versión 4.7.0; si el
