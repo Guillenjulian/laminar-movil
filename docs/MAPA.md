@@ -236,6 +236,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
 | Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |
 | El archivo descargado no tiene las pausas nuevas, o tarda en armarse el `.gcode.3mf` | `archivoEntrega()` (clave del cache) y `precargar()` en `src/ui/entrega-ui.js`; el armado, en `src/ui/entrega.js` y `src/motor/bambu-3mf.js` |
+| El .gcode.3mf no abre en Bambu Studio o la impresora lo rechaza | `armarGcode3mf` en `src/motor/bambu-3mf.js` (entradas, MD5, `slice_info`) y los textos de `src/motor/bambu-xml.js`; perfiles en `src/perfiles/impresoras/bambu-lab-*.json` (`salida`, `modeloBambu`, `pausa`) |
 | La vista previa por capas no responde | `iniciarVistaCapas()` en `src/ui/vista-capas.js` |
 | La lista de filamentos, las marcas de pausa o los colores de la vista previa fallan | `dibujarPausas()` y `conectarPausas()` en `src/ui/pausas-ui.js` |
 | No se puede elegir una impresora | `iniciarImpresoras()` en `src/ui/impresoras.js` |

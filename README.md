@@ -34,6 +34,7 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
    línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores,
    con la vista previa pintada del color de cada filamento)
    y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
+   Las Bambu Lab (A1, A1 mini, P1S y X1C) bajan un **`.gcode.3mf`** (ZIP con el G-code y los metadatos que espera Bambu) en vez de `.gcode`. Los perfiles no están validados con la impresora.
 
 Además:
 
@@ -259,6 +260,17 @@ Esto queda pendiente de validar a mano:
       tienen G-code de inicio dudoso (la app lo avisa cuando no usa `{temp}`/`{bed_temp}`).
 - [ ] En Kiri, a igual porcentaje, el giroide usa bastante menos material que el panal (cubo de
       20 mm al 20 %: 1,18 m contra 2,08 m). Revisar si conviene compensar la densidad por patrón.
+
+### Bambu Lab: `.gcode.3mf` (ADR 0005)
+
+- [ ] Abrir el `.gcode.3mf` en **Bambu Studio** sin errores, con tiempo y gramos a la vista (y qué hace con el `3dmodel.model` sin malla).
+- [ ] Abrirlo en **Bambu Handy** y que muestre el resumen.
+- [ ] **Imprimir un cubo por SD y por LAN** en A1 y P1S, y que la impresora no rechace el archivo por el MD5.
+- [ ] La pausa **`M400 U1`**: que pause, muestre el aviso en la pantalla y retome. Qué pasa con la temperatura durante la pausa.
+- [ ] **Compartir en Android (Chrome) e iOS (Safari)**: qué MIME acepta `canShare` para el `.gcode.3mf` (`application/octet-stream`, `application/zip`, `model/3mf`).
+- [ ] Las miniaturas: que la pantalla de la impresora y Bambu Studio las muestren.
+- [ ] Volver con "Adelante" al paso 4 después de cambiar el material: que el archivo que se descarga o comparte tenga el G-code del material nuevo.
+- [ ] Filamento: el código de bandeja y el color de `slice_info.config` son fijos (`GFL99`, `#FFFFFF`) para todos los materiales; hay que mapearlos antes de imprimir PETG u otro material.
 
 ### Otros
 

@@ -10,6 +10,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Agregado
 
 - Las impresoras Bambu Lab (A1, A1 mini, P1S y X1C) entregan un `.gcode.3mf` en el paso 4: el mismo G-code con las pausas (`M400 U1`) dentro de un ZIP con el MD5 y los metadatos que espera Bambu (ADR 0005). Compartir lo arma por adelantado y avisa "Armando el archivo…"; las demás impresoras siguen bajando el `.gcode` de siempre. Los cuatro perfiles Bambu salen con aviso de "sin validar con la impresora".
+- Clave de perfil `salida` (y `modeloBambu`): dice si la descarga es `.gcode` o `.gcode.3mf`. Documentada en `src/perfiles/LEEME.md`.
+
+### Cambiado
+
+- El importador de Kiri sigue salteando `Bambu.A1` y `Bambu.P1S`, con el motivo de que el perfil revisado a mano es el que se usa.
 
 ## [0.3.0] - 2026-10-18
 

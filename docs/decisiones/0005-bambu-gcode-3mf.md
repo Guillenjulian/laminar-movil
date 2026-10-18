@@ -6,7 +6,7 @@
 
 ## Estado
 
-Aceptado por el CTO el 2026-10-18, con estas decisiones:
+Implementado (T1 a T7; T8 cierre). Aceptado por el CTO el 2026-10-18, con estas decisiones:
 
 - **T0 no bloquea:** no hay un `.gcode.3mf` de referencia exportado de Bambu Studio. Se implementa con lo público y
   todo lo marcado **[A VALIDAR]** lo valida una persona en T9.
@@ -457,7 +457,7 @@ va en serie al final.
 
 | Ola | Tarea | Rol | Qué | Archivos | Prueba | Depende de |
 |---|---|---|---|---|---|---|
-| 0 | **T0** | persona (con Bambu Studio / impresora) | Exportar de Bambu Studio un `.gcode.3mf` de un cubo de 20 mm para A1 y P1S (y X1C si hay), con y sin AMS; pasar el listado de entradas y el contenido de `slice_info.config`, `model_settings.config`, `.rels` y `plate_1.gcode.md5` (los PNG y el G-code no hacen falta). Se guarda como `scripts/formatos/ref-bambu/*.txt`. Confirma o corrige la sección 1 de la Decisión. | `scripts/formatos/ref-bambu/` | revisión de la persona | — |
+| 0 | **T0** | persona (pendiente, con Bambu Studio / impresora) | Exportar de Bambu Studio un `.gcode.3mf` de un cubo de 20 mm para A1 y P1S (y X1C si hay), con y sin AMS; pasar el listado de entradas y el contenido de `slice_info.config`, `model_settings.config`, `.rels` y `plate_1.gcode.md5` (los PNG y el G-code no hacen falta). Se guarda como `scripts/formatos/ref-bambu/*.txt`. Confirma o corrige la sección 1 de la Decisión. | `scripts/formatos/ref-bambu/` | revisión de la persona | — |
 | 1 | **T1** | dev motor | `md5.js`: `Md5`, `md5Hex` (~80 líneas) | `src/motor/md5.js` | `scripts/formatos/md5.mjs` (Node) | — |
 | 1 | **T2** | dev motor | `bambu-xml.js`: las seis funciones de texto (~140) | `src/motor/bambu-xml.js` | `scripts/formatos/bambu-xml.mjs` (Node) | — |
 | 1 | **T3** | dev datos | Los cuatro perfiles Bambu, `salidaDe` en `valores.js` (+ reexport en `perfiles.js`), `LEEME.md` y el motivo en `EXCLUIDAS` del importador (~30 de código, el resto datos) | `src/perfiles/impresoras/bambu-lab-*.json` ×4, `src/perfiles/valores.js`, `src/perfiles/perfiles.js`, `src/perfiles/LEEME.md`, `scripts/importar-impresoras-kiri.mjs` | `scripts/motor/bambu-perfiles.mjs` (Chromium, ver Pruebas) | — |
@@ -466,7 +466,7 @@ va en serie al final.
 | 4 | **T6** | dev interfaz | **Recablear `paso4-resultado.js`** con `entrega` (Contratos 3.4 y 3.5), `gramosDe` si falta, y registrar el contrato de `entrega` en `scripts/lib/contratos-ui.js` | `src/ui/paso4-resultado.js`, `src/ui/materiales.js`, `scripts/lib/contratos-ui.js` | `npm run test:contratos`, `npm run build` | T3, T5 |
 | 5 | **T7** | dev interfaz | Prueba de la app: elegir una Bambu, laminar el cubo, marcar una pausa, descargar y abrir el ZIP con jszip; descarga de una Ender sigue siendo `.gcode`. Registrar los archivos nuevos en `probar-app.mjs` y `probar-motor.mjs` | `scripts/app/descarga-bambu.mjs`, `scripts/probar-app.mjs`, `scripts/probar-motor.mjs`, `package.json` (`test:formatos` suma los nuevos) | `npm run test:app`, `npm run test:motor`, `npm run test:formatos` | T6 |
 | 6 | **T8** | arquitecto | Cierre: `MAPA.md` (flujo, módulos, aristas de `entrega`, tabla de pruebas), `CHANGELOG.md`, Estado → Aceptado | `docs/MAPA.md`, `CHANGELOG.md`, este ADR | `npm run format:check` | T7 |
-| 6 | **T9** | persona (con hardware) | Validar todo lo marcado **[A VALIDAR]**: abrir el `.gcode.3mf` en Bambu Studio y Handy, imprimir un cubo por SD y por LAN en A1 y P1S, probar la pausa `M400 U1`, el compartir en Android y iOS y las miniaturas | — | lista de chequeo de Pruebas, registrada en el PR | T7 |
+| 6 | **T9** | persona (pendiente, con hardware) | Validar todo lo marcado **[A VALIDAR]**: abrir el `.gcode.3mf` en Bambu Studio y Handy, imprimir un cubo por SD y por LAN en A1 y P1S, probar la pausa `M400 U1`, el compartir en Android y iOS y las miniaturas | — | lista de chequeo de Pruebas, registrada en el PR | T7 |
 
 Paralelismo: **T0 ∥ T1 ∥ T2 ∥ T3** (nadie toca archivos de otro; T0 no es código). **T4** espera a T1 y T2 porque los
 importa. **T5** espera a T4. T6 y T7 van **en serie** (comparten `paso4-resultado.js`, `contratos-ui.js` y los
@@ -591,3 +591,32 @@ una librería de MD5 por ~70 líneas no compensa (más bundle, más licencia, m�
    detrás de un flag?
 3. ¿P1P como perfil aparte o alcanza con la P1S?
 4. Si la firmware exige firma (R2), ¿seguimos igual con el aviso o se abre otra decisión?
+
+## Cómo quedó
+
+Lo construido (T1 a T7) sigue el plan. Estas son las diferencias reales:
+
+- **`entrega-ui.js` (módulo nuevo, no estaba en el plan).** Saca de `paso4-resultado.js` la lógica del archivo. El
+  cache guarda sólo el `File` del `.gcode.3mf` (por impresora y pausas) y lo suelta `mostrarResultado`. Tiene la
+  precarga, el cartel "Armando el archivo… N %" mientras se espera y `puedeCompartir`. El `.gcode` plano no se
+  cachea: se arma en cada pedido.
+- **Aviso de Compartir.** "Listo el archivo. Tocá Compartir otra vez" va a `#estadoEntrega`, con `role="status"`.
+- **Callback `alCambiarPausas`.** El plan quería enganchar la precarga sin tocar `pausas-ui`, y no se pudo: el
+  módulo llama al callback después de agregar o quitar una pausa. La cadena es `pausas-ui` → `vista-capas` →
+  `main.js` → `entrega-ui` (`programarPrecarga`).
+- **`gramosDe` ya estaba exportada** en `materiales.js` (firma `gramosDe(mm, diametro, id)`). No hubo que extraerla.
+- **Nombre por defecto.** Si `info.nombre` viene vacío, el nombre interno del archivo es `pieza`
+  (`NOMBRE_POR_DEFECTO` en `bambu-3mf.js`).
+- **Entradas planas.** El ZIP se escribe con `createFolders: false`, sin carpetas intermedias.
+- **Miniaturas.** Si hay `miniatura` y no `miniaturaChica`, la chica repite la grande. La app todavía no genera
+  miniaturas (ver "Fuera de v1").
+- **Prueba de perfiles.** `scripts/motor/bambu-perfiles.mjs` revisa que cada `{variable}` del G-code esté en una lista
+  blanca de las que reemplaza Kiri (`VARIABLES_KIRI`), además de las temperaturas y la pausa.
+- **Filamento fijo (pendiente).** `infoBambu` en `entrega-ui.js` pone `color: '#FFFFFF'` y `trayInfoIdx: 'GFL99'` para
+  todos los materiales. Sólo el `tipo` sale del material. El ADR pide el código de cada uno (PETG `GFG99`, ABS
+  `GFB99`, etc.): hay que mapearlo antes de T9.
+
+Pendientes de una persona:
+
+- **T0** (muestra de Bambu Studio): no bloquea. `scripts/formatos/ref-bambu/` todavía no existe.
+- **T9** (validación con hardware): la checklist está en `README.md`, sección "Lo que NO pude validar".
