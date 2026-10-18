@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { crearMarcasBloqueo } from '../src/ui/visor-bloqueos.js';
 import { crearSelectorCara } from '../src/ui/visor-cara.js';
 import { armarPieza, POSICIONES } from './visor/arnes.mjs';
+import { probarMarcoMotor } from './visor/marco-motor.mjs';
 
 let fallas = 0;
 function revisar(nombre, condicion, detalle = '') {
@@ -71,8 +72,8 @@ revisar('pidió redibujar', dibujos === 1);
 const hallar = (z, k) =>
     esferas().find(
         m =>
-            casi(m.position.x, z.centro.x + POSICIONES[k].x) &&
-            casi(m.position.y, z.centro.y + POSICIONES[k].y) &&
+            casi(m.position.x, z.centro.x + (POSICIONES[k]?.x ?? 0)) &&
+            casi(m.position.y, z.centro.y + (POSICIONES[k]?.y ?? 0)) &&
             casi(m.position.z, z.centro.z),
     );
 revisar(
@@ -106,6 +107,14 @@ marcas.poner([], POSICIONES);
 revisar('poner sin zonas no deja nada', escena.children.length === 0);
 marcas.poner(zonas, POSICIONES);
 revisar('se puede volver a poner después de quitar', esferas().length === 4);
+
+marcas.quitar();
+marcas.poner(zonas, []);
+revisar(
+    'pieza sola sin copias: una esfera por zona en la posición de la pieza',
+    esferas().length === 2 && !!hallar({ centro: zonas[0].centro }, -1),
+);
+probarMarcoMotor(revisar);
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS` : '\nTODAS LAS PRUEBAS OK');
 process.exit(fallas ? 1 : 0);

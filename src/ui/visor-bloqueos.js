@@ -37,7 +37,8 @@ export function crearMarcasBloqueo(ctx) {
 
 // Reusa las mallas que ya existen (misma zona y misma copia), crea las que faltan y saca las que sobran.
 function ponerMarcas(est, bloqueos, posiciones) {
-    if (!bloqueos.length || !posiciones.length) return liberar(est);
+    if (!posiciones.length) posiciones = [{ x: 0, y: 0 }]; // pieza sola, sin copias: está en el origen
+    if (!bloqueos.length) return liberar(est);
     if (!est.grupo) armar(est);
     const vigentes = new Set();
     for (const b of bloqueos) {

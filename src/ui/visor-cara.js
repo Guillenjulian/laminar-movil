@@ -122,7 +122,9 @@ function tocarModelo(est, cx, cy) {
  * Pasa un punto del mundo al marco de la pieza (ya transformada y centrada en X/Y, apoyada en Z=0: el de `centrar()`).
  * La malla tocada es una copia: lo único que la separa de ese marco es su posición en la cama, que es el centro de su
  * caja en X/Y (el marco tiene el centro en el origen y la base en Z=0). Se mide con los vértices, no con la caja
- * original, porque al girar la caja alineada a los ejes sale más grande.
+ * original, porque al girar la caja alineada a los ejes sale más grande. Ojo: el motor centra la malla ya decimada
+ * (`prepararPiezas`), así que con decimación el centro del motor puede diferir del de acá hasta media celda
+ * (menos de 0,2 mm con los topes reales); sin decimar coinciden.
  * @param {THREE.Vector3} punto  en coordenadas del mundo
  * @param {THREE.Object3D} malla  la copia tocada
  * @returns {{x: number, y: number, z: number}}
