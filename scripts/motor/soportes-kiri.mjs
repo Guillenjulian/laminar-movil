@@ -45,6 +45,8 @@ export const TE = stlDeCajas([
     [-10, -10, TAPA_Z, 10, 10, TAPA_Z + 3],
 ]);
 
+// No reusa `porCapa` de gcode-capas.mjs porque necesita el tipo ("; feature") y los dos extremos de cada
+// extrusión para muestrear segmentos; unificar los dos lectores queda como deuda (MAPA §6).
 /**
  * Extrusiones del G-code con su tipo ("; feature ...") y sus coordenadas absolutas de cama.
  * @param {string} gcode
@@ -93,7 +95,7 @@ const copiaDe = (e, posiciones) =>
 
 // Cuántas muestras de soporte caen dentro de la sección de alguna esfera. La sección se toma con su radio mínimo
 // dentro del alto de la capa (la capa de Kiri se corta en algún z entre `z - alto` y `z`) y menos 0,05 mm; las
-// secciones de menos de 1,5 mm de radio no cuentan (el cierre del contorno de Kiri las tapa).
+// secciones de menos de 1 mm de radio no cuentan (el cierre del contorno de Kiri las tapa: el polo de la esfera).
 function dentroDeZonas(extr, zonas, posiciones, alto) {
     let n = 0;
     for (const e of extr.filter(esSoporte)) {
@@ -102,7 +104,7 @@ function dentroDeZonas(extr, zonas, posiciones, alto) {
             for (const b of zonas) {
                 const r2 = z => b.radio ** 2 - (z - b.centro.z) ** 2;
                 const r = Math.sqrt(Math.max(0, Math.min(r2(m.z), r2(m.z - alto))));
-                if (r >= 1.5 && Math.hypot(m.x - b.centro.x, m.y - b.centro.y) < r - 0.05) n++;
+                if (r >= 1 && Math.hypot(m.x - b.centro.x, m.y - b.centro.y) < r - 0.05) n++;
             }
         }
     }
@@ -277,6 +279,72 @@ async function sinCambios({ laminar, revisar, pagina }) {
     revisar('sin `diagnostico` info.ganchos no viaja', r.info.ganchos === undefined);
 }
 
+// Cama: pieza de 220 mm de ancho (la tapa ocupa toda la cama); el soporte árbol no puede salir de [0, 220].
+const ANCHA = stlDeCajas([
+    [-5, -5, 0, 5, 5, TAPA_Z],
+    [-110, -20, TAPA_Z, 110, 20, TAPA_Z + 3],
+]);
+async function conCama({ laminar, revisar }) {
+    console.log('\n▶ pieza de 220 mm de ancho: el árbol no sale de la cama');
+    const normal = extrusionesDe((await laminar({ stlBase64: ANCHA, ...SOPORTES })).gcode);
+    const arbol = extrusionesDe((await laminar({ stlBase64: ANCHA, ...SOPORTES, extras: ARBOL })).gcode);
+    const rango = x => {
+        const xs = x.filter(esSoporte).flatMap(e => [e.x0, e.x]);
+        return [Math.min(...xs), Math.max(...xs)];
+    };
+    const [[nMin, nMax], [aMin, aMax]] = [rango(normal), rango(arbol)];
+    console.log(`  · X del soporte: normal ${f(nMin, 2)} a ${f(nMax, 2)}, árbol ${f(aMin, 2)} a ${f(aMax, 2)}`);
+    revisar('árbol: hay soporte', arbol.some(esSoporte));
+    revisar('árbol: todo el soporte dentro de X 0..220 (y también Y)', aMin >= 0 && aMax <= CAMA, `${aMin} a ${aMax}`);
+    const fuera = arbol.filter(e => [e.x, e.y, e.x0, e.y0].some(v => v < 0 || v > CAMA));
+    revisar('árbol: todo el G-code dentro de la cama', fuera.length === 0, `${fuera.length} fuera`);
+}
+
+// Agujero: placa de 70×70 con un agujero de 24×24 sobre 4 patas. La sombra tiene un agujero (`.inner` de Kiri): si el
+// puente no lo convierte, el árbol siembra soporte adentro.
+const PLACA = stlDeCajas([
+    ...[-30, 30].flatMap(x => [-30, 30].map(y => [x - 3, y - 3, 0, x + 3, y + 3, TAPA_Z])),
+    [-35, -35, TAPA_Z, -12, 35, TAPA_Z + 3],
+    [12, -35, TAPA_Z, 35, 35, TAPA_Z + 3],
+    [-12, -35, TAPA_Z, 12, -12, TAPA_Z + 3],
+    [-12, 12, TAPA_Z, 12, 35, TAPA_Z + 3],
+]);
+// Lo mismo con una copia corrida: tapa de 220 mm de ancho en x = +0 y otra de 100 mm pegada al borde derecho
+// (centro en +60: llega justo a 220), para comprobar que la cama local se corre con la posición de la copia.
+async function conCamaCorrida({ laminar, revisar }) {
+    const tapa = stlDeCajas([
+        [-5, -5, 0, 5, 5, TAPA_Z],
+        [-50, -20, TAPA_Z, 50, 20, TAPA_Z + 3],
+    ]);
+    const r = await laminar({
+        piezas: [{ stlBase64: tapa, posiciones: [{ x: 60, y: 0 }] }],
+        ...SOPORTES,
+        extras: ARBOL,
+    });
+    const xs = extrusionesDe(r.gcode)
+        .filter(esSoporte)
+        .flatMap(e => [e.x0, e.x]);
+    console.log(`  · copia en x = +60: X del soporte árbol ${f(Math.min(...xs), 2)} a ${f(Math.max(...xs), 2)}`);
+    revisar(
+        'árbol: copia pegada al borde derecho, todo el soporte en X <= 220',
+        xs.length > 0 && Math.max(...xs) <= CAMA,
+    );
+}
+
+async function conAgujero({ laminar, revisar }) {
+    console.log('\n▶ placa con agujero de 24×24 sobre 4 patas: el árbol no entra al agujero');
+    const sa = extrusionesDe((await laminar({ stlBase64: PLACA, ...SOPORTES, extras: ARBOL })).gcode).filter(esSoporte);
+    const adentro = sa
+        .flatMap(e => muestras(e, { x: 0, y: 0 }))
+        .filter(m => Math.abs(m.x) < 11.5 && Math.abs(m.y) < 11.5 && m.z < TAPA_Z);
+    revisar('árbol: hay soporte', sa.length > 0, `${sa.length} extrusiones`);
+    revisar(
+        'árbol: ninguna extrusión de soporte dentro del agujero',
+        adentro.length === 0,
+        `${adentro.length} muestras`,
+    );
+}
+
 /**
  * Pruebas de la tarea T4 del ADR 0004 (puente real con Kiri).
  * @param {{ laminar: Function, revisar: Function, pagina: object }} ctx
@@ -286,5 +354,8 @@ export async function probarSoportesKiri(ctx) {
     await compararTipos(ctx);
     await zonaNormal(ctx);
     await zonaArbol(ctx);
+    await conCama(ctx);
+    await conCamaCorrida(ctx);
+    await conAgujero(ctx);
     await sinCambios(ctx);
 }
