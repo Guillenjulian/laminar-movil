@@ -6,7 +6,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado (CTO, 2026-10-18)
 
 ## Contexto
 
