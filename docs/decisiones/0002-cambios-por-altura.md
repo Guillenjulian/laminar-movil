@@ -84,8 +84,13 @@ Con capa uniforme `h` y primera capa `h0`, la capa `i` (desde 0) ocupa `[h0 + (i
 
 ```
 lo = max(1, ceil((X - h0) / h - 1e-6) + 1)
-hi = hastaMm === undefined ? 1e9 : floor((Y - h0) / h + 1e-6)     // última capa cuyo techo <= Y
+hi = hastaMm === undefined ? 1e9 : capaDesde(Y) - 1               // última capa cuyo piso < Y
 ```
+
+**Regla (corregida por el CTO al integrar T1):** una capa pertenece a un cambio si su **piso** cae en
+`[desdeMm, hastaMm)`. La versión original (`hi` = última capa cuyo techo <= Y) dejaba sin cubrir la capa
+que cruza el borde cuando `h` no divide a Y (ej. capas de 0,12 o 0,28 mm), y esa capa salía con el valor
+base. Con esta regla los rangos consecutivos son contiguos (`hi(k) + 1 = lo(k+1)`).
 
 Si X no cae justo en el piso de una capa, el cambio ocurre en la capa que empieza arriba de X (la
 diferencia es menor a una altura de capa). `1e9` en lugar de `Infinity` porque el `proceso` viaja por
