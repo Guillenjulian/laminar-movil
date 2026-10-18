@@ -25,6 +25,27 @@ const TABLA = {
     'bambu-lab-p1s': { nombre: 'Bambu Lab P1S', modelo: 'C12', vol: [256, 256, 256], hotendMax: 300, camaMax: 100 },
     'bambu-lab-x1c': { nombre: 'Bambu Lab X1C', modelo: 'BL-P001', vol: [256, 256, 256], hotendMax: 300, camaMax: 120 },
 };
+// Variables que Kiri reemplaza en el G-code (vendor/kiri/src/kiri/mode/fdm/work/export.js, `subst` y `subst.layer`).
+// Una desconocida no falla: Kiri la reemplaza por 0 sin avisar, por eso se revisa el JSON.
+const VARIABLES_KIRI = new Set([
+    'minx',
+    'maxx',
+    'miny',
+    'maxy',
+    'temp',
+    'temp_bed',
+    'bed_temp',
+    'fan_speed',
+    'fan_speed_base',
+    'top',
+    'left',
+    'right',
+    'bottom',
+    'z_max',
+    'layers',
+    'layer',
+    'progress',
+]);
 const AVISO = 'Perfil sin validar con la impresora: probalo con un cubo antes de una pieza grande.';
 
 const leerJson = ruta => JSON.parse(fs.readFileSync(new URL(ruta, CARPETA), 'utf8'));
@@ -102,12 +123,49 @@ function revisarTabla(revisar, nombre, esperado, json) {
     );
 }
 
+// Toda {variable} de los G-code del JSON es una que Kiri conoce (un typo como {bed_tmp} saldría como 0).
+function revisarVariables(revisar, nombre, json) {
+    const desconocidas = [];
+    for (const [clave, valor] of Object.entries(json.dispositivo)) {
+        if (!/^gcode/.test(clave) || !Array.isArray(valor)) continue;
+        for (const linea of valor) {
+            for (const [, v] of linea.matchAll(/\{([^}]*)\}/g)) {
+                if (!VARIABLES_KIRI.has(v)) desconocidas.push(`${clave}: {${v}}`);
+            }
+        }
+    }
+    revisar(
+        `${nombre}: todas las {variables} del G-code las conoce Kiri`,
+        desconocidas.length === 0,
+        desconocidas + '',
+    );
+}
+
+// Orden del inicio y del fin sobre el G-code ya laminado.
+function revisarSecuencia(revisar, nombre, lineas) {
+    const primero = f => lineas.findIndex(f);
+    const m109 = primero(l => /^M109 S/.test(l));
+    const extrusion = primero(l => /^G1 .*\bE\d/.test(l) && +l.match(/\bE([\d.]+)/)[1] > 0);
+    const g28 = primero(l => /^G28\b/.test(l));
+    const movimiento = primero(l => /^G[01] .*[XY]-?\d/.test(l));
+    revisar(
+        `${nombre}: M109 (línea ${m109}) antes de la primera extrusión (${extrusion}); G28 (${g28}) antes del primer movimiento X/Y (${movimiento})`,
+        m109 >= 0 && extrusion > m109 && g28 >= 0 && movimiento > g28,
+    );
+    const fin = lineas.slice(lineas.length - 25);
+    const apaga = ['M104 S0', 'M140 S0', 'M106 S0'].filter(a => !fin.some(l => l.startsWith(a)));
+    revisar(`${nombre}: el fin apaga boquilla, cama y ventilador`, apaga.length === 0, apaga + '');
+    const negativa = lineas.find(l => /^G[01] .*Z-\d/.test(l));
+    revisar(`${nombre}: ninguna Z negativa`, !negativa, negativa || '');
+}
+
 async function probarLaminado({ laminar, revisar }, id, esperado, material, calidad) {
     const nombre = `Bambu ${id} ${material} ${calidad}`;
     const r = await laminar({ caso: 'cubo', impresoraId: id, calidad, material });
     const lineas = r.g.lineas;
     const llave = r.gcode.match(/\{[^}\n]*\}/)?.[0];
     revisar(`${nombre}: sin llaves sin reemplazar`, !llave, llave ? `(quedó ${llave})` : '');
+    revisarSecuencia(revisar, nombre, lineas);
     const e = extremos(lineas);
     const [ancho, fondo] = esperado.vol;
     revisar(
@@ -157,6 +215,7 @@ async function probarPerfil(ctx, id, esperado) {
     const { revisar } = ctx;
     const json = leerJson(`${id}.json`);
     revisarTabla(revisar, `Bambu ${id}`, esperado, json);
+    revisarVariables(revisar, `Bambu ${id}`, json);
     let cubo;
     for (const calidad of ['rapido', 'normal', 'detalle'])
         cubo = await probarLaminado(ctx, id, esperado, 'pla', calidad);
