@@ -59,6 +59,9 @@ jobs:
             - name: Test formatos
               run: npm run test:formatos
 
+            - name: Test torres
+              run: npm run test:torres
+
             - name: Test motor
               run: npm run test:motor
 
