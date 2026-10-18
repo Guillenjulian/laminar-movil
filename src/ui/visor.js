@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { crearSelectorCara } from './visor-cara.js';
 import { crearRecorridos } from './visor-recorridos.js';
+import { reemplazarCama } from './visor-cama.js';
 
 const COLOR_PIEZA = 0xf08a24;
 const COLOR_FUERA = 0xd03030; // copias que se pasan de la cama
@@ -104,39 +105,10 @@ function ajustar(v, contenedor) {
     v.redibujar();
 }
 
-// Cama: un plano con una grilla cada 10 mm, centrada en el origen.
-function ponerCama(v, { x, y, z }) {
-    v.tamanoCama = { x, y, z };
-    if (v.cama) {
-        v.escena.remove(v.cama);
-        v.cama.traverse(o => {
-            o.geometry?.dispose();
-            o.material?.dispose();
-        });
-    }
-    v.cama = construirCama(x, y);
-    v.escena.add(v.cama);
+function ponerCama(v, medidas) {
+    v.tamanoCama = { x: medidas.x, y: medidas.y, z: medidas.z };
+    v.cama = reemplazarCama(v.escena, v.cama, medidas);
     v.redibujar();
-}
-
-function construirCama(x, y) {
-    const cama = new THREE.Group();
-    const plano = new THREE.Mesh(
-        new THREE.PlaneGeometry(x, y),
-        new THREE.MeshBasicMaterial({ color: 0x8090a0, transparent: true, opacity: 0.25 }),
-    );
-    plano.position.z = -0.05;
-    cama.add(plano);
-    const grilla = new THREE.GridHelper(Math.max(x, y), Math.max(x, y) / 10, 0x8899aa, 0x8899aa);
-    grilla.rotation.x = Math.PI / 2;
-    grilla.material.transparent = true;
-    grilla.material.opacity = 0.35;
-    cama.add(grilla);
-    // Marca del origen (esquina frontal izquierda): X roja, Y verde.
-    const origen = new THREE.Vector3(-x / 2, -y / 2, 0);
-    cama.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), origen, 20, 0xd03030));
-    cama.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), origen, 20, 0x30a030));
-    return cama;
 }
 
 function materialPieza(color) {
@@ -208,6 +180,7 @@ function ponerCopias(v, id, posiciones, fuera) {
     quitarCopias(v, p);
     p.posiciones = posiciones || [];
     p.malla.visible = !p.posiciones.length;
+    // El rojo gana: las copias de `fuera` no se tiñen aunque sean de la pieza activa.
     if (fuera.length) p.rojo = materialPieza(COLOR_FUERA);
     p.copias = p.posiciones.map((_, k) => {
         const copia = new THREE.Mesh(p.malla.geometry, fuera.includes(k) ? p.rojo : p.malla.material);
@@ -254,6 +227,7 @@ function quitarPieza(v, id) {
     p.malla.geometry.dispose();
     p.malla.material.dispose();
     v.piezas.delete(id);
+    if (id === v.activa) v.activa = null;
 }
 
 // Tinte suave a la activa; con una sola pieza (o ninguna activa) no tiñe.
@@ -292,7 +266,7 @@ function vistaInicial(v) {
 function esferaPiezas(v) {
     return mallas(v)
         .map(m => {
-            m.geometry.computeBoundingSphere();
+            if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere(); // las copias comparten geometría
             return m.geometry.boundingSphere.clone().applyMatrix4(m.matrix);
         })
         .reduce((total, esfera) => total.union(esfera));

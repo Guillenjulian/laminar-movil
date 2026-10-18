@@ -42,8 +42,9 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor y las capas | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
 | `src/ui/pausas-ui.js` | Pausas de filamento de la vista previa: lista de filamentos, marcas sobre el deslizador, modo y colores de los recorridos | `estado`, `util-dom`, `formato`, `motor/tipos-linea`, `perfiles/perfiles` |
 | `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
-| `src/ui/visor.js` | Visor three.js: cama, una malla por pieza (por `id`, 0 si no se dice: `ponerModelo`, `ponerTransformacion`, `ponerCopias`, `tamanoModelo`, `quitarModelo`, `resaltarPieza`), ciclo de dibujo (sólo cuando algo cambia). Delega en `visor-cara` y `visor-recorridos` (ADR 0003, T5) | three, `visor-cara`, `visor-recorridos` |
+| `src/ui/visor.js` | Visor three.js: cama, una malla por pieza (por `id`, 0 si no se dice: `ponerModelo`, `ponerTransformacion`, `ponerCopias`, `tamanoModelo`, `quitarModelo`, `resaltarPieza`), ciclo de dibujo (sólo cuando algo cambia). Delega en `visor-cara` y `visor-recorridos` (ADR 0003, T5) | three, `visor-cara`, `visor-recorridos`, `visor-cama` |
 | `src/ui/visor-cara.js` | Elegir cara con un toque ("apoyar cara"): detección del toque, triángulo resaltado, avisa normal e `id` de la pieza (`elegirCara`, `alTocarPieza`) | three |
+| `src/ui/visor-cama.js` | La cama del visor: plano, grilla cada 10 mm y marca del origen; `reemplazarCama` libera la anterior | three |
 | `src/ui/visor-recorridos.js` | Recorridos del G-code capa por capa: `ponerRecorridos`, `mostrarCapa`, `pintarRecorridos`, `atenuarAbajo`, `quitarRecorridos`, `esfera` | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
@@ -67,7 +68,7 @@ Nivel 3   impresoras ──► formulario-impresora
 Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
           vista-capas ──► pausas-ui
 Nivel 1   pausas-ui ──► estado, util-dom
-Nivel 1   visor ──► visor-cara, visor-recorridos (hojas, nivel 0)
+Nivel 1   visor ──► visor-cara, visor-recorridos, visor-cama (hojas, nivel 0)
 Nivel 1   navegacion ──► estado
           pausas-ui ──► estado, util-dom
 Nivel 0   estado, util-dom, actualizacion, cambios, torres ──► hojas ya existentes (avanzado, formato, materiales,
