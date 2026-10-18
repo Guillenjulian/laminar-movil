@@ -115,6 +115,9 @@ ENTREGA: commit (sin push) con Conventional Commits + líneas de autoría + repo
 - Migrar a ESLint 10.
 - Top-level await de precios en `materiales.js`.
 
+### Decisión abierta (la toma el usuario)
+- **Torres de calibración:** hoy (v1), con una torre cargada se ocultan la escala y la rotación. Preguntale al usuario si lo deja así o si quiere permitir escalar la torre, que cambia la altura de los bloques y obliga a recalcular los cambios por altura. Hasta que responda, no lo cambies.
+
 ### Validación con hardware (la hace una persona)
 - Imprimir: cubo Normal, pausa M600, PETG/TPU, modo jarrón, altura variable, una torre de temperatura y una de retracción en la Ender 3 V3 SE.
 - Celu real: gama baja, offline, instalar la app, compartir, gestos, "apoyar cara" y la hoja de la torre.
