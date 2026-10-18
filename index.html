@@ -282,6 +282,23 @@
                         Volver a los valores de fábrica
                     </button>
                 </details>
+
+                <!-- Cambios por altura (ADR 0002). La lógica está en src/ui/cambios.js -->
+                <details class="personalizar" id="cambiosAltura">
+                    <summary>Cambios por altura</summary>
+                    <p class="nota">
+                        Desde cierta altura (mm) cambiá el relleno, la temperatura, la velocidad o el ventilador. Cada
+                        cambio dura hasta el siguiente. La temperatura nueva tarda unos segundos en alcanzarse: la
+                        impresora no espera.
+                    </p>
+                    <p class="aviso" id="cambAlturaVariable" hidden>
+                        No se puede combinar con altura de capa variable (Avanzado).
+                    </p>
+                    <div id="cambLista"></div>
+                    <div class="aviso error" id="cambErrores" role="alert" hidden></div>
+                    <p class="nota" id="cambDetalle"></p>
+                    <button type="button" class="boton enlace" id="cambAgregar">Agregar cambio</button>
+                </details>
             </section>
 
             <!-- Paso 3: laminando -->

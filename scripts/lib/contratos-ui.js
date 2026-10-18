@@ -53,10 +53,15 @@ export const CONTRATOS = {
             'ui/util-dom',
             'ui/impresoras',
             'ui/avanzado',
+            'ui/cambios',
             'ui/materiales',
             'ui/iconos-relleno',
             PERFILES,
         ],
+    },
+    'ui/cambios': {
+        exports: { crearCambios: 1, resumenCambios: 1 },
+        importa: ['perfiles/cambios', 'ui/util-dom'],
     },
     'ui/vista-capas': {
         exports: { iniciarVistaCapas: 0, armarVistaPrevia: 0 },

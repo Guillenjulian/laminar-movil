@@ -46,3 +46,35 @@
     font-size: 0.85rem;
     color: var(--suave);
 }
+
+/* Cambios por altura (src/ui/cambios.js): una tarjeta por cambio. */
+.cambio {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+}
+.cambio-cabeza,
+.cambio-prop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+}
+.cambio input[type='number'] {
+    width: 6.5em;
+    min-height: 40px;
+    padding: 0 8px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    background: var(--fondo);
+    color: var(--texto);
+    font: inherit;
+}
+.cambio input:disabled {
+    opacity: 0.5;
+}
+#cambErrores div + div {
+    margin-top: 4px;
+}

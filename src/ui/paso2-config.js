@@ -8,12 +8,15 @@ import { estado, valoresActuales, guardarPreferencias } from './estado.js';
 import { dibujarImpresoraElegida } from './impresoras.js';
 import { $ } from './util-dom.js';
 import { crearAvanzado } from './avanzado.js';
+import { crearCambios } from './cambios.js';
 import * as materialesUI from './materiales.js';
 import { iconoRelleno } from './iconos-relleno.js';
 import { buscarImpresora, opciones, valoresDeCalidad } from '../perfiles/perfiles.js';
 
 /** Sección Avanzado; se crea dentro de iniciarPaso2. */
 let avanzado = null;
+/** Sección Cambios por altura; se crea dentro de iniciarPaso2. */
+let cambios = null;
 
 /** HTML de una opción de radio.
  *  @param {string} grupo @param {string} valor @param {string} titulo @param {string} detalle
@@ -49,6 +52,7 @@ export function dibujarOpciones() {
     $('soportes').checked = estado.soportes;
     dibujarPersonalizar();
     avanzado?.dibujar();
+    cambios?.dibujar();
 }
 
 /** Tarjeta del material elegido (descripción, avisos y precio del rollo). @returns {void} */
@@ -169,6 +173,7 @@ function conectarEleccion() {
  *  { estado, alCambiar: guardarPreferencias }). Llamar una vez. @returns {void} */
 export function iniciarPaso2() {
     avanzado = crearAvanzado({ estado, alCambiar: guardarPreferencias });
+    cambios = crearCambios({ estado, alCambiar: () => {} });
     conectarPersonalizar();
     conectarEleccion();
 }

@@ -35,7 +35,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/paso1-modelo.js` | Sube y ajusta el modelo en el visor (STL, OBJ, 3MF, foto, ejemplo o reciente): escala, rotación, apoyar cara | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `formato`, `motor/motor`, `motor/transformar`, `perfiles/perfiles`, `almacen`, `config`, `recientes` |
 | `src/ui/recientes.js` | Lista de recientes (abrir, borrar) y guardado de escala y rotación: 500 ms tras el último cambio, o de inmediato al salir del paso 1 / `pagehide` | `estado`, `navegacion`, `util-dom`, `formato`, `almacen` |
 | `src/ui/impresoras.js` | Elegir impresora (hoja con búsqueda), su tarjeta y "Mi impresora" (formulario, copiar, editar, borrar) | `estado`, `navegacion`, `util-dom`, `perfiles/perfiles`, `perfiles/generico` |
-| `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
+| `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
 | `src/ui/paso3-laminar.js` | Lanza el laminado, muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `config` |
 | `src/ui/paso4-resultado.js` | Resumen del resultado, avisos y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles` |
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción) y pausas de filamento | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config` |
@@ -46,6 +46,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor`, `motor/litofania`, `formato` |
 | `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen. `iniciarMateriales()` registra el listener de "Poné el precio" (lo llama `main.js`) | `perfiles`, `almacen`, `formato` |
 | `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
+| `src/ui/cambios.js` | Sección "Cambios por altura" del paso 2 (ADR 0002): agregar, editar y quitar cambios (relleno, temperatura, velocidad, ventilador desde cierta altura en mm), errores de `validarCambios` y resumen en el `<summary>`. Deshabilitada con altura variable | `perfiles/cambios`, `util-dom` |
 | `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
 | `src/config.js` | Límites que dependen de la memoria del equipo (triángulos, tramos de la vista previa) | — |
 | `src/sw.js` | Service worker (offline). `vite.config.js` le inyecta la lista de archivos | — |
@@ -59,7 +60,7 @@ Nivel 4   paso4-resultado ──► vista-capas, paso2-config
 Nivel 3   paso2-config ──► impresoras
 Nivel 2   paso1-modelo   impresoras   vista-capas   paso3-laminar   ──► navegacion
 Nivel 1   navegacion ──► estado
-Nivel 0   estado, util-dom, actualizacion  ──► hojas ya existentes (avanzado, formato, materiales,
+Nivel 0   estado, util-dom, actualizacion, cambios  ──► hojas ya existentes (avanzado, formato, materiales,
                                               litofania, visor, motor/*, perfiles/*, almacen, config)
 ```
 
@@ -110,6 +111,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
 | `resultado` | `{ gcode, info, archivo, impresoraId }` del último laminado | no |
+| `cambios` | Cambios por altura (`Cambio[]`, ADR 0002); se pasan a `armarConfiguracion` | no |
 | `pausas`, `coloresFilamento`, `modoColor` | Pausas y colores de la vista previa | no |
 
 ## 4. Pruebas
@@ -162,6 +164,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | No abre offline | `src/sw.js` (lista de archivos, `ignoreVary`), `vite.config.js` |
 | La vista previa no coincide con las capas | `recorridos.worker.js` (detección de capa por cambio de Z en extrusión) |
 | Modo jarrón sin espiral o capas raras | `espiral.js` y el comentario `; capa en espiral` que lee `recorridos.worker.js` |
+| La sección "Cambios por altura" no responde o no marca errores | `crearCambios()` en `src/ui/cambios.js` |
 | Altura variable sin subir Z | parche de `slice.js` en `vendor-kiri.mjs` |
 | La pausa cae en un lugar raro | `recorridos.worker.js` (`pausaCapa`) y `pausas.js` |
 | El modelo aparece corrido | `visor.js` (`ponerTransformacion`), `laminador.worker.js` (`centrar`) |

@@ -66,6 +66,7 @@ function configuracionActual() {
         material: estado.material,
         soportes: estado.soportes,
         personal: { ...estado.personal, avanzado: estado.avanzado },
+        cambios: estado.cambios,
     });
 }
 
