@@ -128,6 +128,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `formatos-3mf.js` | Lector de 3MF (`leer3MF`, `leerXML3MF`); `formatos.js` lo re-exporta |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |
 | `piezas.js` | Varias piezas o copias (ADR 0003): `acomodar` (estantes en la cama), `repartirTriangulos` y `validarCantidad`; funciones puras, sin imports |
+| `bloqueos.js` | Zonas sin soporte (ADR 0004): `validarBloqueos`, `seccionBloqueos` (esfera cortada a una altura = círculo de radio √(R²−dz²)), `bloqueaPunto` y `sinBloqueos` (resta de la sombra; la resta de polígonos entra por parámetro, la pone el puente con Kiri). Puro, sin imports |
 | `preparar-piezas.js` | `prepararPiezas` (ADR 0003): lee, transforma, decima (tope repartido), centra y replica por copia; valida la cama. Exporta `centrar` (la usa el worker). No importa Kiri |
 | `transformar.js` | Matrices 3×3: identidad, multiplicar, rotacion90, escala, rotacionQueApoya, aplicar, medir |
 | `decimar.js` | Simplificación por agrupamiento en grilla |
@@ -149,6 +150,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `valores.js` | Lo que se lee de un perfil: `lineasPausa`, `salidaDe` (`'gcode'` o `'gcode.3mf'`), `procesoDeCalidad`, `valoresDeCalidad`, `valoresDeAvanzado`, `esBowden`. Importa `catalogo` y `materiales.json` |
 | `cambios.js` | Cambios por altura (ADR 0002), funciones puras sin imports: `validarCambios`, `cambiosARangos` (mm → `process.ranges` de Kiri), `resumenCambios`, `avisosPostLaminado` |
 | `torres.js` | Configuración de las torres de calibración (ADR 0002): `valoresSugeridos` (según `hotendMax` y Bowden), `armarTorre`, `configuracionDeTorre` (bloque 0 en Avanzado, el resto como `cambios`). Importa `motor/torres`, `cambios` y `perfiles` |
+| `soportes.js` | Tipo de soporte (ADR 0004): `normalizarSoportes` (boolean viejo → `'no'|'normal'|'arbol'`), `procesoDeSoportes` (claves de proceso de Kiri) y `etiquetaSoportes`. Puro, sin imports |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
 | `LEEME.md` | Referencia de todas las claves |
 
