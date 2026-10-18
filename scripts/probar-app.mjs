@@ -16,12 +16,14 @@ import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/pas
 import { probarMateriales } from './app/materiales.mjs';
 import { probarAvanzado } from './app/avanzado.mjs';
 import { probarCambios } from './app/cambios.mjs';
+import { probarCambiosGcode } from './app/cambios-gcode.mjs';
 import { probarVistaCapas } from './app/vista-capas.mjs';
 import { probarPausas } from './app/pausas.mjs';
 import { probarDescarga } from './app/descarga.mjs';
 import { probarImpresoras } from './app/impresoras.mjs';
 import { probarRecientes } from './app/recientes.mjs';
 import { probarTransformar } from './app/transformar.mjs';
+import { probarTorres } from './app/torres.mjs';
 import { probarOffline } from './app/offline.mjs';
 
 const AREAS = [
@@ -38,9 +40,11 @@ const AREAS = [
     probarVistaCapas,
     probarPausas,
     probarDescarga,
+    probarCambiosGcode,
     probarImpresoras,
     probarRecientes,
     probarTransformar,
+    probarTorres,
     probarOffline,
 ];
 

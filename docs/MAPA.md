@@ -146,9 +146,11 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Vista previa por capas | `scripts/app/vista-capas.mjs` |
 | Pausas / filamentos | `scripts/app/pausas.mjs` |
 | Descarga del G-code | `scripts/app/descarga.mjs` |
+| Cambios por altura en el G-code (M104 a 10 mm) | `scripts/app/cambios-gcode.mjs` |
 | Impresoras (buscar, propia, copiar) | `scripts/app/impresoras.mjs` |
 | Recientes y ajustes guardados | `scripts/app/recientes.mjs` |
 | Escala, rotar, apoyar cara | `scripts/app/transformar.mjs` |
+| Torres de calibración (hoja, paso 2, M104 por bloque) | `scripts/app/torres.mjs` |
 | PWA y sin conexión | `scripts/app/offline.mjs` |
 
 Antes de cualquier commit: `npm run build` y las suites que toquen el área cambiada. Antes de integrar, todas.
