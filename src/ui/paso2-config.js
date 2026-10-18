@@ -12,6 +12,7 @@ import { crearCambios } from './cambios.js';
 import * as materialesUI from './materiales.js';
 import { iconoRelleno } from './iconos-relleno.js';
 import { buscarImpresora, opciones, valoresDeCalidad } from '../perfiles/perfiles.js';
+import { armarTorre } from '../perfiles/torres.js';
 
 /** Sección Avanzado; se crea dentro de iniciarPaso2. */
 let avanzado = null;
@@ -66,7 +67,22 @@ function dibujarTorre() {
     const tipo = t.tipo === 'temperatura' ? 'temperatura' : 'retracción';
     $('lineaTorre').textContent =
         `Torre de ${tipo}: ${t.resumen} (de abajo hacia arriba). La torre fija esos valores, el relleno y los ` +
-        'cambios por altura, y no usa soportes; calidad, material e impresora siguen siendo los tuyos.';
+        'cambios por altura, y no usa soportes. Los valores salieron de la impresora y el material que había al ' +
+        'crearla: si los cambiás, creá la torre de nuevo. Coasting, wipe, z-hop y velocidad de Avanzado siguen ' +
+        `aplicando.${avisoTorre(t)}`;
+}
+
+/** Avisos de la torre cargada (del material, o si la impresora elegida ya no aguanta sus temperaturas).
+ *  @param {object} t torre @returns {string} texto con un espacio adelante, o '' si no hay avisos */
+function avisoTorre(t) {
+    const textos = t.aviso ? [t.aviso] : [];
+    try {
+        const hotendMax = buscarImpresora(estado.impresoraId).limites?.hotendMax;
+        armarTorre({ tipo: t.tipo, valores: t.bloques.map(b => b.valor), altoBloqueMm: t.altoBloqueMm, hotendMax });
+    } catch (err) {
+        textos.push(`${err.message} Creá la torre de nuevo para esta impresora.`);
+    }
+    return textos.map(x => ` ${x}`).join('');
 }
 
 /** Tarjeta del material elegido (descripción, avisos y precio del rollo). @returns {void} */

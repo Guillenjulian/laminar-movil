@@ -13,7 +13,6 @@
 import { torreAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { armarTorre, valoresSugeridos } from '../perfiles/torres.js';
-import * as formato from './formato.js';
 import { $ } from './util-dom.js';
 
 const TIPOS = {
@@ -25,8 +24,12 @@ const BLOQUES_MAX = 8;
 
 /** Texto "225, 220 °C" de los valores de una torre (lo muestra el paso 2).
  *  @param {{ tipo: string, bloques: { valor: number }[] }} torre @returns {string} */
-const resumenTorre = torre =>
-    `${torre.bloques.map(b => formato.numero(b.valor)).join(', ')} ${TIPOS[torre.tipo].unidad}`;
+const resumenTorre = torre => {
+    const { unidad } = TIPOS[torre.tipo];
+    const decimales = unidad === 'mm' ? 1 : 0; // 0,5 mm de retracción no se puede redondear a 1
+    const ver = v => v.toLocaleString('es-AR', { maximumFractionDigits: decimales });
+    return `${torre.bloques.map(b => ver(b.valor)).join(', ')} ${unidad}`;
+};
 
 /** Máximo de temperatura de la boquilla de la impresora, en °C (Infinity si no lo define).
  *  @param {string} impresoraId @returns {number} */
@@ -123,6 +126,11 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
         ajustarCantidad(tipo(), Number(e.target.value));
     });
 
+    // Al cerrar la hoja (con "Crear torre" o con la flecha) el foco vuelve al botón que la abrió.
+    new MutationObserver(() => $('hojaTorre').hidden && $('botonTorre').focus()).observe($('hojaTorre'), {
+        attributeFilter: ['hidden'],
+    });
+
     form.addEventListener('submit', e => {
         e.preventDefault();
         let torre;
@@ -145,6 +153,7 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
             aviso = sugerir(form, contexto());
             abrir();
             form.parentElement.scrollTo?.(0, 0);
+            form.querySelector('input:checked').focus();
         },
         revisar: torre => avisarTorre(torre, contexto().impresoraId),
     };

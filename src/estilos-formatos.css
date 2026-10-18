@@ -13,16 +13,17 @@
     gap: 8px;
     margin-top: 8px;
 }
-.valores-torre label,
-.valores-torre label > span {
+.formulario .valores-torre label,
+.formulario .valores-torre label > span {
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 8px;
 }
-.valores-torre label {
+.formulario .valores-torre label {
     justify-content: space-between;
 }
-.valores-torre input {
+.formulario .valores-torre input {
     width: 6rem;
 }
 

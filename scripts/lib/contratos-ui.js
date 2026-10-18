@@ -62,6 +62,7 @@ export const CONTRATOS = {
             'ui/materiales',
             'ui/iconos-relleno',
             PERFILES,
+            'perfiles/torres',
         ],
     },
     'ui/cambios': {
