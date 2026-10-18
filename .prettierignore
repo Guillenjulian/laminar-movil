@@ -1,0 +1,11 @@
+.claude/
+node_modules/
+dist/
+vendor/
+public/
+capturas/
+package-lock.json
+*.md
+src/perfiles/impresoras/kiri/
+# datos editados a mano: se respeta su formato compacto
+src/perfiles/*.json

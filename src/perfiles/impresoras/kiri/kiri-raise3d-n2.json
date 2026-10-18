@@ -1,0 +1,119 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Raise3D.N2.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-raise3d-n2",
+    "nombre": "Raise3D N2",
+    "marca": "Raise3D",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "bedWidth": 310,
+        "bedDepth": 310,
+        "maxHeight": 305,
+        "originCenter": false,
+        "bedRound": false,
+        "extrudeAbs": true,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "M140 S{bed_temp}",
+            "M221 T{tool} S100.00",
+            "M104 T{tool} S{temp}",
+            "M109 T{tool} S{temp}",
+            "M190 S{bed_temp}",
+            "G21",
+            "G90",
+            "M82",
+            "M107",
+            "G28 X0 Y0",
+            "G28 Z0",
+            "T{tool}",
+            "G1 Z0.05 F6000.00",
+            "G92 E0",
+            "G1 F140 E29",
+            "G4 P500",
+            "G1 X15 Y15 Z0.02 F2000",
+            "G1 F6000.00",
+            "M117 Printing...",
+            "M1001"
+        ],
+        "gcodePost": [
+            "G91",
+            "G1 Z10",
+            "G90",
+            "M1002",
+            "M104 T{tool} S0",
+            "M104 S0",
+            "M140 S0",
+            "G1 X20 Y20 F6000",
+            "G1 X0 Y0",
+            "M84",
+            ";Print Time: {time}",
+            ";Material#1 Used: {material}",
+            ";Material#2 Used: 0.0"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}",
+            ";HEIGHT:{height}"
+        ],
+        "gcodeFExt": "gcode",
+        "deviceName": "Raise3D N2",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {},
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

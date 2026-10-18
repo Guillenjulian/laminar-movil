@@ -1,0 +1,47 @@
+{
+    "name": "laminar-movil",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Laminador STL → G-code 100% en el navegador, pensado para el celu. Motor: Kiri:Moto.",
+    "license": "MIT",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "vendor:kiri": "node scripts/vendor-kiri.mjs",
+        "test:motor": "node scripts/probar-motor.mjs",
+        "test:app": "node scripts/probar-app.mjs",
+        "test:transformar": "node scripts/probar-transformar.mjs",
+        "test:formatos": "node scripts/probar-formatos.mjs",
+        "test:torres": "node scripts/probar-torres.mjs",
+        "test:cambios": "node scripts/probar-cambios.mjs",
+        "test:contratos": "CONTRATOS_ESTRICTO=1 node scripts/probar-contratos.mjs",
+        "iconos": "python3 scripts/generar-iconos.py",
+        "importar:impresoras": "node scripts/importar-impresoras-kiri.mjs",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
+    },
+    "dependencies": {
+        "@tweenjs/tween.js": "^25.0.0",
+        "earcut": "^3.2.4",
+        "jszip": "^3.10.2",
+        "three": "^0.182.0",
+        "three-mesh-bvh": "^0.7.6"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.5",
+        "esbuild": "^0.28.2",
+        "eslint": "^9.39.5",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^17.13.0",
+        "playwright-core": "^1.64.1",
+        "prettier": "^3.9.10",
+        "vite": "^8.3.4"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

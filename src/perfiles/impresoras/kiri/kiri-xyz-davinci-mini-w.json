@@ -1,0 +1,102 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/XYZ.daVinci.Mini.w.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-xyz-davinci-mini-w",
+    "nombre": "XYZ daVinci Mini w",
+    "marca": "XYZ",
+    "estado": "importado",
+    "aviso": "El G-code de inicio no usa la temperatura elegida de cama (tiene valores fijos o ninguno).",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "bedWidth": 150,
+        "bedDepth": 150,
+        "maxHeight": 150,
+        "originCenter": false,
+        "bedRound": false,
+        "extrudeAbs": true,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "T{tool}                ; select extruder #0",
+            "M104 S{temp}           ; set nozzle temp",
+            "M109 S{temp}           ; wait for nozzle to heat",
+            "G21                    ; set units to millimeters",
+            "M82                    ; absolute extrusion mode",
+            "G28                    ; home",
+            "G1 Z15 F6000           ; lower platform 15mm",
+            "G92 E0                 ; zero out extruder position",
+            "G1 F200 E3             ; prime the extruder 3mm"
+        ],
+        "gcodePost": [
+            "M107                   ; fan off",
+            "M104 S0                ; set nozzle temp to 0",
+            "M140 S0                ; set bed temp to 0",
+            "G92 E0                 ; zero out extruder position",
+            "G1 E-1 F300            ; retract filament",
+            "G28 X0 Y0              ; home X Y",
+            "M84                    ; disable steppers"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}"
+        ],
+        "gcodeFExt": "gcode",
+        "deviceName": "XYZ daVinci Mini w",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {},
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

@@ -1,0 +1,112 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Flashforge.Guider.II.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-flashforge-guider-ii",
+    "nombre": "Flashforge Guider II",
+    "marca": "Flashforge",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "bedWidth": 280,
+        "bedDepth": 250,
+        "maxHeight": 300,
+        "originCenter": true,
+        "bedRound": false,
+        "extrudeAbs": true,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "; set bed and nozzle temps",
+            "M104 S{temp} T{tool}",
+            "M140 S{bed_temp}",
+            "; absolute positioning and home",
+            "G90",
+            "G28",
+            "; wait for nozzle and bed to reach target temps",
+            "M190 S{bed_temp}",
+            "M109 S{temp} T{tool}",
+            "M7 T{tool}",
+            "M6 T{tool}",
+            "; select nozzle 0",
+            "M108 T{tool}",
+            "G92 E0",
+            "G1 E0 F300",
+            "; purge nozzle",
+            "G1 X150 Y75 Z15 E-2 F500",
+            "G1 Y125 Z0.5 F600",
+            "G1 Y50 E40 F600"
+        ],
+        "gcodePost": [
+            "; stop fan, cool nozzle and bed",
+            "M107",
+            "M104 S0 T{tool}",
+            "M140 S0",
+            "; slow descent of bed",
+            "G0 F300",
+            "; end print",
+            "M18"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}"
+        ],
+        "gcodeFExt": "gcode",
+        "deviceName": "Flashforge Guider II",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {},
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

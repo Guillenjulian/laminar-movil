@@ -1,0 +1,84 @@
+/* Sección "Avanzado" del paso 2 (src/ui/avanzado.js). Reusa los estilos de
+   "Personalizar" (.personalizar, .interruptor, .contador, .fila-deslizador). */
+
+#avanzado .interruptor {
+    margin-top: 12px;
+}
+#avanzado .interruptor:has(input:disabled) {
+    opacity: 0.55;
+}
+#avanzado h3 small {
+    font-weight: 400;
+    color: var(--suave);
+}
+#avanzado .aviso {
+    margin: 8px 0 0;
+}
+#avanzado .nota {
+    margin: 0 0 8px;
+}
+#avRestablecer {
+    margin-top: 12px;
+}
+
+/* Contador con un valor distinto al de fábrica: el número resaltado. */
+#avanzado .contador.cambiado output {
+    color: var(--acento);
+}
+/* Los valores tienen unidad ("0,8 mm", "215 °C"): un poco más de lugar. */
+#avanzado .contador output {
+    min-width: 7ch;
+}
+
+/* Costura deshabilitada en modo jarrón. */
+#avCosturas.deshabilitado {
+    opacity: 0.5;
+}
+
+/* Modo jarrón activo: el relleno de "Personalizar" no se usa. */
+#personalizar.sin-relleno :is(#patrones, .fila-deslizador, #densidad, #atajosDensidad) {
+    opacity: 0.4;
+    pointer-events: none;
+}
+#personalizar.sin-relleno #patrones::before {
+    content: 'Modo jarrón: sin relleno';
+    grid-column: 1 / -1;
+    font-size: 0.85rem;
+    color: var(--suave);
+}
+
+/* Cambios por altura (src/ui/cambios.js): una tarjeta por cambio. */
+.cambio {
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+}
+.cambio-cabeza,
+.cambio-prop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+}
+.cambio input[type='number'] {
+    width: 6.5em;
+    min-height: 40px;
+    padding: 0 8px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    background: var(--fondo);
+    color: var(--texto);
+    font: inherit;
+}
+.cambio input:disabled {
+    opacity: 0.5;
+}
+.cambio-bloque small {
+    display: block;
+    color: var(--suave);
+}
+#cambErrores div + div {
+    margin-top: 4px;
+}

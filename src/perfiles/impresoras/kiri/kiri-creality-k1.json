@@ -1,0 +1,97 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Creality.K1.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-creality-k1",
+    "nombre": "Creality K1",
+    "marca": "Creality",
+    "estado": "importado",
+    "aviso": "El G-code de inicio no usa la temperatura elegida de boquilla ni de cama (tiene valores fijos o ninguno).",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "deviceName": "Creality K1",
+        "bedWidth": 220,
+        "bedDepth": 220,
+        "maxHeight": 250,
+        "originCenter": false,
+        "bedRound": false,
+        "fwRetract": false,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "M140 S0",
+            "M104 S0 ",
+            "START_PRINT EXTRUDER_TEMP=220.000000 BED_TEMP=45.000000",
+            "G92 E0",
+            "G1 F2400 E-0.5"
+        ],
+        "gcodePost": [
+            "M106 S0",
+            "M106 P2 S0",
+            "M106 P1 S0",
+            "END_PRINT",
+            "M82 ;absolute extrusion mode",
+            "M104 S0"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}"
+        ],
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {},
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}

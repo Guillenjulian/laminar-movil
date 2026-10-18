@@ -1,0 +1,99 @@
+{
+    "_nota": "Importado de Kiri:Moto 4.7.0 (src/kiri/dev/fdm/Creality.Sermoon.D1.json) por scripts/importar-impresoras-kiri.mjs. Sin revisar: contrastar con el perfil oficial antes de confiar.",
+    "id": "kiri-creality-sermoon-d1",
+    "nombre": "Creality Sermoon D1",
+    "marca": "Creality",
+    "estado": "importado",
+    "adhesion": "falda",
+    "limites": {},
+    "dispositivo": {
+        "bedWidth": 280,
+        "bedDepth": 260,
+        "maxHeight": 310,
+        "originCenter": false,
+        "bedRound": false,
+        "extrudeAbs": true,
+        "deviceZMax": 0,
+        "gcodeTime": 1,
+        "gcodePre": [
+            "M107                     ; turn off filament cooling fan",
+            "G90                      ; set absolute positioning mode",
+            "M82                      ; set absolute positioning for extruder",
+            "M104 S{temp} T{tool}     ; set extruder temperature",
+            "M140 S{bed_temp} T{tool} ; set bed temperature",
+            "G28                      ; home axes",
+            "G92 E0                   ; reset extruder position",
+            "M109 S{temp} T{tool}     ; wait for extruder to reach target temp",
+            "M190 S{bed_temp} T{tool} ; wait for bed to reach target temp"
+        ],
+        "gcodePost": [
+            "M107                     ; turn off filament cooling fan",
+            "M104 S0 T{tool}          ; turn off right extruder",
+            "M140 S0 T{tool}          ; turn off bed",
+            "G28 XY                   ; home XY",
+            "M84                      ; disable stepper motors"
+        ],
+        "gcodeFan": [
+            "M106 S{fan_speed}"
+        ],
+        "gcodeTrack": [],
+        "gcodeLayer": [
+            ";LAYER:{layer}"
+        ],
+        "gcodeFExt": "gcode",
+        "deviceName": "Creality Sermoon D1",
+        "extruders": [
+            {
+                "extOffsetX": 0,
+                "extOffsetY": 0,
+                "extFilament": 1.75,
+                "extNozzle": 0.4
+            }
+        ]
+    },
+    "proceso": {},
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 60,
+                "outputFinishrate": 36,
+                "sliceShells": 2,
+                "sliceFillSparse": 0.15
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "outputFeedrate": 50,
+                "outputFinishrate": 30,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "outputFeedrate": 35,
+                "outputFinishrate": 21,
+                "sliceShells": 3,
+                "sliceFillSparse": 0.2
+            }
+        }
+    }
+}
