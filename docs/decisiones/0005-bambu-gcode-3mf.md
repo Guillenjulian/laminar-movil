@@ -6,7 +6,14 @@
 
 ## Estado
 
-Propuesto.
+Aceptado por el CTO el 2026-10-18, con estas decisiones:
+
+- **T0 no bloquea:** no hay un `.gcode.3mf` de referencia exportado de Bambu Studio. Se implementa con lo público y
+  todo lo marcado **[A VALIDAR]** lo valida una persona en T9.
+- **Perfiles Bambu con aviso:** salen con `estado: revisado` y un `aviso` ("Perfil sin validar con la impresora:
+  probalo con un cubo antes de una pieza grande"), sin flag.
+- **P1P fuera de v1:** alcanza con la P1S.
+- **Firma de firmware:** si la exige, queda el aviso en el perfil (R7) y no se hace nada más en v1.
 
 ## Contexto
 
