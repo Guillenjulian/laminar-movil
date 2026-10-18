@@ -14,6 +14,7 @@
         "test:app": "node scripts/probar-app.mjs",
         "test:transformar": "node scripts/probar-transformar.mjs",
         "test:formatos": "node scripts/probar-formatos.mjs",
+        "test:contratos": "node scripts/probar-contratos.mjs",
         "iconos": "python3 scripts/generar-iconos.py",
         "importar:impresoras": "node scripts/importar-impresoras-kiri.mjs",
         "lint": "eslint .",
