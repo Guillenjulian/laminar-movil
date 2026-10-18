@@ -1,10 +1,10 @@
 // PWA: instalable y sin conexión.
 //
 // Flujo: manifest con íconos, service worker controlando la página tras recargar; sin red abre
-// la app, carga el cubo de ejemplo y lamina.
+// la app, carga el cubo de ejemplo y lamina. Al final toca "Laminar otro modelo" (#otro).
 //
 // Precondición: cualquier paso de la app ya cargada (la última área deja la app en paso 2 o 1).
-// Deja: paso 4 con el cubo laminado, de vuelta con conexión.
+// Deja: paso 1 sin modelo cargado, de vuelta con conexión.
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarOffline(ctx) {
@@ -26,4 +26,11 @@ export async function probarOffline(ctx) {
     await esperarResultado();
     revisar('lamina sin conexión', true);
     await contexto.setOffline(false);
+
+    // "Laminar otro modelo" vuelve al paso 1 sin modelo cargado.
+    await pagina.tap('#otro');
+    revisar(
+        '"otro modelo" → paso 1 sin modelo',
+        (await visible('section[data-paso="1"]')) && (await visible('#sinModelo')),
+    );
 }

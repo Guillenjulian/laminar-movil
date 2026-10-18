@@ -27,7 +27,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | Archivo | Responsabilidad | Depende de |
 |---|---|---|
 | `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
-| `src/main.js` | Manejadores de los pasos 2 a 4 (en división, ver ADR 0001; los pasos 1 y 2 y las impresoras ya están en `ui/paso1-modelo`, `ui/paso2-config` e `ui/impresoras`). ⚠️ ~450 líneas: ver la sección 6 | casi todo, `ui/estado`, `ui/util-dom`, `ui/navegacion`, `ui/paso1-modelo`, `ui/paso2-config`, `ui/impresoras` |
+| `src/main.js` | Punto de entrada (~70 líneas): inicializa en orden los módulos de `src/ui/`, cablea sus callbacks y registra el service worker (ADR 0001) | `ui/*` (todos los módulos de pasos, `estado`, `navegacion`, `util-dom`, `materiales`), `almacen` |
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso | `ui/estado`, `ui/util-dom` |
@@ -138,6 +138,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Un archivo no abre | `formatos.js` (mensajes de error) y `convertir.worker.js` |
 
 ## 6. Deuda técnica conocida
-- La división de `src/main.js` (ADR 0001) va a medias: ya están `ui/util-dom`, `ui/estado`, `ui/navegacion`, `ui/paso1-modelo`, `ui/paso2-config` e `ui/impresoras`; faltan `paso3-laminar`, `paso4-resultado`, `vista-capas` y `actualizacion`.
+- La división de `src/main.js` (ADR 0001) va casi terminada: ya están todos los módulos de `src/ui/` salvo `actualizacion` (R4); `registrarServiceWorker` sigue en `main.js` (~70 líneas).
 - `scripts/probar-app.mjs` (~530 líneas) es un solo recorrido largo: dividir por área con helpers compartidos.
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
