@@ -75,7 +75,11 @@ export const CONTRATOS = {
     },
     'ui/vista-capas': {
         exports: { iniciarVistaCapas: 0, armarVistaPrevia: 0 },
-        importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config'),
+        importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config', 'ui/pausas-ui'),
+    },
+    'ui/pausas-ui': {
+        exports: { conectarPausas: 1, dibujarPausas: 0 },
+        importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/tipos-linea', PERFILES],
     },
     'ui/paso3-laminar': {
         exports: { iniciarPaso3: 1 },

@@ -39,7 +39,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/paso2-config.js` | Pantalla del paso 2: calidad, material, soportes, Personalizar y Avanzado (`iniciarPaso2`, `dibujarOpciones`) | `estado`, `impresoras`, `util-dom`, `avanzado`, `cambios`, `materiales`, `iconos-relleno`, `perfiles/perfiles` |
 | `src/ui/paso3-laminar.js` | Lanza el laminado (con la configuración de la torre si hay una), muestra el progreso, permite cancelar y muestra el error; al terminar llama `alTerminar` | `estado`, `navegacion`, `util-dom`, `motor/motor`, `perfiles/perfiles`, `perfiles/torres`, `config` |
 | `src/ui/paso4-resultado.js` | Resumen del resultado, avisos (incluye los de cambios por altura fuera de la pieza, `avisosPostLaminado`) y entrega del G-code (compartir, descargar, elegir otro modelo) | `estado`, `navegacion`, `util-dom`, `vista-capas`, `paso2-config`, `formato`, `materiales`, `motor/pausas`, `perfiles/perfiles`, `perfiles/cambios` |
-| `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción) y pausas de filamento | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config` |
+| `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor y las capas | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
+| `src/ui/pausas-ui.js` | Pausas de filamento de la vista previa: lista de filamentos, marcas sobre el deslizador, modo y colores de los recorridos | `estado`, `util-dom`, `formato`, `motor/tipos-linea`, `perfiles/perfiles` |
 | `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
 | `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
@@ -62,6 +63,8 @@ Nivel 5   paso4-resultado ──► vista-capas, paso2-config
 Nivel 4   paso2-config ──► impresoras
 Nivel 3   impresoras ──► formulario-impresora
 Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
+          vista-capas ──► pausas-ui
+Nivel 1   pausas-ui ──► estado, util-dom
 Nivel 1   navegacion ──► estado
 Nivel 0   estado, util-dom, actualizacion, cambios, torres ──► hojas ya existentes (avanzado, formato, materiales,
                                               litofania, visor, motor/*, perfiles/*, almacen, config)
@@ -182,6 +185,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
 | Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |
 | La vista previa por capas no responde | `iniciarVistaCapas()` en `src/ui/vista-capas.js` |
+| La lista de filamentos, las marcas de pausa o los colores de la vista previa fallan | `dibujarPausas()` y `conectarPausas()` en `src/ui/pausas-ui.js` |
 | No se puede elegir una impresora | `iniciarImpresoras()` en `src/ui/impresoras.js` |
 | "Mi impresora" (crear, copiar, editar, borrar) no guarda o no abre | `iniciarFormularioImpresora()` en `src/ui/formulario-impresora.js` |
 | "Atrás" sale de la app o no cierra la hoja; el paso no cambia | `iniciarNavegacion()` y `mostrar()` en `src/ui/navegacion.js` |
@@ -191,7 +195,6 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 
 ## 6. Deuda técnica conocida
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
-- `src/ui/vista-capas.js` supera las 300 líneas físicas (317); el lint no lo marca porque no cuenta blancos ni comentarios. Plan B: `pausas-ui.js` (ADR 0001).
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
 - Funciones y archivos largos marcados por `npm run lint` (warnings, no bloquean): `visor.js` (`crearVisor`, 310 líneas; el archivo, 313), `crearAvanzado`, `prepararLitofania`, `armarConfiguracion`, `espiral.js` (`espiralar`, `vueltaDesde`), `recorridos.worker.js` (`leer`), `laminador.worker.js` (`laminar`), `litofania.js` (`generarLitofania`), `decimar.js` (`agrupar`), `formatos.js` (`leerOBJ`, `leerXML3MF`), y los archivos `scripts/probar-motor.mjs` (541 líneas) y `scripts/probar-formatos.mjs` (320).

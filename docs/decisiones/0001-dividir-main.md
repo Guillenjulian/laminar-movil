@@ -103,7 +103,8 @@ formulario-impresora → estado, navegacion, util-dom, perfiles/perfiles, perfil
 paso2-config    → estado, impresoras, util-dom, ui/avanzado, ui/materiales, ui/iconos-relleno,
                   perfiles/perfiles
 vista-capas     → estado, navegacion, util-dom, ui/visor, ui/formato, motor/motor, motor/tipos-linea,
-                  perfiles/perfiles, config
+                  perfiles/perfiles, config, pausas-ui   (arista agregada al extraer las pausas)
+pausas-ui       → estado, util-dom, ui/formato, motor/tipos-linea, perfiles/perfiles
 paso3-laminar   → estado, navegacion, util-dom, motor/motor, perfiles/perfiles, config
 paso4-resultado → estado, navegacion, util-dom, vista-capas, paso2-config, ui/formato, ui/materiales,
                   motor/pausas, perfiles/perfiles
