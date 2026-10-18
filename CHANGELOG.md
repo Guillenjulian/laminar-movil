@@ -11,6 +11,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 - ESLint 10: migración desde ESLint 9 (`eslint` y `@eslint/js` ^10), con las mismas reglas del proyecto y 0 errores / 0 warnings.
 
+### Corregido
+
+- La vista previa ya no muestra una capa vacía al final cuando el tope de tramos corta justo al empezar una capa nueva.
+
 ## [0.2.0] - 2026-10-18
 
 Cierre de los sprints 0 a 2.

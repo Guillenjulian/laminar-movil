@@ -34,6 +34,16 @@ export class Tramos {
     }
 
     /**
+     * ¿Se llenó `maxSegmentos`? Si es así, deja el resultado `incompleta`.
+     * @returns {boolean}
+     */
+    llena() {
+        if (this.segmentos < this.maxSegmentos) return false;
+        this.incompleta = true;
+        return true;
+    }
+
+    /**
      * Empieza una capa: anota dónde va la pausa, su Z y su primer tramo.
      * @param {number} nz Z de la capa
      * @param {number} offPausa posición en el texto donde insertar la pausa antes de la capa
@@ -98,10 +108,7 @@ export class Tramos {
      * @returns {boolean} false si se llenó `maxSegmentos` (queda `incompleta`)
      */
     agregarTramo(x, y, nx, ny, nz, tipo) {
-        if (this.segmentos >= this.maxSegmentos) {
-            this.incompleta = true;
-            return false;
-        }
+        if (this.llena()) return false;
         const { pos, col, tip } = this;
         pos.asegurar(6);
         col.asegurar(6);

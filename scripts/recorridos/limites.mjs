@@ -114,7 +114,7 @@ function capaVacia({ revisar, igual }) {
     ];
     const r = leerPlano(L, 2);
     revisar(
-        'tope 2: inicioCapa [0, 2] y 1 sola zCapa (reproduce bug de capa vacía: se arregla en recorridos-lector)',
+        'tope 2: inicioCapa [0, 2] y 1 sola zCapa',
         r.incompleta === true && igual(r.ini, [0, 2]) && r.z.length === 1,
         `inicioCapa=${r.ini.join(',')} zCapa=${r.z.length}`,
     );

@@ -159,6 +159,8 @@ class Lector {
     extrusion(nx, ny, nz, enEspiral, offLinea) {
         // ¿Capa nueva? (cambió la altura a la que se extruye). En espiral la capa la marca MARCA_ESPIRAL.
         if (this.vueltaNueva || (nz !== this.capaZ && !enEspiral) || isNaN(this.capaZ)) {
+            // Si ya no entra ningún tramo, no se abre la capa (quedaría vacía).
+            if (this.tramos.llena()) return false;
             this.capaNueva(nz, offLinea);
         }
         const { tramos, x, y, tipo } = this;
