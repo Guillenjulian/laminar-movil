@@ -8,6 +8,7 @@ import { probar3mf } from './formatos/3mf.mjs';
 import { probarErrores } from './formatos/errores.mjs';
 import { probarLitofania } from './formatos/litofania.mjs';
 import { probarMd5 } from './formatos/md5.mjs';
+import { probarBambuXml } from './formatos/bambu-xml.mjs';
 
 let fallas = 0;
 function revisar(nombre, condicion, detalle = '') {
@@ -21,6 +22,7 @@ await probar3mf({ revisar });
 await probarErrores({ revisar });
 await probarLitofania({ revisar });
 probarMd5({ revisar });
+await probarBambuXml({ revisar });
 
 console.log(fallas ? `\n${fallas} PRUEBA(S) FALLARON` : '\nTODAS LAS PRUEBAS OK');
 process.exit(fallas ? 1 : 0);
