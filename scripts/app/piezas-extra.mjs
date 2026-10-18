@@ -20,6 +20,7 @@ import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
 import { medir, multiplicar, rotacion90, rotacionQueApoya } from '../../src/motor/transformar.js';
 import { puntosDeCapa } from '../lib/gcode.mjs';
 import { CAMA } from './piezas.mjs';
+import { esperarVisor } from '../lib/visor.mjs';
 
 const LARGO = 40;
 const LADO = 10 * Math.SQRT2; // cateto del triángulo apoyado: la huella real mide LADO × LARGO
@@ -65,6 +66,7 @@ const medidas = pagina => pagina.textContent('#datosModelo').then(t => t.split('
  */
 async function apoyarCara({ page: pagina, ok: revisar, captura }, fx, fy, nombre) {
     await pagina.tap('#apoyarCara');
+    await esperarVisor(pagina, '#visor');
     const l = await pagina.locator('#visor canvas').boundingBox();
     await pagina.touchscreen.tap(l.x + l.width * fx, l.y + l.height * fy);
     const cayo = await pagina

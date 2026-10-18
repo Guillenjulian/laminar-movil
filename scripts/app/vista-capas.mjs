@@ -7,6 +7,8 @@
 // Precondición: paso 4 visible con el cubo de 20 mm en PLA/Rápido (72 capas).
 // Deja: paso 4, vista en la capa penúltima (la que fuerza el dibujo), sin pausas.
 
+import { esperarVisor } from '../lib/visor.mjs';
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarVistaCapas(ctx) {
     const { page: pagina, ok: revisar, captura } = ctx;
@@ -50,7 +52,8 @@ async function reproducir({ page: pagina, ok: revisar }, ultima) {
     );
 }
 
-function pixelesConColor(pagina) {
+async function pixelesConColor(pagina) {
+    await esperarVisor(pagina, '#visorCapas');
     return pagina.evaluate(
         () =>
             new Promise(listo => {
