@@ -7,8 +7,15 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [0.2.0] - 2026-10-18
+
+Cierre de los sprints 0 a 2.
+
 ### Agregado
 
+- Varias piezas y copias en la cama, con acomodo automático (ADR 0003): se agregan piezas (archivo o cubo de ejemplo), se les pone copias y la app las acomoda en la cama; con una sola pieza, todo sigue como antes.
+- Perfiles revisados de Ender 3 V2, Ender 3 V3 KE, K1, Neptune 4, Kobra 2, Kobra 3, Prusa MK4 y Sovol SV06.
+- `npm run test:piezas`: pruebas en Node del acomodo, el reparto de triángulos, los límites de cantidad y `prepararPiezas`.
 - ESLint y Prettier, con `npm run lint`, `lint:fix`, `format` y `format:check`.
 - CI en GitHub Actions: build, lint, formato y las suites de prueba en cada PR y en cada push a `main`.
 - Prueba de contratos de los módulos de `src/ui/` (`npm run test:contratos`).
@@ -23,10 +30,13 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - `main.js` dividido en 10 módulos de `src/ui/` (de 1007 a 48 líneas).
 - `probar-app.mjs` dividido por área en `scripts/app/`, con helpers en `scripts/lib/`.
 - Código formateado con Prettier.
+- Módulos de la interfaz divididos para que queden chicos: `pausas-ui` (sale de `vista-capas`), `formulario-impresora` (sale de `impresoras`), `visor-cara`, `visor-recorridos` y `visor-cama` (salen de `visor`), y `ajuste-modelo` (sale de `paso1-modelo`).
+- Los importados de la K1 y la Kobra 2 quedan tapados por sus perfiles revisados, con `reemplaza`, para que el modelo no salga dos veces en la lista.
 
 ### Corregido
 
 - `materiales.js` ya no registra listeners al importarse.
+- Una impresora guardada que quedó tapada por un perfil revisado pasa a ese perfil (`idVigente`).
 
 ## [0.1.0] - 2026-10-18
 

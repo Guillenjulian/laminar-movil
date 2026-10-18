@@ -19,6 +19,12 @@ visor.js (3D)         armarConfiguracion()
 transformar.js (escala/rotación/apoyar cara)
 ```
 
+En el paso 1 puede haber varias piezas y varias copias de cada una (ADR 0003): `piezas-ui.js` maneja las piezas
+(chips, agregar, quitar, pieza activa) y `copias-ui.js` el stepper de copias. `acomodo.js` (`acomodarPiezas`) las
+acomoda en la cama con `motor/piezas.js`, y el visor muestra en rojo las copias que no entran. El paso 3 vuelve a
+acomodar y lamina `piezasParaMotor()`; el worker arma un widget de Kiri por copia (`preparar-piezas.js`). Con una
+sola pieza y una copia, el flujo es el de antes.
+
 Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al terminar (`motor.js`).
 
 ## 2. Módulos
@@ -129,7 +135,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 
 | Clave | Qué guarda | Se persiste |
 |---|---|---|
-| `piezas`, `activa`, `entra` | `Pieza[]` (id, nombre, stl, vista, rotacion, escala, copias, origen, posiciones; ADR 0003), id de la pieza activa (`null` = la primera) y si entran en la cama. Se carga con `estado.piezas = [crearPieza({...})]; estado.activa = id` | recientes guarda nombre, stl, rotación y escala |
+| `piezas`, `activa`, `entra` | `Pieza[]` (id, nombre, stl, vista, rotacion, escala, copias, origen, posiciones y `tamano`; ADR 0003), id de la pieza activa (`null` = la primera) y si entran en la cama. `tamano` es la medida real ya transformada (`{x,y,z}`): la guarda `ajuste-modelo` y `piezas-ui` desde `visor.tamanoModelo`, y `acomodarPiezas` la usa. Se carga con `estado.piezas = [crearPieza({...})]; estado.activa = id` | recientes guarda nombre, stl, rotación y escala (no las copias) |
 | `nombre`, `stl`, `vista`, `rotacion`, `escala` | Accesores de la pieza activa (sin pieza: `''`, `null`, `null`, identidad, `1`, y el setter no hace nada: cargar un modelo exige crear la pieza antes) | sí, en recientes (500 ms o al salir) |
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
@@ -147,7 +153,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
 | `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y posiciones inválidas | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
-| `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` |
+| `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige. También corre las pruebas de los accesores de `estado.piezas` (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` + `scripts/probar-estado.mjs` |
 | `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, todas las impresoras importadas, malla pesada, cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa), torres de calibración (casos 10-11: M104 y retracción por bloque), los 8 perfiles revisados (tabla fija de datos de fábrica, macros sin reemplazar, temperaturas, X/Y dentro de la cama, retracción esperada, orden de arranque, G29 sólo donde corresponde, `reemplaza` e `idVigente`) y varias piezas con `track.pos` (ADR 0003: T0 con falda, borde, balsa y soportes; T6 con equivalencia con una pieza, 4 copias, alturas distintas, cambio por altura, fuera de la cama) | `scripts/probar-motor.mjs` + `prueba-motor.html` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` + `scripts/motor/perfiles-revisados.mjs` + `scripts/motor/piezas-kiri.mjs` + `scripts/motor/piezas.mjs` |
 | `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` (orquestador) + `scripts/app/*.mjs` + `scripts/lib/` |
 | `npm run lint` | ESLint (recomendado + límites de tamaño como aviso: 300 líneas por archivo, 40 por función); `npm run lint:fix` aplica los arreglos automáticos | `eslint.config.js` |
@@ -161,6 +167,8 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 |---|---|
 | Paso 1: modelo pesado, cubo, gesto en el visor | `scripts/app/paso1-modelo.mjs` |
 | Paso 1: OBJ, 3MF, litofanía | `scripts/app/paso1-formatos.mjs` |
+| Paso 1: varias piezas (agregar, activar, escalar, quitar, laminar dos cubos, tope, torre) | `scripts/app/piezas.mjs` |
+| Paso 1: copias (stepper, acomodo, aviso "no entran", recientes) | `scripts/app/copias.mjs` |
 | Paso 2: calidad, atrás/adelante | `scripts/app/paso2-config.mjs` |
 | Paso 3: cancelar, personalizar, laminar el cubo | `scripts/app/paso3-laminar.mjs` |
 | Materiales y costo | `scripts/app/materiales.mjs` |
@@ -201,6 +209,8 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 | Un botón del paso 1 no responde | `iniciarPaso1()` en `src/ui/paso1-modelo.js` |
 | Escala, rotación, apoyar cara o los avisos del modelo fallan | `crearAjuste()` en `src/ui/ajuste-modelo.js` |
 | Un modelo cargado no aparece en `estado` (los accesores no escriben) | `montarModelo()` en `src/ui/paso1-modelo.js` y `crearPieza()` en `src/ui/estado.js` |
+| Las copias no se acomodan o el visor no coincide con el G-code | `acomodarPiezas()` en `src/ui/acomodo.js` (posiciones) y `reacomodar()` en `src/ui/piezas-ui.js` (lo que se ve); `prepararPiezas()` en `src/motor/preparar-piezas.js` (cada copia con su `pos`) |
+| No se puede agregar una pieza | `dibujar()` y `botonesAgregar()` en `src/ui/piezas-ui.js` (se oculta con torre o litofanía; se deshabilita en el tope de `validarCantidad` en `src/motor/piezas.js`, con `MAX_PIEZAS` y `maxCopias()` de `src/config.js`) |
 | Un botón del paso 2 no responde o una opción no se redibuja | `iniciarPaso2()` y `dibujarOpciones()` en `src/ui/paso2-config.js` |
 | Laminar, cancelar o el error no se muestran bien | `iniciarPaso3()` en `src/ui/paso3-laminar.js` |
 | Compartir, descargar o "Elegir otro modelo" no responden | `iniciarPaso4()` en `src/ui/paso4-resultado.js` |
@@ -217,4 +227,10 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
-- Funciones y archivos largos marcados por `npm run lint` (warnings, no bloquean): `crearAvanzado`, `prepararLitofania`, `armarConfiguracion`, `espiral.js` (`espiralar`, `vueltaDesde`), `recorridos.worker.js` (`leer`), `litofania.js` (`generarLitofania`), `decimar.js` (`agrupar`), `formatos.js` (`leerOBJ`, `leerXML3MF`), y los archivos `scripts/probar-motor.mjs` (615 líneas) y `scripts/probar-formatos.mjs` (320).
+- Warnings de `npm run lint` (12, 0 errores; no bloquean). Funciones: `crearAvanzado` (`src/ui/avanzado.js`), `prepararLitofania` (`src/ui/litofania.js`), `generarLitofania` (`src/motor/litofania.js`), `armarConfiguracion` (`src/perfiles/perfiles.js`), `espiralar` y `vueltaDesde` (`src/motor/espiral.js`), `leer` (`src/motor/recorridos.worker.js`), `agrupar` (`src/motor/decimar.js`), `leerOBJ` y `leerXML3MF` (`src/motor/formatos.js`). Archivos: `scripts/probar-motor.mjs` (549 líneas) y `scripts/probar-formatos.mjs` (320).
+- Piezas y copias (ADR 0003):
+  - H2: no hay prueba de `p.tamano` con giros que no sean de 90° (`acomodarPiezas` sin `medir`, con la caja de 8 esquinas).
+  - H4: en el paso 2 no se avisa si al cambiar de impresora dejan de entrar las piezas; el error recién aparece al laminar (paso 3).
+  - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
+  - No hay prueba de piezas con impresoras `originCenter` ni de cama de cinta (R1 del ADR 0003 lo deja pendiente).
+  - `progreso` y `cancelación` con más de un widget (N > 1) no tienen prueba propia.

@@ -6,7 +6,9 @@
 
 ## Estado
 
-Aceptado con cambios (CTO, 2026-10-18). Cambio del CTO: el riesgo R1 se mide **antes** de construir la UI. Se suma
+Implementado (T0–T10). Aceptado por el CTO el 2026-10-18.
+
+Cambio del CTO sobre T0: el riesgo R1 se mide **antes** de construir la UI. Se suma
 **T0** (dev motor, ola 1, en paralelo con T1–T3): prueba en el Kiri real con dos widgets en `track.pos` distintos y
 falda, borde, balsa y soportes, que verifica en el G-code que cada pieza y sus extras caen en su posición. Si falla,
 T4 desplaza los vértices en `prepararPiezas` y los widgets van con `pos` en cero (plan B de R1); el contrato del
@@ -396,3 +398,20 @@ proporcionalmente más lento y el progreso mezcla piezas. Tres suites cambian (`
 
 ---
 Reglas de uso: un ADR por decisión; numeración correlativa; no se editan los aceptados (se reemplazan con otro ADR).
+
+## Enmiendas de la implementación
+
+Lo que cambió al construir, respecto del texto de arriba. Cada punto se verificó contra el código en `1eaad66`.
+
+- **`crearAjuste`** (`src/ui/ajuste-modelo.js`) devuelve `{conectar, aplicar, actualizarAviso, cancelarCara}`. `cancelarCara` sale del modo "apoyar cara" al montar un modelo.
+- **`visor-cara`** recibe `mallas: () => Mesh[]` (todas las mallas tocables, copias incluidas). El id de la pieza sale de `malla.userData.idPieza` (0 si falta). La sección 4 no lo mencionaba en el contexto.
+- **`src/ui/visor-cama.js`** es un módulo nuevo que no está en la sección 7: `reemplazarCama(escena, anterior, medidas)` pone la cama, la grilla cada 10 mm y la marca del origen. Sale de `visor.js`.
+- **Un solo id por pieza.** `crearPieza` (`src/ui/estado.js`) asigna `id` secuencial desde 1 y no lo reutiliza. No hay una pieza con id 0 fijo: el `0` de las funciones del visor es sólo el default de las llamadas sin id.
+- **Ganchos para las pruebas.** El canvas expone `data-piezas` (cantidad de mallas, `visor.js`). `#listaPiezas` expone `data-copias` (copias totales) y `data-fuera` (`idPieza:copia` de las que no entran), en `piezas-ui.js`. No cambian lo que ve el usuario.
+- **`src/ui/acomodo.js`** exporta `acomodarPiezas(medir?)`, sin DOM. Escribe `p.posiciones` y `estado.entra`. Usa `p.tamano` (la medida real que guarda `ajuste-modelo`) si no viene `medir`; si falta, la caja de 8 esquinas. La sección 2 no lo listaba como módulo de UI.
+- **`copias-ui.js` está separado de `piezas-ui.js`.** El stepper de copias (`crearCopias`) es su módulo; `piezas-ui` lo importa.
+- **Contrato real de `piezas-ui`.** `crearPiezas(ctx)` recibe `{visor, ajuste, leer, ejemplo, elegirOtro, guardar}` (no `agregar` ni `alCambiar`) y devuelve `{conectar, dibujar, reacomodar}`. Importa `estado`, `util-dom`, `config`, `motor/piezas`, `ui/acomodo` y `ui/copias-ui`; no importa `ui/formato`. `scripts/lib/contratos-ui.js` verifica esa lista.
+- **`prepararPiezas` consume `p.stl`** (lo suelta al leerlo) y ya no tiene la opción `desplazar`: T0 confirmó que Kiri aplica `track.pos` a falda, balsa y soportes, así que no hizo falta el plan B.
+- **Paso 3 con una sola pieza y una copia** no bloquea con `acomodarPiezas` (`sola` en `paso3-laminar.js`). Deja decidir al worker, que valida con `prepararPiezas` y da el mensaje detallado ("El modelo mide … no entra en la cama"). Con más de una pieza o copia, el paso 3 no lamina si `estado.entra` es false.
+- **`rotacion` es `number[]` de 9 elementos** (matriz 3×3 aplanada), no `number[][]`. `piezasParaMotor()` manda `transformacion` con el mismo formato.
+- **Archivos de prueba.** `scripts/probar-piezas.mjs` (con `scripts/piezas/preparar.mjs`) corre en `test:piezas`. `scripts/probar-estado.mjs` lo llama `scripts/probar-contratos.mjs`, así que corre en `test:contratos`. `scripts/motor/piezas-kiri.mjs` y `scripts/motor/piezas.mjs` corren desde `test:motor`. `scripts/app/piezas.mjs` y `scripts/app/copias.mjs` corren desde `test:app`.

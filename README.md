@@ -40,10 +40,13 @@ Además:
 - Si el STL tiene demasiados triángulos para la RAM del equipo, se **simplifica antes de laminar** y se avisa.
 - Recuerda la última configuración y los últimos 6 modelos (IndexedDB, en el celu).
 - Avisa si el modelo no entra en la cama y limita las temperaturas a los máximos de la impresora.
+- **Varias piezas y copias en la cama**: agregás piezas (archivo o cubo de ejemplo), les ponés copias y la app
+  las acomoda sola (ADR 0003). Las copias que no entran se marcan en rojo y "Siguiente" queda deshabilitado.
 
 Impresoras:
 
-- **Creality Ender 3 V3 SE**: perfil armado a mano.
+- **Perfiles revisados a mano** (con pruebas automáticas): Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE
+  y K1; Elegoo Neptune 4; Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06.
 - **48 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
   marcadas "sin revisar".
 - **Mi impresora**: cada usuario puede cargar la suya (medidas, boquilla, Marlin/Klipper, G-code)
@@ -238,6 +241,15 @@ Esto queda pendiente de validar a mano:
 - [ ] Workers con módulos ES: requiere iOS 15 o más nuevo; Wake Lock: iOS 16.4 o más nuevo.
 - [ ] iOS Safari puede borrar los datos guardados (recientes) si la app no está instalada y no se usa por un tiempo.
 - [ ] Flujo de "Hay una versión nueva" después de publicar una actualización.
+
+### Varias piezas y perfiles revisados nuevos
+
+- [ ] Imprimir varias copias en una cama real: que el acomodo y la separación de 10 mm se vean igual en el G-code y en la impresora.
+- [ ] Los perfiles revisados nuevos, sobre todo el Kobra 3 (el aviso del perfil dice que no se pudo confirmar el firmware de fábrica).
+- [ ] `M600` en la Ender 3 V2 (el firmware de fábrica puede no traerlo).
+- [ ] Macros `START_PRINT` en la K1 y la Ender 3 V3 KE: que el firmware real las tenga con esos parámetros.
+- [ ] `PAUSE` y `BED_MESH_CALIBRATE` en el Neptune 4 (el perfil los marca como sin confirmar en el equipo real).
+- [ ] La memoria con muchas copias en un celu de gama baja.
 
 ### Impresoras importadas de Kiri
 
