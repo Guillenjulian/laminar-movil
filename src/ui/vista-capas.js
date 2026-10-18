@@ -58,6 +58,7 @@ export async function armarVistaPrevia() {
     pararReproduccion();
     visorCapas?.quitarRecorridos(); // liberar la memoria de la vista anterior
     $('controlCapas').hidden = true;
+    $('avisoVista').textContent = ''; // el aviso es de la vista anterior
     $('cargandoCapas').hidden = false;
     $('cargandoCapas').textContent = 'Armando la vista previa…';
     try {
@@ -90,7 +91,6 @@ function mostrarRecorridos(r, resultado) {
         .map(t => `<li><i style="background: rgb(${t.color.join(',')})"></i>${t.nombre}</li>`)
         .join('');
     const aviso = textoAvisoVista(r, total);
-    $('avisoVista').hidden = !aviso;
     $('avisoVista').textContent = aviso;
     $('cargandoCapas').hidden = true;
     $('controlCapas').hidden = false;
