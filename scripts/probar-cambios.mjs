@@ -109,6 +109,21 @@ for (const [h, h0, x, lo, y, hi] of tabla) {
         r ? `(${r.lo}..${r.hi})` : '',
     );
 }
+// Casos que dependen de la tolerancia EPS (división casi exacta en punto flotante)
+const eps = [
+    [0.2, 0.2, { desdeMm: 0.8 }, 'lo', 4],
+    [0.2, 0.2, { desdeMm: 1.4 }, 'lo', 7],
+    [0.2, 0.2, { desdeMm: 2.0 }, 'lo', 10],
+    [0.2, 0.2, { desdeMm: 0.2, hastaMm: 0.6 }, 'hi', 2],
+    [0.2, 0.2, { desdeMm: 0.2, hastaMm: 1.0 }, 'hi', 4],
+    [0.2, 0.2, { desdeMm: 0.2, hastaMm: 4.8 }, 'hi', 23],
+    [0.12, 0.24, { desdeMm: 0.6 }, 'lo', 4],
+    [0.12, 0.24, { desdeMm: 0.3, hastaMm: 4.8 }, 'hi', 38],
+];
+for (const [h, h0, c, k, esperado] of eps) {
+    const [r] = rangos({ ...c, tempBoquilla: 200 }, { sliceHeight: h, firstSliceHeight: h0 });
+    revisar(`EPS: h=${h} h0=${h0} ${J(c)} -> ${k} ${esperado}`, r?.[k] === esperado, r ? `(${r[k]})` : '');
+}
 const t = { tempBoquilla: 200 };
 revisar('desde en el piso de una capa no se corre', rangos({ desdeMm: 0.6, ...t })[0].lo === 3);
 revisar(
@@ -174,6 +189,31 @@ revisar(
 const cs = [10, 30, 20].map(d => ({ desdeMm: d, tempBoquilla: 200 }));
 revisar('avisa los que quedan por encima (o justo en el alto)', avisosPostLaminado(cs, 20).length === 2);
 revisar('sin avisos si todo aplica', avisosPostLaminado(cs, 40).length === 0 && avisosPostLaminado([], 5).length === 0);
+
+console.log('\n▶ revisión: mismo desde, null y avisos con capas');
+const igualDesde = validarCambios([
+    { desdeMm: 5, relleno: 0.2 },
+    { desdeMm: 5, tempBoquilla: 210 },
+]);
+revisar(
+    'mismo desdeMm: error y se descarta el segundo',
+    igualDesde.errores.length === 1 && igualDesde.cambios.length === 1,
+);
+const nulos = validarCambios([
+    { desdeMm: 5, hastaMm: null, relleno: null, patron: null, tempBoquilla: 210, velocidad: null },
+]);
+revisar('null equivale a sin valor', J(nulos) === J({ cambios: [{ desdeMm: 5, tempBoquilla: 210 }], errores: [] }));
+revisar('sólo nulls -> "no cambia nada"', errores([{ desdeMm: 5, relleno: null }]) === 1);
+const capa = { sliceHeight: 0.2, firstSliceHeight: 0.2 };
+const av = (d, alto, c = capa) => avisosPostLaminado([{ desdeMm: d, tempBoquilla: 200 }], alto, c).length;
+revisar('con capas: 9.8 aplica (capa 49); 10 avisa (no hay capa 50)', av(9.8, 10) === 0 && av(10, 10) === 1);
+revisar('con capas: 9.9 cae entre capas y avisa', av(9.9, 10) === 1);
+revisar('con capas: 10.1 en pieza de 10 avisa', av(10.1, 10) === 1);
+revisar(
+    'altura no numérica o cambios inválidos -> []',
+    [NaN, undefined, '10', null].every(a => avisosPostLaminado(cs, a).length === 0) &&
+        avisosPostLaminado(null, 10).length === 0,
+);
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
 process.exit(fallas ? 1 : 0);

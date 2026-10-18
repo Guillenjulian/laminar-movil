@@ -35,18 +35,18 @@ function sanear(c, patrones) {
     }
     const nuevo = { desdeMm: c.desdeMm };
     const donde = `El cambio desde ${num(c.desdeMm)} mm`;
-    if (c.hastaMm !== undefined) {
+    if (c.hastaMm != null) {
         if (!esNumero(c.hastaMm) || c.hastaMm <= c.desdeMm) return { error: `${donde}: "hasta" tiene que ser mayor.` };
         nuevo.hastaMm = c.hastaMm;
     }
     for (const [clave, [min, max, nombre]] of Object.entries(LIMITES)) {
-        if (c[clave] === undefined) continue;
+        if (c[clave] == null) continue;
         if (!esNumero(c[clave]) || c[clave] < min || c[clave] > max) {
             return { error: `${donde}: ${nombre} fuera de rango (${min} a ${max}).` };
         }
         nuevo[clave] = c[clave];
     }
-    if (c.patron !== undefined) {
+    if (c.patron != null) {
         if (typeof c.patron !== 'string' || !c.patron || (patrones && !patrones.includes(c.patron))) {
             return { error: `${donde}: patrón de relleno desconocido.` };
         }
@@ -81,7 +81,7 @@ export function validarCambios(lista, contexto = {}) {
     const cambios = [];
     for (const c of buenos) {
         const previo = cambios[cambios.length - 1];
-        if (previo && previo.hastaMm !== undefined && previo.hastaMm > c.desdeMm) {
+        if (previo && (previo.desdeMm === c.desdeMm || (previo.hastaMm !== undefined && previo.hastaMm > c.desdeMm))) {
             errores.push(`El cambio desde ${num(c.desdeMm)} mm se solapa con el anterior.`);
             continue;
         }
@@ -105,10 +105,14 @@ function camposDe(c, base) {
     return f;
 }
 
+// Primera capa cuyo piso es >= desdeMm (nunca antes de la capa 1).
+const capaDesde = (desdeMm, h, h0) => Math.max(1, Math.ceil((desdeMm - h0) / h - EPS) + 1);
+
 /**
  * Convierte cambios (mm) en `process.ranges` de Kiri (índices de capa inclusivos). No valida.
  * "Desde X mm" es la primera capa cuyo piso es >= X (nunca antes de la capa 1); "hasta Y mm" es la última
- * capa cuyo techo es <= Y; sin `hastaMm`, `hi` vale 1e9. Un rango sin capas o sin campos se omite.
+ * capa cuyo techo es <= Y; sin `hastaMm`, `hi` vale 1e9. Un rango sin capas o sin campos
+ * (por ejemplo velocidad sin velocidad base) se omite en silencio, sin error ni aviso.
  * @param {object[]} cambios cambios ya validados
  * @param {{ sliceHeight:number, firstSliceHeight:number, outputFeedrate?:number, outputFinishrate?:number }} base
  *   proceso final: alturas de capa y velocidades que se escalan
@@ -118,7 +122,7 @@ export function cambiosARangos(cambios, base) {
     const { sliceHeight: h, firstSliceHeight: h0 } = base;
     const rangos = [];
     for (const c of cambios || []) {
-        const lo = Math.max(1, Math.ceil((c.desdeMm - h0) / h - EPS) + 1);
+        const lo = capaDesde(c.desdeMm, h, h0);
         const hi = c.hastaMm === undefined ? HASTA_EL_FINAL : Math.floor((c.hastaMm - h0) / h + EPS);
         const fields = camposDe(c, base);
         if (hi >= lo && Object.keys(fields).length) rangos.push({ lo, hi, fields });
@@ -144,14 +148,22 @@ export function resumenCambios(cambios) {
 }
 
 /**
- * Avisos posteriores al laminado: un cambio que empieza en o por encima de la altura de la pieza no hace nada.
+ * Avisos posteriores al laminado: un cambio que no cae en ninguna capa real de la pieza no hace nada.
+ * Con `capa` usa el mismo criterio que `cambiosARangos` (primera capa del cambio vs. última capa de la pieza);
+ * sin `capa` compara `desdeMm` con la altura. No lanza: si la altura no es un número devuelve [].
  * @param {object[]} cambios cambios validados
  * @param {number} alturaPiezaMm alto de la pieza laminada, en mm
+ * @param {{ sliceHeight:number, firstSliceHeight:number }} [capa] alturas de capa (opcional)
  * @returns {string[]} un aviso por cambio inútil (vacío si todo aplica)
  */
-export function avisosPostLaminado(cambios, alturaPiezaMm) {
+export function avisosPostLaminado(cambios, alturaPiezaMm, capa) {
+    if (!esNumero(alturaPiezaMm) || !Array.isArray(cambios)) return [];
     const alto = num(alturaPiezaMm);
-    return (cambios || [])
-        .filter(c => c.desdeMm >= alturaPiezaMm - EPS)
+    const { sliceHeight: h, firstSliceHeight: h0 } = capa || {};
+    const conCapa = esNumero(h) && esNumero(h0) && h > 0;
+    const ultima = conCapa ? Math.max(0, Math.ceil((alturaPiezaMm - h0) / h - EPS)) : 0;
+    const inutil = c => (conCapa ? capaDesde(c.desdeMm, h, h0) > ultima : c.desdeMm >= alturaPiezaMm - EPS);
+    return cambios
+        .filter(inutil)
         .map(c => `El cambio desde ${num(c.desdeMm)} mm queda por encima de la pieza (${alto} mm): no se aplicó.`);
 }
