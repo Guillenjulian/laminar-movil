@@ -4,7 +4,15 @@ import prettier from 'eslint-config-prettier';
 
 export default [
     {
-        ignores: ['node_modules/', 'dist/', 'vendor/', 'public/', 'capturas/', '.claude/', 'src/perfiles/impresoras/kiri/'],
+        ignores: [
+            'node_modules/',
+            'dist/',
+            'vendor/',
+            'public/',
+            'capturas/',
+            '.claude/',
+            'src/perfiles/impresoras/kiri/',
+        ],
     },
     js.configs.recommended,
     {
