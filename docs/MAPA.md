@@ -89,6 +89,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `stl.js` · `formatos.js` · `litofania.js` | Lectores y generadores de mallas (Float32Array de triángulos) |
 | `torres.js` | Mallas puras de las torres de calibración (`generarTorreTemperatura`, `generarTorreRetraccion`) y `bloquesDeTorre`; sin imports (ADR 0002) |
 | `piezas.js` | Varias piezas o copias (ADR 0003): `acomodar` (estantes en la cama), `repartirTriangulos` y `validarCantidad`; funciones puras, sin imports |
+| `preparar-piezas.js` | `prepararPiezas` (ADR 0003): lee, transforma, decima (tope repartido), centra y replica por copia; valida la cama; opción `desplazar` (plan B). Exporta `centrar` (el worker la usará en T6). No importa Kiri |
 | `transformar.js` | Matrices 3×3: identidad, multiplicar, rotacion90, escala, rotacionQueApoya, aplicar, medir |
 | `decimar.js` | Simplificación por agrupamiento en grilla |
 | `pausas.js` | Inserta las pausas (M600/PAUSE) en el G-code al descargar |
@@ -134,7 +135,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:transformar` | Matrices (Node) | `scripts/probar-transformar.mjs` |
 | `npm run test:formatos` | OBJ, 3MF y litofanía (Node) | `scripts/probar-formatos.mjs` |
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
-| `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad | `scripts/probar-piezas.mjs` |
+| `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y `desplazar` | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` |
 | `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, 50 impresoras, malla pesada y cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa) y torres de calibración (casos 10-11: M104 y retracción por bloque) | `scripts/probar-motor.mjs` + `prueba-motor.html` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` |

@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { acomodar, repartirTriangulos, validarCantidad } from '../src/motor/piezas.js';
+import { probarPreparar } from './piezas/preparar.mjs';
 
 let fallas = 0;
 let aciertos = 0;
@@ -268,6 +269,8 @@ revisar(
     validarCantidad(1, 25, 8, 24),
 );
 revisar('las dos pasadas: avisa primero las piezas', /piezas/.test(validarCantidad(9, 25, 8, 24) ?? ''));
+
+probarPreparar({ revisar, igual });
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
 process.exit(fallas ? 1 : 0);
