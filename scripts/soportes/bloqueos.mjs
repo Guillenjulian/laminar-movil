@@ -3,6 +3,8 @@
 import {
     validarBloqueos,
     seccionBloqueos,
+    radioSeccion,
+    LADOS_SECCION,
     bloqueaPunto,
     sinBloqueos,
     MAX_BLOQUEOS,
@@ -93,6 +95,14 @@ function probarSeccion(revisar) {
         );
     }
     probarVarias(revisar);
+    const e = b[0];
+    revisar(
+        'radioSeccion: √(R²−dz²), 0 si |dz| ≥ R, y es el radio de seccionBloqueos',
+        Math.abs(radioSeccion(e, 8) - Math.sqrt(64 - 9)) < 1e-12 &&
+            radioSeccion(e, 13) === 0 &&
+            radioSeccion(e, -3) === 0 &&
+            seccionBloqueos([e], 8)[0].length === LADOS_SECCION,
+    );
     revisar('vacía si |dz| >= r', seccionBloqueos(b, 13).length === 0 && seccionBloqueos(b, -3).length === 0);
     revisar('sin bloqueos -> []', seccionBloqueos([], 5).length === 0 && seccionBloqueos(undefined, 5).length === 0);
     const dentro = bloqueaPunto(b, { x: 10, y: 20, z: 5 });
