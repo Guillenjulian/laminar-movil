@@ -13,7 +13,7 @@ import { resumenPersonal } from './paso2-config.js';
 import * as formato from './formato.js';
 import * as materialesUI from './materiales.js';
 import { insertarPausas } from '../motor/pausas.js';
-import { buscarImpresora, materiales, lineasPausa, armarConfiguracion } from '../perfiles/perfiles.js';
+import { buscarImpresora, materiales, lineasPausa } from '../perfiles/perfiles.js';
 import { avisosPostLaminado } from '../perfiles/cambios.js';
 
 /** Arma el archivo .gcode con las pausas de filamento insertadas, listo para compartir o descargar.
@@ -26,20 +26,12 @@ function archivoGcode() {
 }
 
 /** Avisos de los cambios por altura que cayeron por encima de la pieza (ADR 0002).
- *  La altura sale de `info.tamano.z`; las alturas de capa, de la configuración con que se laminó.
- *  @param {{tamano?: {z: number}}} info @returns {string[]} */
-function avisosDeCambios(info) {
-    if (!estado.cambios?.length) return [];
-    const { proceso } = armarConfiguracion({
-        impresoraId: estado.impresoraId,
-        calidad: estado.calidad,
-        material: estado.material,
-        soportes: estado.soportes,
-        personal: { ...estado.personal, avanzado: estado.avanzado },
-        cambios: estado.cambios,
-    });
-    const { sliceHeight, firstSliceHeight } = proceso;
-    return avisosPostLaminado(estado.cambios, info.tamano?.z, { sliceHeight, firstSliceHeight });
+ *  Usa lo guardado al laminar: la altura sale de `info.tamano.z`; capas y cambios, de `estado.resultado`.
+ *  @returns {string[]} */
+function avisosDeCambios() {
+    const { info, capas, cambios } = estado.resultado;
+    if (!cambios?.length) return [];
+    return avisosPostLaminado(cambios, info.tamano?.z, capas);
 }
 
 /** Cablea #compartir, #descargar y #otro.
@@ -92,7 +84,7 @@ export function mostrarResultado() {
     $('resumen').innerHTML = filas.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
     $('nombreArchivo').textContent = archivo;
 
-    const notas = [...avisos, ...avisosDeCambios(info)];
+    const notas = [...avisos, ...avisosDeCambios()];
     if (info.decimado) {
         const d = info.decimado;
         notas.push(

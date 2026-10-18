@@ -106,6 +106,8 @@ async function ejecutarLaminado({ dispositivo, proceso, avisos, signal }) {
         avisos,
         archivo: `${base}_${estado.calidad}.gcode`,
         impresoraId: estado.impresoraId,
+        capas: { sliceHeight: proceso.sliceHeight, firstSliceHeight: proceso.firstSliceHeight },
+        cambios: estado.cambios.map(c => ({ ...c })), // los usados (el paso 4 avisa de los que no aplicaron)
     };
 }
 
