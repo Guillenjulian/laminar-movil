@@ -2,6 +2,7 @@
 //
 // Uso: npm run test:cambios
 
+import { probarConfiguracionCambios } from './cambios/configuracion.mjs';
 import { validarCambios, cambiosARangos, resumenCambios, avisosPostLaminado } from '../src/perfiles/cambios.js';
 
 let fallas = 0;
@@ -259,6 +260,8 @@ revisar(
     'la capa con piso justo en X va al cambio que empieza en X',
     justo[0].hi + 1 === justo[1].lo && justo[1].lo === 7,
 );
+
+await probarConfiguracionCambios(revisar);
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
 process.exit(fallas ? 1 : 0);

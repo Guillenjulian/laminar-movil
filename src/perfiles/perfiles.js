@@ -193,6 +193,23 @@ function avanzadoAProceso(av = {}, proceso, dispositivo) {
 }
 
 /**
+ * Recorta la temperatura de boquilla de `campos` (el proceso o los campos de un rango) a `hotendMax`.
+ * El aviso sale una sola vez aunque recorten varios valores.
+ * @param {object} campos claves de Kiri (`outputTemp`, `firstLayerNozzleTemp`); se modifica
+ * @param {object} imp perfil de la impresora (`nombre`, `limites`)
+ * @param {string[]} avisos avisos de armarConfiguracion
+ */
+function limitarBoquilla(campos, imp, avisos) {
+    const { hotendMax } = imp.limites || {};
+    const aviso = `La boquilla se limitó a ${hotendMax} °C (máximo de la ${imp.nombre}).`;
+    for (const clave of ['outputTemp', 'firstLayerNozzleTemp']) {
+        if (!hotendMax || !(campos[clave] > hotendMax)) continue;
+        if (!avisos.includes(aviso)) avisos.push(aviso);
+        campos[clave] = hotendMax;
+    }
+}
+
+/**
  * Cambios por altura (ADR 0002): los valida, los pasa a `proceso.ranges` de Kiri y recorta la temperatura de
  * cada rango a `hotendMax`. Con altura variable (sin jarrón) los ignora; en jarrón descarta relleno y patrón.
  * Sin cambios no toca `proceso`. Los avisos se agregan a `avisos`.
@@ -213,17 +230,11 @@ function aplicarCambios(proceso, cambios, imp, av = {}, avisos) {
     let lista = ok;
     if (av.jarron) {
         const conRelleno = ok.some(c => 'relleno' in c || 'patron' in c);
-        lista = ok.map(c => ({ ...c, relleno: undefined, patron: undefined }));
+        lista = ok.map(({ relleno: _r, patron: _p, ...resto }) => resto);
         if (conRelleno) avisos.push('En modo jarrón el relleno no se cambia por altura.');
     }
     const ranges = cambiosARangos(lista, proceso);
-    const { hotendMax } = imp.limites || {};
-    for (const r of ranges) {
-        if (hotendMax && r.fields.outputTemp > hotendMax) {
-            avisos.push(`La boquilla se limitó a ${hotendMax} °C (máximo de la ${imp.nombre}).`);
-            r.fields.outputTemp = hotendMax;
-        }
-    }
+    for (const r of ranges) limitarBoquilla(r.fields, imp, avisos);
     if (ranges.length) proceso.ranges = ranges;
 }
 
@@ -269,13 +280,8 @@ export function armarConfiguracion({
     const retraccion = { ...imp.proceso, ...cal.proceso }.outputRetractDist;
     if (mat.avisoBowden && retraccion > 2) avisos.push(mat.avisoBowden);
 
-    const { hotendMax, camaMax } = imp.limites || {};
-    for (const clave of ['outputTemp', 'firstLayerNozzleTemp']) {
-        if (hotendMax && proceso[clave] > hotendMax) {
-            avisos.push(`La boquilla se limitó a ${hotendMax} °C (máximo de la ${imp.nombre}).`);
-            proceso[clave] = hotendMax;
-        }
-    }
+    limitarBoquilla(proceso, imp, avisos);
+    const { camaMax } = imp.limites || {};
     for (const clave of ['outputBedTemp', 'firstLayerBedTemp']) {
         if (camaMax && proceso[clave] > camaMax) {
             avisos.push(`La cama se limitó a ${camaMax} °C (máximo de la ${imp.nombre}).`);
