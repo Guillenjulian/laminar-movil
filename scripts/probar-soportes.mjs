@@ -29,8 +29,10 @@ const archivos = readdirSync(carpeta)
     .filter(f => f.endsWith('.mjs'))
     .sort();
 for (const archivo of archivos) {
-    console.log(`\n== ${archivo}`);
     const modulo = await import(pathToFileURL(carpeta + archivo).href);
+    // Los helpers compartidos (sin export default) no son pruebas: se saltean.
+    if (typeof modulo.default !== 'function') continue;
+    console.log(`\n== ${archivo}`);
     await modulo.default({ revisar, igual });
 }
 
