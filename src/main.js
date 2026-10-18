@@ -8,7 +8,6 @@ import {
     listaImpresoras,
     buscarImpresora,
     existeImpresora,
-    ponerImpresorasPropias,
     IMPRESORA_INICIAL,
     materiales,
     opciones,
@@ -20,35 +19,20 @@ import { PLANTILLAS_GCODE } from './perfiles/generico.js';
 import { iconoRelleno } from './ui/iconos-relleno.js';
 import { maxTriangulos, maxSegmentosVista } from './config.js';
 import { crearVisor } from './ui/visor.js';
-import { crearAvanzado, validarAvanzado } from './ui/avanzado.js';
+import { crearAvanzado } from './ui/avanzado.js';
 import * as formato from './ui/formato.js';
 import * as almacen from './almacen.js';
 import { tipoArchivo, prepararLitofania } from './ui/litofania.js';
 import * as materialesUI from './ui/materiales.js';
-
-const $ = id => document.getElementById(id);
-
-const estado = {
-    paso: 1,
-    nombre: '', // nombre del archivo STL
-    stl: null, // ArrayBuffer original (se copia en cada laminado)
-    vista: null, // { triangulos, tamano } (tamaño original, sin transformar)
-    rotacion: transformar.identidad(), // rotaciones del modelo en la cama (matriz 3×3)
-    escala: 1, // escala uniforme (1 = 100 %)
-    eligiendoCara: false,
-    impresoraId: IMPRESORA_INICIAL,
-    propias: [], // datos de "Mi impresora" (guardados en el celu)
-    calidad: 'normal',
-    material: 'pla',
-    soportes: false,
-    personal: {}, // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
-    avanzado: {}, // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
-    resultado: null, // { gcode, info, archivo, impresoraId }
-    pausas: new Map(), // capa -> { capa, offset, z }: pausas para cambiar filamento
-    coloresFilamento: [...COLORES_FILAMENTO], // color de cada filamento (1º, 2º, ...) en la vista previa
-    modoColor: 'tipo', // vista previa coloreada por 'tipo' de línea o por 'filamento'
-    cancelar: null, // AbortController del laminado en curso
-};
+import { $, escapar } from './ui/util-dom.js';
+import {
+    estado,
+    matrizModelo,
+    valoresActuales,
+    guardarPropias,
+    guardarPreferencias,
+    cargarPreferencias,
+} from './ui/estado.js';
 
 let visor = null; // visor del modelo (paso 1)
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
@@ -245,10 +229,6 @@ $('listaRecientes').onclick = async e => {
     if (modelo && stl) await cargarArchivo(modelo.nombre, stl, { esStl: true });
 };
 
-function escapar(texto) {
-    return texto.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
-}
-
 $('ejemplo').onclick = async () => {
     const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
     await cargarArchivo('cubo-20mm.stl', await r.arrayBuffer());
@@ -257,11 +237,6 @@ $('ejemplo').onclick = async () => {
 $('siguiente').onclick = () => irA(2);
 
 // --- Modelo en la cama: escala, rotaciones y "apoyar cara" ---
-
-// Matriz final: primero las rotaciones, después la escala.
-function matrizModelo() {
-    return transformar.multiplicar(transformar.escala(estado.escala), estado.rotacion);
-}
 
 // Tamaño del modelo como va a quedar en la cama.
 function tamanoActual() {
@@ -386,11 +361,6 @@ function dibujarMaterial() {
 }
 
 // --- Personalizar: relleno, paredes y adhesión ---
-
-// Valores actuales: los de la calidad, pisados por lo que cambió el usuario.
-function valoresActuales() {
-    return { ...valoresDeCalidad(estado.impresoraId, estado.calidad), ...estado.personal };
-}
 
 // Guarda un cambio. Si coincide con el valor de la calidad, se borra el
 // "personalizado" (así, si después cambia la calidad, ese valor la sigue).
@@ -709,39 +679,6 @@ $('borrarImpresora').onclick = async () => {
     if (!existeImpresora(estado.impresoraId)) elegirImpresora(IMPRESORA_INICIAL);
     cerrarHojas();
 };
-
-async function guardarPropias() {
-    ponerImpresorasPropias(estado.propias);
-    await almacen.guardarAjuste('impresorasPropias', estado.propias).catch(() => {});
-}
-
-// Las elecciones del paso 2 se recuerdan para la próxima vez.
-function guardarPreferencias() {
-    const { impresoraId, calidad, material, soportes, personal, avanzado } = estado;
-    almacen
-        .guardarAjuste('preferencias', { impresoraId, calidad, material, soportes, personal, avanzado })
-        .catch(() => {});
-}
-
-async function cargarPreferencias() {
-    estado.propias = (await almacen.leerAjuste('impresorasPropias').catch(() => null)) || [];
-    ponerImpresorasPropias(estado.propias);
-    const p = await almacen.leerAjuste('preferencias').catch(() => null);
-    if (!p) return;
-    // Sólo usamos lo que todavía existe (puede haber cambiado algún perfil).
-    if (existeImpresora(p.impresoraId)) estado.impresoraId = p.impresoraId;
-    if (buscarImpresora(estado.impresoraId).calidades[p.calidad]) estado.calidad = p.calidad;
-    if (materiales[p.material]) estado.material = p.material;
-    estado.soportes = !!p.soportes;
-    // Del personalizado, sólo lo que sigue siendo válido.
-    const pers = p.personal || {};
-    if (opciones.patrones[pers.patron]) estado.personal.patron = pers.patron;
-    if (opciones.adhesiones[pers.adhesion]) estado.personal.adhesion = pers.adhesion;
-    for (const clave of ['densidad', 'paredes', 'arriba', 'abajo']) {
-        if (typeof pers[clave] === 'number') estado.personal[clave] = pers[clave];
-    }
-    estado.avanzado = validarAvanzado(p.avanzado);
-}
 
 // ---------------------------------------------------------------------------
 // Paso 3: laminar

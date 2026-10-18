@@ -28,6 +28,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 |---|---|---|
 | `index.html` | Estructura de los 4 pasos, las hojas (pantallas encima) y las acciones de abajo | — |
 | `src/main.js` | Estado de la app, navegación entre pasos e historial, y los manejadores de cada paso. ⚠️ ~1000 líneas: **dividir** (ver la sección 6) | casi todo |
+| `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
+| `src/ui/estado.js` | Objeto `estado` único, `matrizModelo`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
@@ -70,7 +72,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 ### Motor externo: `vendor/kiri/`
 Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano.** Los parches están en el script y marcados `PARCHE laminar-movil`. Detalle en `vendor/kiri/ORIGEN.md`.
 
-## 3. Estado (`estado` en main.js)
+## 3. Estado (`estado` en src/ui/estado.js)
 
 | Clave | Qué guarda | Se persiste |
 |---|---|---|
