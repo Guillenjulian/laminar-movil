@@ -19,6 +19,20 @@
 // Devuelve un Float32Array de triángulos (como leerSTL).
 export const MARCO_MM = 2;
 
+/**
+ * Genera la malla cerrada de una litofanía o relieve (ver las opciones arriba).
+ * @param {object} opciones
+ * @param {Uint8Array} opciones.grises Grises de ancho × alto (0 = negro, 255 = blanco).
+ * @param {number} opciones.ancho Ancho en píxeles (mínimo 2).
+ * @param {number} opciones.alto Alto en píxeles (mínimo 2).
+ * @param {number} opciones.anchoMm Ancho de la imagen en mm.
+ * @param {number} opciones.minMm Espesor mínimo en mm.
+ * @param {number} opciones.maxMm Espesor máximo en mm.
+ * @param {'litofania'|'relieve'} [opciones.tipo] Por defecto 'litofania'.
+ * @param {boolean} [opciones.marco] Agrega un borde de MARCO_MM al espesor máximo.
+ * @returns {Float32Array} Vértices de cada triángulo, en mm.
+ * @throws {Error} Si la imagen es muy chica o los anchos y espesores no son válidos.
+ */
 export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, tipo = 'litofania', marco = false }) {
     validarOpciones({ grises, ancho, alto, anchoMm, minMm, maxMm });
 
@@ -135,8 +149,17 @@ function agregarParedes({ X, Y, punto, arriba }, contorno) {
     }
 }
 
-// Tamaño en píxeles para muestrear la foto: ~0,25 mm por píxel y como mucho
-// `maxPx` de lado (para no reventar la memoria del celu).
+/**
+ * Tamaño en píxeles para muestrear la foto: ~0,25 mm por píxel y como mucho
+ * `maxPx` de lado (para no reventar la memoria del celu).
+ * @param {number} anchoImagen Ancho de la foto en píxeles.
+ * @param {number} altoImagen Alto de la foto en píxeles.
+ * @param {number} anchoMm Ancho de la litofanía en mm.
+ * @param {number} [mmPorPixel] Milímetros por píxel.
+ * @param {number} [maxPx] Máximo de píxeles de lado.
+ * @returns {{ancho: number, alto: number}} Tamaño de muestreo (mínimo 2 × 2).
+ * @throws {Error} No lanza errores propios.
+ */
 export function resolucionLitofania(anchoImagen, altoImagen, anchoMm, mmPorPixel = 0.25, maxPx = 500) {
     const proporcion = altoImagen / anchoImagen;
     let ancho = Math.round(anchoMm / mmPorPixel) + 1;

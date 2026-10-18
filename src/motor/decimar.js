@@ -6,7 +6,15 @@
 // memoria y alcanza para impresión 3D mientras la celda sea chica comparada
 // con la boquilla. No es tan prolijo como otros métodos (QEM), pero es simple.
 
-// Devuelve null si no hace falta decimar; si no, { vertices, original, final, celda }.
+/**
+ * Simplifica una malla hasta que tenga como mucho `maxTriangulos` triángulos.
+ * @param {Float32Array} vertices Vértices de cada triángulo (9 números por triángulo).
+ * @param {number} maxTriangulos Tope de triángulos.
+ * @param {(fraccion: number) => void} [alProgresar] Avance de 0 a 1.
+ * @returns {{vertices: Float32Array, original: number, final: number, celda: number}|null}
+ *   null si no hace falta decimar.
+ * @throws {Error} No lanza errores propios.
+ */
 export function decimar(vertices, maxTriangulos, alProgresar = () => {}) {
     const original = vertices.length / 9;
     if (original <= maxTriangulos) return null;

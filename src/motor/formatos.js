@@ -9,7 +9,13 @@ import { leer3MF } from './formatos-3mf.js';
 
 export { leer3MF, leerXML3MF } from './formatos-3mf.js';
 
-// Lee un modelo según la extensión del nombre. Devuelve una promesa.
+/**
+ * Lee un modelo según la extensión del nombre.
+ * @param {string} nombre Nombre del archivo (decide el lector: .obj o .3mf).
+ * @param {ArrayBuffer|Uint8Array|string} buffer Contenido del archivo.
+ * @returns {Promise<Float32Array>} Vértices de cada triángulo, en mm.
+ * @throws {Error} Si la extensión no se sabe leer o el archivo es inválido.
+ */
 export async function leerModelo(nombre, buffer) {
     const ext = extension(nombre);
     if (ext === 'obj') return leerOBJ(buffer);
@@ -17,6 +23,11 @@ export async function leerModelo(nombre, buffer) {
     throw new Error(`No sabemos leer archivos .${ext || '?'}. Elegí un STL, OBJ o 3MF.`);
 }
 
+/**
+ * Extensión de un nombre de archivo, en minúsculas y sin el punto.
+ * @param {string} [nombre] Nombre del archivo.
+ * @returns {string} La extensión, o '' si no tiene.
+ */
 export function extension(nombre) {
     const m = /\.([a-z0-9]+)$/i.exec(nombre || '');
     return m ? m[1].toLowerCase() : '';
@@ -29,6 +40,12 @@ export function extension(nombre) {
 // leído (-1 = el último). Las caras de más de 3 vértices se triangulan en
 // abanico (alcanza para caras convexas, que es lo normal).
 
+/**
+ * Lee un OBJ y triangula sus caras.
+ * @param {ArrayBuffer|Uint8Array|string} entrada Contenido del archivo.
+ * @returns {Float32Array} Vértices de cada triángulo, en mm.
+ * @throws {Error} Si hay un vértice inválido, una cara a un vértice inexistente o no hay caras.
+ */
 export function leerOBJ(entrada) {
     const texto = typeof entrada === 'string' ? entrada : new TextDecoder().decode(entrada);
     const vertices = []; // x, y, z de cada "v"
@@ -37,7 +54,7 @@ export function leerOBJ(entrada) {
     for (let n = 0; n < lineas.length; n++) {
         const linea = lineas[n].trim();
         if (linea.startsWith('v ') || linea.startsWith('v\t')) {
-            vertices.push(...leerVerticeOBJ(linea, n));
+            leerVerticeOBJ(linea, n, vertices);
         } else if (linea.startsWith('f ') || linea.startsWith('f\t')) {
             triangularCaraOBJ(leerCaraOBJ(linea, n, vertices.length / 3), vertices, salida);
         }
@@ -48,8 +65,8 @@ export function leerOBJ(entrada) {
     return new Float32Array(salida);
 }
 
-// "v x y z" -> [x, y, z]. `n` es el número de línea (desde 0) para el error.
-function leerVerticeOBJ(linea, n) {
+// "v x y z": agrega x, y, z a `vertices`. `n` es el número de línea (desde 0) para el error.
+function leerVerticeOBJ(linea, n, vertices) {
     const p = linea.split(/\s+/);
     const x = +p[1],
         y = +p[2],
@@ -57,7 +74,7 @@ function leerVerticeOBJ(linea, n) {
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
         throw new Error(`El OBJ tiene un vértice inválido en la línea ${n + 1}.`);
     }
-    return [x, y, z];
+    vertices.push(x, y, z);
 }
 
 // "f a b c ..." -> índices (desde 0) de los vértices de la cara. `total` es
@@ -91,6 +108,12 @@ function triangularCaraOBJ(indices, vertices, salida) {
 // STL binario: 80 bytes de encabezado, la cantidad de triángulos y 50 bytes por
 // triángulo (normal + 3 vértices + 2 bytes sin uso).
 
+/**
+ * Escribe un STL binario.
+ * @param {Float32Array} v Vértices de cada triángulo (9 números por triángulo).
+ * @param {string} [encabezado] Texto del encabezado (hasta 80 caracteres).
+ * @returns {ArrayBuffer} El archivo STL.
+ */
 export function escribirSTL(v, encabezado = 'Laminar Movil') {
     const n = v.length / 9;
     const buffer = new ArrayBuffer(84 + n * 50);
