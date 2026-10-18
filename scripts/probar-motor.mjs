@@ -9,6 +9,7 @@
 import { chromium } from 'playwright-core';
 import { preview, createServer } from 'vite';
 import fs from 'node:fs';
+import { buscarChromium } from './lib/chromium.mjs';
 import { insertarPausas } from '../src/motor/pausas.js';
 
 // El lector de la vista previa es un worker: lo cargamos en Node simulando `self`.
@@ -41,22 +42,6 @@ function probarPausa(gcode, capa) {
         ok,
         detalle: `capa ${capa + 1}: Z antes ${zAntes}, después ${zDespues} (esperado ${r.zCapa[capa - 1].toFixed(2)} → ${r.zCapa[capa].toFixed(2)})`,
     };
-}
-
-function buscarChromium() {
-    if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
-    const base = process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers';
-    if (!fs.existsSync(base)) return undefined;
-    for (const dir of fs
-        .readdirSync(base)
-        .filter(d => d.startsWith('chromium'))
-        .sort()
-        .reverse()) {
-        for (const sub of ['chrome-linux/chrome', 'chrome-linux64/chrome']) {
-            const p = `${base}/${dir}/${sub}`;
-            if (fs.existsSync(p)) return p;
-        }
-    }
 }
 
 // Datos útiles de un G-code para comparar.

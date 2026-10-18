@@ -91,9 +91,29 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:formatos` | OBJ, 3MF y litofanía (Node) | `scripts/probar-formatos.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` |
 | `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, 50 impresoras, malla pesada | `scripts/probar-motor.mjs` + `prueba-motor.html` |
-| `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` |
+| `npm run test:app` | La app de punta a punta emulando un Pixel 7, offline incluido | `scripts/probar-app.mjs` (orquestador) + `scripts/app/*.mjs` + `scripts/lib/` |
 | `npm run lint` | ESLint (recomendado + límites de tamaño como aviso: 300 líneas por archivo, 40 por función); `npm run lint:fix` aplica los arreglos automáticos | `eslint.config.js` |
 | `npm run format:check` | Prettier (4 espacios, comillas simples, 120 columnas); `npm run format` lo aplica | `.prettierrc.json` |
+
+### `test:app` por área
+
+`scripts/probar-app.mjs` sólo arma el contexto (`scripts/lib/app.mjs`: servidor de `dist/`, Chromium como Pixel 7, `ok`) y llama a las áreas en orden. Es un recorrido con estado: cada archivo de `scripts/app/` declara en su cabecera qué espera y cómo deja la app, así que el orden importa. Helpers compartidos en `scripts/lib/` (`chromium.mjs` también lo usa `test:motor`).
+
+| Área | Archivo |
+|---|---|
+| Paso 1: modelo pesado, cubo, gesto en el visor | `scripts/app/paso1-modelo.mjs` |
+| Paso 1: OBJ, 3MF, litofanía | `scripts/app/paso1-formatos.mjs` |
+| Paso 2: calidad, atrás/adelante | `scripts/app/paso2-config.mjs` |
+| Paso 3: cancelar, personalizar, laminar el cubo | `scripts/app/paso3-laminar.mjs` |
+| Materiales y costo | `scripts/app/materiales.mjs` |
+| Avanzado (jarrón, costura, velocidad) | `scripts/app/avanzado.mjs` |
+| Vista previa por capas | `scripts/app/vista-capas.mjs` |
+| Pausas / filamentos | `scripts/app/pausas.mjs` |
+| Descarga del G-code | `scripts/app/descarga.mjs` |
+| Impresoras (buscar, propia, copiar) | `scripts/app/impresoras.mjs` |
+| Recientes y ajustes guardados | `scripts/app/recientes.mjs` |
+| Escala, rotar, apoyar cara | `scripts/app/transformar.mjs` |
+| PWA y sin conexión | `scripts/app/offline.mjs` |
 
 Antes de cualquier commit: `npm run build` y las suites que toquen el área cambiada. Antes de integrar, todas.
 
