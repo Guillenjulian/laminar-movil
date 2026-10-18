@@ -67,20 +67,13 @@ export function distanciaAPoligono(p, poligonos) {
 
 /**
  * Círculo aproximado por un polígono regular, antihorario, con el primer vértice en +x. Los vértices quedan sobre
- * la circunferencia de radio `r` (el polígono queda adentro del círculo). Dos formas de llamarlo:
- *   `circulo(cx, cy, r, lados = 16)`        (firma simple pedida por el CTO para unificar con bloqueos.js)
- *   `circulo({x, y}, r, lados = 8)`         (firma del ADR 0004)
- * @param {number|Punto} a  cx, o el centro
- * @param {number} b  cy, o el radio
- * @param {number} [c]  r, o la cantidad de lados
- * @param {number} [d]  lados (sólo en la forma simple)
+ * la circunferencia de radio `radio` (el polígono queda adentro del círculo).
+ * @param {Punto} centro
+ * @param {number} radio  mm
+ * @param {number} [lados=8]
  * @returns {Poligono}
  */
-export function circulo(a, b, c, d) {
-    const simple = typeof a === 'number';
-    const centro = simple ? { x: a, y: b } : a;
-    const radio = simple ? c : b;
-    const lados = (simple ? d : c) ?? (simple ? 16 : 8);
+export function circulo(centro, radio, lados = 8) {
     const puntos = [];
     for (let k = 0; k < lados; k++) {
         const ang = (2 * Math.PI * k) / lados;

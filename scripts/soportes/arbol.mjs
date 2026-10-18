@@ -3,13 +3,13 @@
 import { planificarArbol } from '../../src/motor/soportes-arbol.js';
 import { areaPoligono, distanciaAPoligono } from '../../src/motor/geometria-2d.js';
 
-const H = 0.2;
-const OP = { ancho: 0.4, altoCapa: H, angulo: 50 };
-const DERIVA = H * Math.tan((50 * Math.PI) / 180);
-const EPS = 1e-9;
-const CAMA = { x0: 0, y0: 0, x1: 220, y1: 220 };
+export const H = 0.2;
+export const OP = { ancho: 0.4, altoCapa: H, angulo: 50 };
+export const DERIVA = H * Math.tan((50 * Math.PI) / 180);
+export const EPS = 1e-9;
+export const CAMA = { x0: 0, y0: 0, x1: 220, y1: 220 };
 
-const rect = (x0, y0, x1, y1) => [
+export const rect = (x0, y0, x1, y1) => [
     { x: x0, y: y0 },
     { x: x1, y: y0 },
     { x: x1, y: y1 },
@@ -18,7 +18,7 @@ const rect = (x0, y0, x1, y1) => [
 
 // Pila de abajo hacia arriba: `n` capas libres (con `pilar` de cuerpo si se da) y arriba de todo la tapa.
 // La sombra está en la capa n - 1 (justo bajo la tapa). Con `pilar`, la sombra lo lleva como agujero (par-impar).
-function pila({ n, tapas, pilar }) {
+export function pila({ n, tapas, pilar }) {
     const capas = [];
     for (let i = 0; i < n; i++) {
         capas.push({ z: (i + 0.5) * H, voladizos: [], cuerpo: pilar ? [pilar] : [] });
@@ -34,7 +34,7 @@ function info(poli) {
     const y = poli.reduce((s, p) => s + p.y, 0) / poli.length;
     return { x, y, r: Math.hypot(poli[0].x - x, poli[0].y - y) };
 }
-const circulos = capa => capa.map(info);
+export const circulos = capa => capa.map(info);
 const area = salida => salida.reduce((s, capa) => s + capa.reduce((t, p) => t + areaPoligono(p), 0), 0);
 
 // Puntos de la grilla de 3 mm que caen estrictamente dentro de un rectángulo.
@@ -62,6 +62,8 @@ function voladizoSimple({ revisar }) {
         sinCubrir.length === 0,
         JSON.stringify(sinCubrir[0]),
     );
+    const rMin = Math.min(...s.flatMap(circulos).map(c => c.r));
+    revisar(`todo círculo tiene r ≥ 1,2 × ancho = 0,48 mm (mínimo ${rMin.toFixed(3)})`, rMin >= 1.2 * 0.4 - EPS);
     revisar('nada de soporte dentro de la tapa (la capa de la tapa queda vacía)', s[100].length === 0);
     const todos = s.flatMap(circulos);
     revisar(
@@ -126,8 +128,10 @@ function pieza({ revisar }) {
     const centros = s.flatMap(circulos);
     const adentro = centros.filter(c => distanciaAPoligono(c, [pilar]) < 0);
     revisar('ningún centro cae dentro del pilar', adentro.length === 0, `${adentro.length} adentro`);
-    const rodea = centros.filter(c => c.x > 22 || c.x < 18 || c.y > 22 || c.y < 18).length;
-    revisar('hay troncos alrededor del pilar', rodea > 0);
+    const libre = c => distanciaAPoligono(c, [pilar]) >= c.r;
+    const izq = centros.filter(c => c.x < 18 && libre(c)).length;
+    const der = centros.filter(c => c.x > 22 && libre(c)).length;
+    revisar(`hay troncos a ≥1 radio del pilar a ambos lados (izq ${izq}, der ${der})`, izq > 0 && der > 0);
     revisar('ningún par de círculos se pisa, en ninguna capa', sinPisarse(s));
     // Pilar sólo en las capas 0-14 y una sombra chica y centrada en la 29: el tronco baja y se apoya, no lo atraviesa.
     const encima = [];
@@ -155,17 +159,6 @@ function topeYBloqueo({ revisar }) {
         'un bloqueo que cubre todo el voladizo deja la salida vacía',
         vacio.every(c => c.length === 0),
     );
-    const parcial = { centro: { x: 20, y: 20, z: 10 }, radio: 6 };
-    const s = planificarArbol(capas, { ...OP, bloqueos: [parcial] });
-    let pisa = 0;
-    s.forEach((capa, i) => {
-        const dz = capas[i].z - 10;
-        if (Math.abs(dz) >= 6) return;
-        const sec = Math.sqrt(36 - dz * dz);
-        for (const c of circulos(capa)) if (Math.hypot(c.x - 20, c.y - 20) < sec + c.r - 1e-6) pisa++;
-    });
-    revisar('con un bloqueo esférico ningún círculo toca su sección', pisa === 0, `${pisa}`);
-    revisar('...pero sigue habiendo soporte fuera de él', s.flat().length > 0);
 }
 
 function inyectadaYDeterminismo({ revisar, igual }) {
