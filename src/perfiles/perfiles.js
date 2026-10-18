@@ -10,6 +10,7 @@
 import materiales from './materiales.json';
 import opciones from './opciones.json';
 import { perfilPropio } from './generico.js';
+import { validarCambios, cambiosARangos } from './cambios.js';
 
 // Vite junta todos los JSON de las carpetas en tiempo de build.
 const archivos = import.meta.glob('./impresoras/**/*.json', { eager: true, import: 'default' });
@@ -191,8 +192,44 @@ function avanzadoAProceso(av = {}, proceso, dispositivo) {
     return p;
 }
 
+/**
+ * Cambios por altura (ADR 0002): los valida, los pasa a `proceso.ranges` de Kiri y recorta la temperatura de
+ * cada rango a `hotendMax`. Con altura variable (sin jarrón) los ignora; en jarrón descarta relleno y patrón.
+ * Sin cambios no toca `proceso`. Los avisos se agregan a `avisos`.
+ * @param {object} proceso proceso final (se le agrega `ranges`)
+ * @param {object[]} cambios cambios por altura en mm (ver cambios.js)
+ * @param {object} imp perfil de la impresora (`nombre`, `limites`)
+ * @param {object | undefined} av opciones de Avanzado (`jarron`, `alturaVariable`)
+ * @param {string[]} avisos avisos de armarConfiguracion
+ */
+function aplicarCambios(proceso, cambios, imp, av = {}, avisos) {
+    if (!cambios?.length) return;
+    const { cambios: ok, errores } = validarCambios(cambios, { patrones: Object.keys(opciones.patrones) });
+    avisos.push(...errores);
+    if (av.alturaVariable && !av.jarron) {
+        avisos.push('Los cambios por altura no funcionan con altura de capa variable: se ignoraron.');
+        return;
+    }
+    let lista = ok;
+    if (av.jarron) {
+        const conRelleno = ok.some(c => 'relleno' in c || 'patron' in c);
+        lista = ok.map(c => ({ ...c, relleno: undefined, patron: undefined }));
+        if (conRelleno) avisos.push('En modo jarrón el relleno no se cambia por altura.');
+    }
+    const ranges = cambiosARangos(lista, proceso);
+    const { hotendMax } = imp.limites || {};
+    for (const r of ranges) {
+        if (hotendMax && r.fields.outputTemp > hotendMax) {
+            avisos.push(`La boquilla se limitó a ${hotendMax} °C (máximo de la ${imp.nombre}).`);
+            r.fields.outputTemp = hotendMax;
+        }
+    }
+    if (ranges.length) proceso.ranges = ranges;
+}
+
 // Combina, en este orden (lo último gana):
-//   proceso base de la impresora → calidad → material → adhesión → personalizado → avanzado → extras
+//   proceso base de la impresora → calidad → material → adhesión → personalizado → avanzado → soportes → extras
+//   → cambios por altura (se agregan aparte, como `proceso.ranges`)
 // y recorta las temperaturas a los límites de la impresora.
 // Devuelve { dispositivo, proceso, avisos }.
 export function armarConfiguracion({
@@ -202,6 +239,7 @@ export function armarConfiguracion({
     soportes = false,
     personal = {},
     extras = {},
+    cambios = [],
 }) {
     const imp = buscarImpresora(impresoraId);
     const cal = imp.calidades[calidad] || imp.calidades.normal;
@@ -223,6 +261,7 @@ export function armarConfiguracion({
         ...extras,
     });
     const avisos = [];
+    aplicarCambios(proceso, cambios, imp, personal.avanzado, avisos);
 
     // Avisos del material: el propio (ej. "necesita gabinete") y, para los que
     // no se llevan bien con Bowden (TPU), si la impresora retrae más de 2 mm.

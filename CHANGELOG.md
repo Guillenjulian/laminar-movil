@@ -12,6 +12,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - ESLint y Prettier, con `npm run lint`, `lint:fix`, `format` y `format:check`.
 - CI en GitHub Actions: build, lint, formato y las suites de prueba en cada PR y en cada push a `main`.
 - Prueba de contratos de los módulos de `src/ui/` (`npm run test:contratos`).
+- `armarConfiguracion` acepta `cambios` por altura y los convierte en `proceso.ranges` de Kiri (ADR 0002, T2).
 - ADR 0001 (`docs/decisiones/0001-dividir-main.md`): división de `main.js`.
 
 ### Cambiado

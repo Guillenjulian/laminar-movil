@@ -29,13 +29,16 @@ Las claves que empiezan con `_` son comentarios y se ignoran.
 Lo de la derecha pisa a lo de la izquierda:
 
 ```
-valores por defecto de Kiri → impresora.proceso → calidad.proceso → material.proceso → adhesión → personalizado → avanzado → soportes
+valores por defecto de Kiri → impresora.proceso → calidad.proceso → material.proceso → adhesión → personalizado → avanzado → soportes → extras → cambios por altura
 ```
 
 "Avanzado" (`personal.avanzado`, ver `avanzadoAProceso` en `perfiles.js`) se aplica sobre lo ya
 combinado: la velocidad escala la de la calidad y el modo jarrón pisa paredes y relleno.
 
-Después, las temperaturas se recortan a `limites.hotendMax` y `limites.camaMax`.
+Los cambios por altura (`cambios`, ver `cambios.js`) no reemplazan nada: se agregan como `proceso.ranges`
+(rangos de capas de Kiri, que pisan campos puntuales sólo en esas capas). Sin cambios, la salida es la de siempre.
+
+Después, las temperaturas (también las de cada rango) se recortan a `limites.hotendMax` y `limites.camaMax`.
 
 ## Estructura de un archivo de impresora
 
