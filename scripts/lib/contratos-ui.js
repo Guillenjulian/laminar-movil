@@ -97,5 +97,8 @@ export const CONTRATOS = {
             'perfiles/cambios',
         ),
     },
+    'ui/visor-cara': { exports: { crearSelectorCara: 1 }, importa: [] },
+    'ui/visor-recorridos': { exports: { crearRecorridos: 1 }, importa: ['motor/tipos-linea'] },
+    'ui/visor': { exports: { crearVisor: 1 }, importa: ['ui/visor-cara', 'ui/visor-recorridos'] },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

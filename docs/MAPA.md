@@ -42,7 +42,9 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/vista-capas.js` | Vista previa capa por capa (visor, deslizador, reproducción); le inyecta a `pausas-ui` el visor y las capas | `estado`, `navegacion`, `util-dom`, `visor`, `formato`, `motor/motor`, `motor/tipos-linea`, `perfiles/perfiles`, `config`, `pausas-ui` |
 | `src/ui/pausas-ui.js` | Pausas de filamento de la vista previa: lista de filamentos, marcas sobre el deslizador, modo y colores de los recorridos | `estado`, `util-dom`, `formato`, `motor/tipos-linea`, `perfiles/perfiles` |
 | `src/ui/actualizacion.js` | Registra el service worker y ofrece "Actualizar" cuando hay una versión nueva. Lo llama `main.js` al final del arranque | `util-dom` |
-| `src/ui/visor.js` | Visor three.js: cama, modelo con su transformación, elegir cara, recorridos del G-code. Dibuja sólo cuando algo cambia | three, `motor/tipos-linea.js` |
+| `src/ui/visor.js` | Visor three.js: cama, una malla por pieza (por `id`, 0 si no se dice: `ponerModelo`, `ponerTransformacion`, `ponerCopias`, `tamanoModelo`, `quitarModelo`, `resaltarPieza`), ciclo de dibujo (sólo cuando algo cambia). Delega en `visor-cara` y `visor-recorridos` (ADR 0003, T5) | three, `visor-cara`, `visor-recorridos` |
+| `src/ui/visor-cara.js` | Elegir cara con un toque ("apoyar cara"): detección del toque, triángulo resaltado, avisa normal e `id` de la pieza (`elegirCara`, `alTocarPieza`) | three |
+| `src/ui/visor-recorridos.js` | Recorridos del G-code capa por capa: `ponerRecorridos`, `mostrarCapa`, `pintarRecorridos`, `atenuarAbajo`, `quitarRecorridos`, `esfera` | three, `motor/tipos-linea.js` |
 | `src/ui/formato.js` | Números, medidas, duración, gramos y pesos en formato es-AR | — |
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
 | `src/ui/torres.js` | Hoja "Torre de calibración" del paso 1 (ADR 0002): tipo, cantidad de bloques, valor de cada uno (sugeridos según impresora y material), avisos y carga como modelo con `estado.torre`. Con torre se ocultan escala y rotación y no entra en recientes | `perfiles/torres`, `perfiles/perfiles`, `motor/motor`, `util-dom`, `formato` |
@@ -65,6 +67,7 @@ Nivel 3   impresoras ──► formulario-impresora
 Nivel 2   paso1-modelo   formulario-impresora   vista-capas   paso3-laminar   ──► navegacion
           vista-capas ──► pausas-ui
 Nivel 1   pausas-ui ──► estado, util-dom
+Nivel 1   visor ──► visor-cara, visor-recorridos (hojas, nivel 0)
 Nivel 1   navegacion ──► estado
           pausas-ui ──► estado, util-dom
 Nivel 0   estado, util-dom, actualizacion, cambios, torres ──► hojas ya existentes (avanzado, formato, materiales,
@@ -200,4 +203,4 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - ESLint 9.x está deprecado: migrar a ESLint 10.
 - `src/ui/materiales.js` usa top-level await para cargar los precios: revisar su efecto en el arranque.
-- Funciones y archivos largos marcados por `npm run lint` (warnings, no bloquean): `visor.js` (`crearVisor`, 310 líneas; el archivo, 313), `crearAvanzado`, `prepararLitofania`, `armarConfiguracion`, `espiral.js` (`espiralar`, `vueltaDesde`), `recorridos.worker.js` (`leer`), `laminador.worker.js` (`laminar`), `litofania.js` (`generarLitofania`), `decimar.js` (`agrupar`), `formatos.js` (`leerOBJ`, `leerXML3MF`), y los archivos `scripts/probar-motor.mjs` (541 líneas) y `scripts/probar-formatos.mjs` (320).
+- Funciones y archivos largos marcados por `npm run lint` (warnings, no bloquean): `crearAvanzado`, `prepararLitofania`, `armarConfiguracion`, `espiral.js` (`espiralar`, `vueltaDesde`), `recorridos.worker.js` (`leer`), `laminador.worker.js` (`laminar`), `litofania.js` (`generarLitofania`), `decimar.js` (`agrupar`), `formatos.js` (`leerOBJ`, `leerXML3MF`), y los archivos `scripts/probar-motor.mjs` (541 líneas) y `scripts/probar-formatos.mjs` (320).
