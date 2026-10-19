@@ -208,6 +208,7 @@ export const CONTRATOS = {
     'textos/en': { exports: { default: 'valor' }, importa: [] },
     'ui/idioma': {
         exports: {
+            ARRANQUE_AUTOMATICO: 'valor',
             t: 2,
             marcar: 1,
             existe: 1,

@@ -10,6 +10,7 @@ import {
     variablesDe,
 } from '../../src/textos/traducir.js';
 import {
+    ARRANQUE_AUTOMATICO,
     alCambiarIdioma,
     cambiarIdioma,
     existe,
@@ -53,7 +54,7 @@ function indexedDBFalso(datos, demora = 0) {
                     get: clave => pedido(datos.get(clave)),
                 }),
             };
-            setTimeout(() => tx.oncomplete?.(), 0);
+            setTimeout(() => tx.oncomplete?.(), demora + 5); // después de la lectura
             return tx;
         },
     };
@@ -172,6 +173,7 @@ async function probarUI({ revisar, igual }) {
     console.warn = warn;
     await probarCambio({ revisar, igual });
     await probarCarreras({ revisar, igual });
+    await probarArranque({ revisar });
     await probarProduccion({ revisar, igual });
 }
 
@@ -277,6 +279,24 @@ async function probarCarreras({ revisar, igual }) {
         AJUSTES.get('idioma') === 'es' && igual(vistos, ['es:es']),
     );
     delete globalThis.indexedDB;
+}
+
+async function probarArranque({ revisar }) {
+    // Arranque: sin preferencia, navegador en inglés = es (con ARRANQUE_AUTOMATICO false); con preferencia, esa.
+    ponerDiccionarios('en', EN, ES);
+    ponerDiccionarios('es', ES, {});
+    AJUSTES.clear();
+    const sinPreferencia = await iniciarIdioma({ navegador: ['en-US'] });
+    revisar(
+        'iniciarIdioma: navegador en inglés y sin preferencia sigue ARRANQUE_AUTOMATICO',
+        sinPreferencia === (ARRANQUE_AUTOMATICO ? 'en' : 'es') && idiomaActual() === sinPreferencia,
+    );
+    AJUSTES.set('idioma', 'en');
+    revisar(
+        'iniciarIdioma: con preferencia guardada en, arranca en en',
+        (await iniciarIdioma({ navegador: ['es'] })) === 'en',
+    );
+    AJUSTES.clear();
 }
 
 async function probarProduccion({ revisar, igual }) {

@@ -789,3 +789,6 @@ format:check` y las suites que toque en verde. Roles: **DI** dev de interfaz, **
     `torres.js`. A2 arranca **después** de integrar T6, hace genérico el retorno del foco al cerrar cualquier hoja y
     **reemplaza** ese helper (lo saca de los dos módulos y del contrato si deja de hacer falta), sin dos mecanismos a la
     vez.
+15. **Arranque en español hasta I14.** Hasta que el inglés esté completo, el arranque es en español salvo una
+    preferencia guardada (`ARRANQUE_AUTOMATICO = false` en `idioma.js`, que ignora `navigator.languages`); I14 la pasa a
+    `true`. Así nadie ve una app mezclada (números en `en-US` y el resto en español).

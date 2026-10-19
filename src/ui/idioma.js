@@ -12,6 +12,12 @@ import { IDIOMA_BASE, IDIOMAS, LOCALES, elegirIdioma, traducir } from '../textos
 // `globalThis.IDIOMA_DESARROLLO = false` simula producción en las pruebas de Node (Vite define import.meta.env).
 const DESARROLLO = import.meta.env ? import.meta.env.DEV : globalThis.IDIOMA_DESARROLLO !== false;
 
+/**
+ * ¿Se elige el idioma según `navigator.languages` cuando no hay preferencia guardada? Con false el arranque es en
+ * español salvo una preferencia guardada. I14 la pasa a true cuando el inglés esté completo.
+ */
+export const ARRANQUE_AUTOMATICO = false;
+
 /** @type {Idioma} */
 let idioma = IDIOMA_BASE;
 /** @type {Diccionario} */
@@ -105,7 +111,7 @@ function activar(cual, dic, resp) {
 }
 
 /**
- * Elige el idioma (preferencia guardada, si no `navigator.languages`), carga su diccionario con import() y pone
+ * Elige el idioma (preferencia guardada; si no, `navigator.languages` sólo con `ARRANQUE_AUTOMATICO`, si no 'es'), carga su diccionario con import() y pone
  * <html lang>. Llamar una vez, en paralelo con `cargarPreferencias`. Nunca lanza: si falla la carga queda en 'es'
  * sin diccionario (el HTML ya está en español).
  * @param {{ navegador?: readonly string[] }} [opciones]  `navegador` reemplaza `navigator.languages` (pruebas)
@@ -121,7 +127,7 @@ export async function iniciarIdioma(opciones) {
             // Sin almacenamiento (modo privado, etc.): se decide por el navegador.
         }
         const navegador = opciones?.navegador ?? (typeof navigator === 'undefined' ? [] : navigator.languages);
-        const elegido = elegirIdioma(guardado, navegador);
+        const elegido = elegirIdioma(guardado, ARRANQUE_AUTOMATICO ? navegador : []);
         const dic = await cargar(elegido);
         const resp = await respaldoDe(elegido);
         if (orden === solicitud) activar(elegido, dic, resp); // si no, un cambiarIdioma del usuario ya ganó

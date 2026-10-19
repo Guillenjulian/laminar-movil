@@ -11,13 +11,42 @@ const DESCRIPCION_ES = 'Laminá tus STL a G-code desde el celu, sin instalar nad
 const DESCRIPCION_EN =
     'Slice your STL files to G-code right from your phone, with nothing to install and no connection needed.';
 
+/** Escribe la preferencia de idioma en el IndexedDB del origen de la app (antes de que ella cargue). */
+async function guardarPreferencia(contexto, base, valor) {
+    const previa = await contexto.newPage();
+    await previa.goto(base + 'manifest.webmanifest');
+    await previa.evaluate(
+        v =>
+            new Promise((ok, mal) => {
+                const abrir = indexedDB.open('laminar-movil', 1);
+                abrir.onupgradeneeded = () => {
+                    const db = abrir.result;
+                    db.createObjectStore('ajustes');
+                    db.createObjectStore('modelos', { keyPath: 'id', autoIncrement: true });
+                    db.createObjectStore('archivos');
+                };
+                abrir.onerror = () => mal(abrir.error);
+                abrir.onsuccess = () => {
+                    const tx = abrir.result.transaction('ajustes', 'readwrite');
+                    tx.objectStore('ajustes').put(v, 'idioma');
+                    tx.oncomplete = () => {
+                        abrir.result.close();
+                        ok();
+                    };
+                };
+            }),
+        valor,
+    );
+    await previa.close();
+}
+
 /**
- * Abre una página en un contexto propio (sin service worker) con `navigator.languages` fijo. Cuenta en
+ * Abre una página en un contexto propio (sin service worker, locale es-AR) con `navigator.languages` fijo y, si se pasa, una preferencia de idioma guardada. Cuenta en
  * `window.__recorridos` las búsquedas de `[data-t…]` en el DOM (para saber si se recorrió).
  * @returns {Promise<{contexto: import('playwright-core').BrowserContext, pagina: import('playwright-core').Page}>}
  */
-async function abrir(browser, base, idiomas) {
-    const contexto = await browser.newContext({ ...devices['Pixel 7'], serviceWorkers: 'block' });
+async function abrir(browser, base, idiomas, preferencia) {
+    const contexto = await browser.newContext({ ...devices['Pixel 7'], locale: 'es-AR', serviceWorkers: 'block' });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', e => console.log('[error idioma]', e.message));
     await pagina.addInitScript(lista => {
@@ -29,6 +58,7 @@ async function abrir(browser, base, idiomas) {
             return original.call(this, selector);
         };
     }, idiomas);
+    if (preferencia) await guardarPreferencia(contexto, base, preferencia);
     await pagina.goto(base);
     // main.js marca el paso (aria-current) en el primer dibujo, después de iniciar el idioma y su DOM.
     await pagina.waitForSelector('.pasos li[aria-current]', { state: 'attached' });
@@ -111,25 +141,28 @@ async function probarErrorDiccionario(browser, base, revisar) {
 }
 
 /**
- * Arranque en el idioma del navegador (I3).
+ * Arranque (I3): hasta I14 (`ARRANQUE_AUTOMATICO` false) siempre en español salvo una preferencia guardada.
  *
- * Flujo: con `navigator.languages = ['en-US']` (`addInitScript`): `<html lang="en-US">`, título y `#sinModelo h2` en
- * inglés y ninguna clave sin traducir visible (regex `^[a-z]+\.[A-Za-z0-9.]+$`); con `['es-AR']` y con `['fr']`, español.
+ * Flujo: con `navigator.languages = ['en-US']`, `['es-AR']` o `['fr']` y sin preferencia: `<html lang="es-AR">`,
+ * textos en español, ninguna clave sin traducir visible y el DOM sin recorrer; con una preferencia `en` guardada en
+ * IndexedDB (aun con `['es-AR']`): `<html lang="en-US">`, descripción en inglés y DOM recorrido. I14 pasa
+ * `ARRANQUE_AUTOMATICO` a true y vuelve a la prueba con `navigator.languages = ['en-US']` en inglés.
  *
  * Precondición: cualquiera (usa su propio contexto).
  * Deja: la página del recorrido sin cambios.
- * @param {import('../lib/app.mjs').Ctx} _ctx
+ * @param {import('../lib/app.mjs').Ctx} ctx
  */
 export async function probarIdiomaArranque({ browser, base, ok: revisar }) {
-    for (const [idiomas, lang, descripcion, recorre] of [
-        [['en-US'], 'en-US', DESCRIPCION_EN, true],
-        [['es-AR'], 'es-AR', DESCRIPCION_ES, false],
-        [['fr'], 'es-AR', DESCRIPCION_ES, false],
+    for (const [idiomas, preferencia, lang, descripcion, recorre] of [
+        [['en-US'], null, 'es-AR', DESCRIPCION_ES, false],
+        [['es-AR'], null, 'es-AR', DESCRIPCION_ES, false],
+        [['fr'], null, 'es-AR', DESCRIPCION_ES, false],
+        [['es-AR'], 'en', 'en-US', DESCRIPCION_EN, true],
     ]) {
-        const { contexto, pagina } = await abrir(browser, base, idiomas);
+        const { contexto, pagina } = await abrir(browser, base, idiomas, preferencia);
         try {
             const v = await leer(pagina);
-            const nombre = `idioma al arrancar con ${idiomas[0]}`;
+            const nombre = `idioma al arrancar con ${idiomas[0]}${preferencia ? ` y preferencia ${preferencia}` : ''}`;
             revisar(`${nombre}: <html lang="${lang}">`, v.lang === lang, v.lang);
             revisar(`${nombre}: la descripción en ${lang.slice(0, 2)}`, v.descripcion === descripcion, v.descripcion);
             revisar(`${nombre}: el título es el nombre de la app`, v.titulo === 'Laminar Móvil', v.titulo);
