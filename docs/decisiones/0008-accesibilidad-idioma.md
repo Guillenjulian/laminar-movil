@@ -6,7 +6,7 @@
 
 ## Estado
 
-Aceptado para implementar (CTO, 2026-10-19), con las decisiones de "Decisiones del CTO" (al final).
+Parcialmente implementado: A1–A4, I1–I3 (sprint 5). Pendiente del sprint 5: A6 (axe en la CI) e I4 (`formato.js` todavía usa `toLocaleString`). Pendiente: I5–I14 y D1 (sprint 6). Aceptado por el CTO el 2026-10-19.
 
 ## Contexto
 

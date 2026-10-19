@@ -46,6 +46,10 @@ Además:
 - Avisa si el modelo no entra en la cama y limita las temperaturas a los máximos de la impresora.
 - **Varias piezas y copias en la cama**: agregás piezas (archivo o cubo de ejemplo), les ponés copias y la app
   las acomoda sola (ADR 0003). Las copias que no entran se marcan en rojo y "Siguiente" queda deshabilitado.
+- **Envío por red local (experimental)**: si configurás OctoPrint o Moonraker para una impresora, el paso 4 puede
+  subirle el G-code por la red de la casa (ADR 0007). Descargar y Compartir siempre quedan disponibles.
+- **Accesibilidad**: contraste AA, foco visible, hojas que se manejan con lector de pantalla y los errores, avisos
+  y progreso se anuncian en voz alta (ADR 0008).
 
 Impresoras:
 
@@ -284,6 +288,22 @@ Esto queda pendiente de validar a mano:
 - [ ] **Zona sin soporte en una pieza real**: que la zona marcada se vea sin soporte al imprimir y que el
       voladizo que cae dentro se imprima como avisa la app.
 - [ ] **Marcar zonas con el dedo en un celu real**: el toque, el radio y quitar una zona.
+
+### Envío por red local (ADR 0007, T10)
+
+- [ ] Chrome en Android (pestaña y app instalada) contra una OctoPrint y una Moonraker reales: `https://<app>` → `http://IP`,
+      con el permiso de Red local aceptado y con el permiso denegado (el mensaje se entiende y "Abrir la impresora" funciona).
+- [ ] CORS en cada impresora ("Allow Cross Origin" en OctoPrint, `cors_domains` en Moonraker) con el origen de la app:
+      si piden reiniciar y qué muestra la app cuando no está habilitado.
+- [ ] iPhone, Firefox y Chrome con el permiso denegado: que caigan al plan B (abrir la impresora) y que el texto sea claro.
+- [ ] "Empezar a imprimir" en las dos impresoras, y el caso "bloqueado" con la casilla encendida (la subida puede haber llegado igual).
+- [ ] Archivos grandes (un G-code de 20 MB por Wi-Fi desde un celu de gama baja) y si nginx o haproxy rechazan la subida (413).
+- [ ] Los demás [A VALIDAR] del ADR 0007 (texto de `state`, `done`, `print_started`, sonda ante LNA denegado).
+
+### Accesibilidad (ADR 0008)
+
+- [ ] Probar con TalkBack (Android) y VoiceOver (iPhone) en un celu real: el paso actual, las hojas (Escape y retorno
+      del foco), los errores y avisos, el deslizador de capas y la descripción del visor.
 
 ### Otros
 

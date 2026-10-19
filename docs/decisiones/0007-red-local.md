@@ -6,9 +6,7 @@
 
 ## Estado
 
-Aceptado para implementar (CTO, 2026-10-19), con las decisiones de "Decisiones del CTO" (al final). La validación en
-hardware (T10) la hace una persona y no frena la implementación: hasta que se haga, la función sale marcada como
-"experimental" en la hoja.
+Implementado (T1 a T9). Aceptado por el CTO el 2026-10-19. T10 (hardware) pendiente: la función sale como experimental.
 
 ## Contexto
 

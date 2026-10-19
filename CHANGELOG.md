@@ -7,6 +7,26 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [0.5.0] - 2026-10-19
+
+Sprint 5: envío por red local a OctoPrint y Moonraker (experimental), accesibilidad y la base del inglés (todavía oculta).
+
+### Agregado
+
+- Envío del G-code por red local a OctoPrint o Moonraker (experimental, ADR 0007): hoja de configuración por impresora, botón "Enviar a la impresora" en el paso 4, plan B si el navegador lo bloquea y `npm run test:red`.
+- Accesibilidad (ADR 0008): contraste AA, anillo de foco, movimiento reducido, paso actual anunciado, hojas modales con Escape y retorno de foco, errores y avisos que se anuncian, contadores con nombre, descripción textual del visor y deslizador de capas con "Capa N de M, Z mm, con pausa".
+- Base del inglés, oculta hasta el sprint 6 (ADR 0008): diccionarios que se cargan bajo demanda y `npm run test:textos`.
+
+### Cambiado
+
+- El cliente de red se carga sólo al usarlo.
+- `anunciar` es compartido, en `util-dom`.
+
+### Corregido
+
+- El nombre de una impresora propia se escapa en el aviso "No entra".
+- Un doble Escape ya no saca de la app.
+
 ## [0.4.0] - 2026-10-19
 
 Sprint 4: soportes árbol y zonas sin soporte, `.gcode.3mf` para Bambu Lab, rendimiento y el arreglo del laminado colgado.

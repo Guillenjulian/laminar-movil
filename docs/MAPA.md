@@ -319,8 +319,14 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - Soportes árbol: un tronco absorbido en una fusión puede quedar tangente al de abajo (~0,5 % de los círculos, puente de 4 a 5 mm); no se mitiga en v1 (ADR 0004, R1).
 - Soportes árbol: el tope de 150 nodos activos (`maxNodos`) no tiene prueba que llegue al límite (ADR 0004, sección 1).
 - Zonas sin soporte: se vacían al cambiar escala o rotación. Se podrían transformar con `matrizPieza` (ADR 0004, sección 2).
-- El chunk principal pesa más de 500 kB (three.js): evaluar importar three dinámicamente.
 - `npm run lint`: 0 errores y 0 warnings.
 - Piezas y copias (ADR 0003):
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
   - No hay prueba de piezas con cama de cinta (R1 del ADR 0003 lo deja pendiente).
+- `test:motor`: dos aserciones de tiempo (árbol contra normal, silencio de la barra con la esfera rugosa) fallan con la máquina saturada; en la CI pasan. Hacerlas relativas o con más margen.
+- `test:motor`: "1 pieza: el progreso no baja" falló una vez bajo carga; reproducir.
+- `test:app`: "el reciente vuelve con su rotación y escala" (`recientes.mjs`) falló una vez; sensible al tiempo.
+- `prefers-reduced-motion` no frena la reproducción de capas ni el giro del visor (JS).
+- Red local: los [A VALIDAR] del ADR 0007 (T10, hardware); un fetch inyectado que ignora abort puede colgar el transporte; la prueba de retorno de foco de la hoja de red no distingue disparador de respaldo; helpers de descarga duplicados entre `scripts/app/*.mjs`.
+- Idioma: el detector de español suelto marca el SVG de `iconos-relleno.js` (I11 necesita `// t-ignorar`); `anunciar`: la doble escritura del respaldo `setTimeout` no tiene prueba; con red y CPU lentas hay ~590 ms en español antes de pasar a inglés.
+- A5 (teclado del visor) queda para v1.1.
