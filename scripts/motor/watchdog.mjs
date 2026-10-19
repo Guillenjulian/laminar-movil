@@ -15,7 +15,9 @@ class WorkerFalso {
     }
     postMessage() {
         for (const [demora, data] of WorkerFalso.guion) {
-            setTimeout(() => !this.terminado && this.onmessage({ data }), demora);
+            const entregar = () =>
+                data.tipo === 'EXPLOTA' ? this.onerror({ message: 'boom' }) : this.onmessage({ data });
+            setTimeout(() => !this.terminado && entregar(), demora);
         }
     }
     terminate() {
@@ -47,6 +49,7 @@ async function probarPlazo(ctx) {
         const { laminar } = await import('../../src/motor/motor.js');
         await probarTrabado(ctx, laminar);
         await probarConAvisos(ctx, laminar);
+        await probarLimpieza(ctx, laminar);
     } finally {
         globalThis.Worker = WorkerOriginal;
     }
@@ -103,6 +106,56 @@ async function probarConAvisos({ revisar }, laminar) {
     revisar('el error del worker pasa tal cual', r instanceof Error && r.message === 'malla rota');
 }
 
+// Cuenta los temporizadores del watchdog (los de 60 s) que siguen vivos: tras cualquier final no debe quedar ninguno.
+async function probarLimpieza({ revisar }, laminar) {
+    const PLAZO = 60_000;
+    const vivos = new Set();
+    const { setTimeout: poner, clearTimeout: sacar } = globalThis;
+    globalThis.setTimeout = (fn, ms, ...resto) => {
+        const id = poner(fn, ms, ...resto);
+        if (ms === PLAZO) vivos.add(id);
+        return id;
+    };
+    globalThis.clearTimeout = id => (vivos.delete(id), sacar(id));
+    const casos = {
+        listo: [[10, { tipo: 'listo', gcode: 'G1', info: {} }]],
+        error: [[10, { tipo: 'error', mensaje: 'malla rota' }]],
+        'el worker se cae (onerror)': [[10, { tipo: 'EXPLOTA' }]],
+        'se cancela (abort)': [[10, { tipo: 'progreso', etapa: 'laminando', valor: 0.1 }]],
+    };
+    try {
+        for (const [nombre, guion] of Object.entries(casos)) {
+            WorkerFalso.creados.length = 0;
+            WorkerFalso.guion = guion;
+            const control = new AbortController();
+            if (nombre.startsWith('se cancela')) setTimeout(() => control.abort(), 30);
+            const r = await resultado(laminar(pedido({ plazoSinNoticiasMs: PLAZO, signal: control.signal })));
+            revisar(
+                `sin temporizador vivo tras: ${nombre}`,
+                vivos.size === 0 && WorkerFalso.creados[0].terminado,
+                `${vivos.size} vivos; ${r?.name ?? r}`,
+            );
+        }
+        await probarYaAbortado({ revisar }, laminar, vivos, PLAZO);
+    } finally {
+        globalThis.setTimeout = poner;
+        globalThis.clearTimeout = sacar;
+    }
+}
+
+async function probarYaAbortado({ revisar }, laminar, vivos, PLAZO) {
+    // Ya cancelado de antemano: AbortError al instante y ni se crea el worker.
+    WorkerFalso.creados.length = 0;
+    const abortado = new AbortController();
+    abortado.abort();
+    const r = await resultado(laminar(pedido({ plazoSinNoticiasMs: PLAZO, signal: abortado.signal })));
+    revisar(
+        'con el signal ya abortado rechaza con AbortError sin crear el worker',
+        r?.name === 'AbortError' && WorkerFalso.creados.length === 0 && vivos.size === 0,
+        String(r?.name ?? r),
+    );
+}
+
 async function probarCola({ revisar }) {
     // Cola que cede el hilo: un temporizador pedido antes de encolar tiene que correr antes de la primera tarea.
     const orden = [];
@@ -136,5 +189,24 @@ async function probarCola({ revisar }) {
     revisar(
         'una tarea que falla no frena a las siguientes',
         (await resultado(fallida)) instanceof Error && (await siguiente) === 7,
+    );
+    await probarColaAsincrona({ revisar });
+}
+
+async function probarColaAsincrona({ revisar }) {
+    // Tareas asíncronas de duraciones distintas: se corren de a una, en orden de llegada, sin superponerse.
+    const eventos = [];
+    const tarea = (n, ms) => async () => {
+        eventos.push(`ini ${n}`);
+        await new Promise(r => setTimeout(r, ms));
+        eventos.push(`fin ${n}`);
+        return n;
+    };
+    const cola3 = crearColaCediendo(100);
+    const res = await Promise.all([cola3(tarea(1, 40)), cola3(tarea(2, 5)), cola3(tarea(3, 20))]);
+    revisar(
+        'tareas asíncronas de distinta duración: una por vez y en orden',
+        eventos.join() === 'ini 1,fin 1,ini 2,fin 2,ini 3,fin 3' && res.join() === '1,2,3',
+        eventos.join(),
     );
 }

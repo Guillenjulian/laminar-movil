@@ -160,7 +160,26 @@ async function probarCaso({ pagina, revisar }, nombre, stl, plazoS) {
     );
 }
 
+// Los minions locales dan lo mismo que las funciones de polígonos de Kiri (outA/outB incluidos) en una capa con islas.
+async function probarEquivalencia({ pagina, revisar }) {
+    const r = await pagina.evaluate(() => window.probarMinions());
+    const s = r.subtract;
+    revisar(
+        'minions locales: subtract da los mismos contornos que POLY.subtract (outA y outB)',
+        s.nA > 0 && s.nB > 0 && s.localA === s.nA && s.localB === s.nB && s.igual,
+        `(directo ${s.nA}/${s.nB}, local ${s.localA}/${s.localB}, igual ${s.igual})`,
+    );
+    revisar('minions locales: union da lo mismo que POLY.union', r.union.n > 0 && r.union.igual, `(${r.union.n})`);
+    revisar(
+        'minions locales: fill agrega las líneas a la salida',
+        r.fill.lineas > 0 && r.fill.salida === r.fill.lineas,
+        `(${r.fill.lineas} / ${r.fill.salida})`,
+    );
+    revisar('minions locales: clip avisa con un error claro', /no soportada: clip/.test(r.clip), `(${r.clip})`);
+}
+
 export async function probarSoportesProgreso(ctx) {
+    await probarEquivalencia(ctx);
     await probarCaso(ctx, 'placa de 36 islotes (2,2 mm de alto)', placaDeIslotes(), PLAZOS_S.islotes);
     await probarCaso(ctx, 'esfera rugosa pesada (~40 mil triángulos)', esferaRugosa(), PLAZOS_S.rugosa);
 }

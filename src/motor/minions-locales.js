@@ -44,7 +44,7 @@ export function usarMinionsLocales(minions) {
     minions.fill = async (polys, angulo, espaciado, salida, largoMin, largoMax) => {
         const lineas = [];
         POLY.fillArea(polys, angulo, espaciado, lineas, largoMin, largoMax);
-        salida.push(...lineas);
+        for (const linea of lineas) salida.push(linea);
         return lineas;
     };
     // clip y sliceZ no tienen versión local: que fallen con un error claro en vez de quedarse esperando.

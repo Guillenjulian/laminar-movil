@@ -97,6 +97,17 @@
             const configurar = ({ impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', ...resto }) =>
                 armarConfiguracion({ impresoraId, calidad, material: 'pla', soportes: false, personal: {}, ...resto });
 
+            // Compara los minions locales con las funciones de polígonos de Kiri (scripts/motor/soportes-progreso.mjs).
+            window.probarMinions = () =>
+                new Promise((resolver, rechazar) => {
+                    const w = new Worker(new URL('./scripts/motor/minions-prueba.worker.js', import.meta.url), {
+                        type: 'module',
+                    });
+                    w.onmessage = e => (w.terminate(), resolver(e.data));
+                    w.onerror = e => (w.terminate(), rechazar(new Error(e.message)));
+                    w.postMessage(null);
+                });
+
             // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
             window.probar = async ({
                 caso = 'cubo',

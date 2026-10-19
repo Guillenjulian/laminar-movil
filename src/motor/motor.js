@@ -3,7 +3,7 @@
 // de gama baja).
 
 // Si el laminador pasa tanto tiempo sin avisar nada (ni progreso, ni listo, ni error), se lo da por trabado.
-const PLAZO_SIN_NOTICIAS_MS = 120_000;
+const PLAZO_SIN_NOTICIAS_MS = 240_000;
 
 const AVISO_TRABADO = 'El laminado se trabó y lo cancelamos. Probá de nuevo; si vuelve a pasar, mandanos el archivo.';
 
@@ -64,7 +64,7 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal, p
  * @param {number} [opciones.maxTriangulos] tope de triángulos del conjunto, copias incluidas
  * @param {(etapa:string, valor:number)=>void} [opciones.alProgresar] avance
  * @param {AbortSignal} [opciones.signal] para cancelar
- * @param {number} [opciones.plazoSinNoticiasMs] si el worker no avisa nada en este lapso se lo cancela con un error (120 s)
+ * @param {number} [opciones.plazoSinNoticiasMs] si el worker no avisa nada en este lapso se lo cancela con un error (240 s)
  * @returns {Promise<{gcode:string, info:object}>}
  */
 export async function laminar({
@@ -78,6 +78,7 @@ export async function laminar({
     signal,
     plazoSinNoticiasMs = PLAZO_SIN_NOTICIAS_MS,
 }) {
+    if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError'); // ya cancelado: ni se crea el worker
     const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
     const lista = piezas || [{ stl, transformacion, posiciones: [{ x: 0, y: 0 }] }];
     const r = await correr(
