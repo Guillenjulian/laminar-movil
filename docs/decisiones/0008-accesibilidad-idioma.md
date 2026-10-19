@@ -190,8 +190,10 @@ Las funciones nuevas son privadas; el contrato de `navegacion.js` no cambia (sie
   Con 0 piezas devuelve "La cama está vacía." y no '' (el nodo de descripción nunca queda sin texto; aceptado por el CTO).
   Lo llama `paso1-modelo.js` (en cada `reacomodar` y `aplicar`) y escribe en `#descripcionVisor`. Para el visor del
   paso 4: `aria-describedby="textoCapa resumen"` (ya existen).
-- Deslizador: `vista-capas.js` pone `aria-valuetext="Capa 12 de 40"` en cada cambio y `aria-describedby="textoCapa"`.
-  `#textoCapa` sigue sin ser región viva (anunciaría cada paso del arrastre).
+- Deslizador: `vista-capas.js` pone `aria-valuetext="Capa 12 de 40, 3,36 mm"` en cada cambio (con `, con pausa` si la
+  capa tiene una pausa; el ⏸ visible es `aria-hidden`). `#capa` no lleva `aria-describedby="textoCapa"` (se leería dos
+  veces). `#textoCapa` sigue sin ser región viva (anunciaría cada paso del arrastre). Los glifos ▶ ❚❚ ⏸ ✕ de
+  `vista-capas` y `pausas-ui` van en `<span aria-hidden="true">`.
 - El texto de ayuda de gestos se mantiene, con `aria-hidden="true"` (es información visual para quien ve) y se suma
   un `<p class="solo-lectores">` con la alternativa: "Para girar y escalar usá los botones de debajo".
 
@@ -610,7 +612,7 @@ Siguen la convención de `scripts/app/` (cabecera con Flujo, **Precondición** y
 | `probarContraste` (A1) | después de `probarConfig`, antes de `volverAlPaso1` (único punto con el paso 2 visible y el cubo cargado) | paso 2 visible, cubo cargado | igual | calcula con `getComputedStyle` y `scripts/lib/contraste.mjs` (puro): `.enlace` y "Poné el precio" ≥ 4,5:1; `.pasos li` ≥ 4,5:1; borde de `.boton` ≥ 3:1 contra su fondo; `:focus-visible` tiene `outline-width` ≥ 2 px y color con ≥ 3:1; en claro y en oscuro (`page.emulateMedia({ colorScheme })`), y `prefers-reduced-motion` anula `transition` |
 | `probarAccesibilidadPasos` (A2) | después de `probarConfig` | paso 2 visible | paso 2 visible, ninguna hoja abierta, `main` sin `inert` | `aria-current="step"` sólo en el `li` del paso (1→2→1); tras `#siguiente` y tras `goBack` el foco está en un elemento del paso nuevo; hoja de impresoras: `role="dialog"`, `aria-modal`, `#main` y `footer` con `inert`; 20 Tab seguidos y el foco nunca sale de la hoja; Escape cierra y el foco vuelve a `#cambiarImpresora`; "Mi impresora" desde la hoja: foco dentro de la hoja nueva |
 | `probarAccesibilidadRegiones` (A3) | después de `probarCancelar` | paso 2 visible | paso 2 visible | toca Laminar, en el paso 3 `#progreso` tiene nombre y `aria-valuetext`, cancela y vuelve al paso 2; `#errorLaminado`, `#errorImpresora`, `#errorLitofania`, `#errorTorre` tienen `role="alert"`; los 11 `.contador` tienen `role="group"` con nombre; la lista de la hoja de impresoras no salta de `h1` a `h3` |
-| `probarAccesibilidadVisor` (A4) | después de `probarVistaCapas` | paso 4 con resultado | igual | `#descripcionVisor` nombra la pieza y su medida en mm; `#visorCapas` tiene `role="group"` y `aria-describedby` válido; `#capa` tiene `aria-valuetext` "Capa N de M" que cambia al mover el deslizador con teclado (`ArrowRight`); `#capa` mide ≥ 44 px de alto |
+| `probarAccesibilidadVisor` (A4) | después de `probarVistaCapas` | paso 4 con resultado | igual | `#descripcionVisor` nombra la pieza y su medida en mm; `#visorCapas` tiene `role="group"` y `aria-describedby` válido; `#capa` tiene `aria-valuetext` "Capa N de M, Z mm" que cambia al mover el deslizador con teclado (`ArrowRight`); `#capa` mide ≥ 44 px de alto |
 
 `scripts/app/idioma.mjs` (contexto propio, como `vista-liviana.mjs`; `serviceWorkers: 'block'` salvo en la última)
 

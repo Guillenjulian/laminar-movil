@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { armarVisorCarga } from '../src/ui/visor-carga.js';
 import * as ayudas from './visor-carga/ayudas.mjs';
+import { probarAriaCanvas } from './visor-carga/aria.mjs';
 import { probarFallo, probarExcepciones, probarConcurrencia } from './visor-carga/errores.mjs';
 
 const { revisar, json, contenedorFalso, cargadorManual, esperar } = ayudas;
@@ -232,6 +233,7 @@ await probarAlListoQueTira();
 await probarAlListoQueTiraYaCargado();
 await probarFallo();
 await probarYaCargado();
+await probarAriaCanvas();
 await probarExcepciones();
 await probarConcurrencia();
 probarNombres();

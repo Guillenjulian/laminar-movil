@@ -26,5 +26,7 @@ export function textoDescripcionVisor(datos) {
     if (!piezas.length) return 'La cama está vacía.';
     const lista = piezas.map(textoPieza).join('; ');
     const cuantas = piezas.length === 1 ? '1 pieza' : `${piezas.length} piezas`;
-    return `Vista 3D de la cama con ${cuantas}: ${lista}.${entra ? '' : ' No entran todas en la cama.'}`;
+    const sola = piezas.length === 1 && piezas[0].copias === 1; // una sola cosa en la cama: singular
+    const noEntra = sola ? ' No entra en la cama.' : ' No entran todas en la cama.';
+    return `Vista 3D de la cama con ${cuantas}: ${lista}.${entra ? '' : noEntra}`;
 }

@@ -108,8 +108,9 @@ function irACapa(n) {
     $('capa').value = n;
     visorCapas.mostrarCapa(n, $('soloCapa').checked);
     const z = formato.numero(capas.zCapa[n], 2);
-    $('capa').setAttribute('aria-valuetext', `Capa ${n + 1} de ${capas.total}, ${z} mm`);
     const pausada = estado.pausas.has(n);
+    // El ⏸ de #textoCapa es decoración (aria-hidden): la pausa se dice acá.
+    $('capa').setAttribute('aria-valuetext', `Capa ${n + 1} de ${capas.total}, ${z} mm${pausada ? ', con pausa' : ''}`);
     ponerTexto($('textoCapa'), `Capa ${n + 1}/${capas.total} · Z ${z} mm${pausada ? ' · ' : ''}`, pausada ? '⏸' : '');
     // botón de pausa según la capa
     const b = $('pausarCapa');

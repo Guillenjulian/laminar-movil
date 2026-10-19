@@ -14,7 +14,12 @@ import { probarFormatos } from './app/paso1-formatos.mjs';
 import { probarPiezas } from './app/piezas.mjs';
 import { probarCopias } from './app/copias.mjs';
 import { probarConfig } from './app/paso2-config.mjs';
-import { probarContraste, probarAccesibilidadPasos, probarAccesibilidadVisor } from './app/accesibilidad.mjs';
+import {
+    probarContraste,
+    probarAccesibilidadPasos,
+    probarAccesibilidadVisor,
+    probarAccesibilidadDescripcion,
+} from './app/accesibilidad.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
 import { probarAvanzado } from './app/avanzado.mjs';
@@ -51,6 +56,7 @@ const AREAS = [
     probarGestos,
     probarPiezas,
     probarCopias,
+    probarAccesibilidadDescripcion, // ADR 0008, A4: la descripción del visor cambia con las copias (paso 1; vuelve a 1)
     probarAcomodoConGiros,
     probarBloqueos, // ADR 0004: zonas sin soporte (paso 1, cubo, 100 %); deja el paso 1
     probarBloqueosModos, // ADR 0004: modos excluyentes y pieza no activa (mismo estado de entrada y de salida)

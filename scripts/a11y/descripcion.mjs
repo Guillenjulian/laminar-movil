@@ -32,7 +32,23 @@ const CASOS = [
     [
         'no entran en la cama',
         { piezas: [{ nombre: 'grande.stl', tamano: { x: 400, y: 20, z: 20 }, copias: 1 }], entra: false },
-        'Vista 3D de la cama con 1 pieza: grande.stl (400,0 × 20,0 × 20,0 mm). No entran todas en la cama.',
+        'Vista 3D de la cama con 1 pieza: grande.stl (400,0 × 20,0 × 20,0 mm). No entra en la cama.',
+    ],
+    [
+        'no entran (una pieza con copias)',
+        { piezas: [{ nombre: 'g.stl', tamano: CUBO, copias: 5 }], entra: false },
+        'Vista 3D de la cama con 1 pieza: g.stl (20,0 × 20,0 × 20,0 mm, 5 copias). No entran todas en la cama.',
+    ],
+    [
+        'no entran (2 piezas)',
+        {
+            piezas: [
+                { nombre: 'a.stl', tamano: CUBO, copias: 1 },
+                { nombre: 'b.stl', tamano: CUBO, copias: 1 },
+            ],
+            entra: false,
+        },
+        'Vista 3D de la cama con 2 piezas: a.stl (20,0 × 20,0 × 20,0 mm); b.stl (20,0 × 20,0 × 20,0 mm). No entran todas en la cama.',
     ],
     [
         'sin medida todavía (visor cargando)',

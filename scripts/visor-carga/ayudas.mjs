@@ -11,7 +11,8 @@ export const esperar = ms => new Promise(r => setTimeout(r, ms));
 // Contenedor de mentira: lo justo para el aviso, su botón y `data-visor`.
 function elementoFalso() {
     const e = { hijos: [], parentNode: null, clics: [], _texto: '' };
-    e.setAttribute = () => {};
+    e.atributos = {};
+    e.setAttribute = (k, v) => (e.atributos[k] = v);
     e.addEventListener = (_tipo, fn) => e.clics.push(fn);
     e.appendChild = h => {
         h.parentNode = e;
@@ -28,8 +29,10 @@ function elementoFalso() {
 }
 
 /** El contenedor: `aviso` es el aria-live; `boton()` el botón de reintento (o undefined). */
-export function contenedorFalso() {
-    const c = { dataset: {}, ownerDocument: { createElement: elementoFalso }, hijos: [] };
+export function contenedorFalso({ conCanvas = true } = {}) {
+    const c = { dataset: {}, ownerDocument: { createElement: elementoFalso }, hijos: [], canvas: [] };
+    // Los canvas los agrega el `crearVisor` real de mentira (como three al hacer appendChild del suyo).
+    if (conCanvas) c.querySelectorAll = sel => (sel === 'canvas' ? c.canvas : []);
     c.appendChild = h => {
         c.hijos.push(h);
         c.aviso = h;
@@ -76,9 +79,10 @@ export function cargadorManual() {
         return new Promise((resolver, rechazar) => c.esperando.push({ resolver, rechazar }));
     };
     const modulo = {
-        crearVisor: () => {
+        crearVisor: contenedor => {
             c.creados++;
             if (c.noCrea) throw new Error('sin WebGL');
+            if (contenedor.canvas && !contenedor.canvas.length) contenedor.canvas.push(elementoFalso());
             return visorFalso(registro, c.tira);
         },
     };

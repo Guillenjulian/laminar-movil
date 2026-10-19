@@ -104,8 +104,13 @@ function crearAviso(contenedor, reintentar) {
 }
 
 // El canvas es sólo dibujo: el contenido lo dice el texto asociado al contenedor (ADR 0008, A4).
+// Tolerante: un fallo de accesibilidad nunca puede dejar el visor en 'error'.
 function ocultarCanvas(contenedor) {
-    contenedor.querySelectorAll('canvas').forEach(c => c.setAttribute('aria-hidden', 'true'));
+    try {
+        contenedor.querySelectorAll?.('canvas').forEach(c => c.setAttribute('aria-hidden', 'true'));
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 // El módulo del visor, pedido una sola vez: la promesa se descarta si falla, para poder reintentar.
