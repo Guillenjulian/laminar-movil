@@ -14,6 +14,8 @@ import { $ } from './util-dom.js';
 /** @type {Array<(paso: number) => void>} */
 const suscriptores = [];
 let yaMostrado = false; // false hasta que se muestra el primer paso
+let recorridoPendiente = false; // hay un history.go() sin su popstate todavía
+let irAlTerminar = false; // se pidió "Ir al paso 1" mientras se cerraba una hoja
 
 /**
  * Registra popstate, [data-cerrar], #atras y deja el historial en {paso:1}. Llamar una vez.
@@ -22,7 +24,12 @@ let yaMostrado = false; // false hasta que se muestra el primer paso
 export function iniciarNavegacion() {
     window.addEventListener('popstate', e => {
         if (estado.paso === 3) estado.cancelar?.abort();
+        recorridoPendiente = false;
         mostrar(e.state?.paso || 1, e.state?.hoja);
+        if (irAlTerminar) {
+            irAlTerminar = false;
+            irAPaso1();
+        }
     });
     document.querySelectorAll('[data-cerrar]').forEach(b => {
         b.onclick = () => history.back();
@@ -88,7 +95,36 @@ export function abrirHoja(hoja) {
  */
 export function cerrarHojas() {
     const nivel = history.state?.nivel || 0;
-    if (nivel) history.go(-nivel);
+    if (!nivel) return;
+    recorridoPendiente = true;
+    history.go(-nivel);
+}
+
+/**
+ * Vuelve al paso 1 desde otro paso, retrocediendo en el historial (las hojas abiertas y el paso actual).
+ * Si todavía hay un recorrido en curso (p. ej. se está cerrando la hoja de impresoras) espera a que termine,
+ * para no retroceder de más y salir de la app. En el paso 1 no hace nada. Después enfoca el paso 1.
+ * @returns {void}
+ */
+export function irAPaso1() {
+    if (recorridoPendiente) {
+        irAlTerminar = true;
+        return;
+    }
+    if (estado.paso === 1) return;
+    recorridoPendiente = true;
+    window.addEventListener('popstate', enfocarPaso1, { once: true });
+    history.go(-((history.state?.nivel || 0) + 1));
+}
+
+/** Pasa el foco al título (o primer control) visible del paso 1. @returns {void} */
+function enfocarPaso1() {
+    const el = [...document.querySelectorAll('.pantalla[data-paso="1"] h2, .pantalla[data-paso="1"] button')].find(
+        x => x.offsetParent,
+    );
+    if (!el) return;
+    if (el.tagName === 'H2') el.tabIndex = -1; // los botones ya son enfocables: no los sacamos del orden de tabulación
+    el.focus();
 }
 
 /**

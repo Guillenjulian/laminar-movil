@@ -1,4 +1,5 @@
 // Prueba de contrato de los módulos nuevos de src/ui/ (ADR 0001, T0): `npm run test:contratos`.
+// Al final también corren las pruebas de estado (accesores de `estado.piezas`, scripts/probar-estado.mjs).
 // Flujo: autoprueba del detector de ciclos; levanta Vite en middleware (sólo ssrLoadModule, sin puertos);
 // por módulo del contrato: si no existe se saltea (CONTRATOS_ESTRICTO=1 lo hace error), si existe se
 // importa con document/window "trampa" y se chequea que no los toque y que exports y aridades coincidan;
@@ -12,6 +13,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTRATOS } from './lib/contratos-ui.js';
+import { probarEstado } from './probar-estado.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(RAIZ, 'src');
@@ -177,6 +179,7 @@ const vite = await createServer({
 try {
     await chequearModulos(vite);
     chequearGrafo();
+    await probarEstado(chequear, ruta => vite.ssrLoadModule(ruta));
 } finally {
     await vite.close();
 }

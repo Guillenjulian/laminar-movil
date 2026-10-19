@@ -11,6 +11,8 @@
 import { iniciarApp } from './lib/app.mjs';
 import { probarModelo, probarGestos } from './app/paso1-modelo.mjs';
 import { probarFormatos } from './app/paso1-formatos.mjs';
+import { probarPiezas } from './app/piezas.mjs';
+import { probarCopias } from './app/copias.mjs';
 import { probarConfig } from './app/paso2-config.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
@@ -25,11 +27,15 @@ import { probarRecientes } from './app/recientes.mjs';
 import { probarTransformar } from './app/transformar.mjs';
 import { probarTorres } from './app/torres.mjs';
 import { probarOffline } from './app/offline.mjs';
+import { probarAcomodoConGiros, probarPrecioTrasRecargar } from './app/piezas-extra.mjs';
 
 const AREAS = [
     probarModelo,
     probarFormatos,
     probarGestos,
+    probarPiezas,
+    probarCopias,
+    probarAcomodoConGiros,
     probarConfig,
     probarCancelar,
     probarPersonalizar,
@@ -45,6 +51,7 @@ const AREAS = [
     probarRecientes,
     probarTransformar,
     probarTorres,
+    probarPrecioTrasRecargar,
     probarOffline,
 ];
 

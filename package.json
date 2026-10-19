@@ -1,6 +1,6 @@
 {
     "name": "laminar-movil",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "private": true,
     "description": "Laminador STL → G-code 100% en el navegador, pensado para el celu. Motor: Kiri:Moto.",
     "license": "MIT",
@@ -16,6 +16,8 @@
         "test:formatos": "node scripts/probar-formatos.mjs",
         "test:torres": "node scripts/probar-torres.mjs",
         "test:cambios": "node scripts/probar-cambios.mjs",
+        "test:piezas": "node scripts/probar-piezas.mjs",
+        "test:recorridos": "node scripts/probar-recorridos.mjs",
         "test:contratos": "CONTRATOS_ESTRICTO=1 node scripts/probar-contratos.mjs",
         "iconos": "python3 scripts/generar-iconos.py",
         "importar:impresoras": "node scripts/importar-impresoras-kiri.mjs",
@@ -32,9 +34,9 @@
         "three-mesh-bvh": "^0.7.6"
     },
     "devDependencies": {
-        "@eslint/js": "^9.39.5",
+        "@eslint/js": "^10.0.1",
         "esbuild": "^0.28.2",
-        "eslint": "^9.39.5",
+        "eslint": "^10.13.0",
         "eslint-config-prettier": "^10.1.8",
         "globals": "^17.13.0",
         "playwright-core": "^1.64.1",
@@ -42,6 +44,6 @@
         "vite": "^8.3.4"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=20.19"
     }
 }

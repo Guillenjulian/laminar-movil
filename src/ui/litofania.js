@@ -24,6 +24,51 @@ export function nombreLitofania(nombreFoto) {
     return nombreFoto.replace(/\.[a-z0-9]+$/i, '') + '-litofania.stl';
 }
 
+function leerOpciones(form) {
+    const f = form.elements;
+    return {
+        tipo: f.tipo.value,
+        anchoMm: Number(f.ancho.value),
+        minMm: Number(f.minimo.value),
+        maxMm: Number(f.maximo.value),
+        marco: f.marco.checked,
+    };
+}
+
+function validar(o) {
+    if (!(o.anchoMm >= 10 && o.anchoMm <= 500)) return 'El ancho tiene que estar entre 10 y 500 mm.';
+    if (!(o.minMm >= 0.2)) return 'El espesor mínimo tiene que ser de al menos 0,2 mm.';
+    if (!(o.maxMm >= o.minMm)) return 'El espesor máximo tiene que ser mayor o igual que el mínimo.';
+    if (o.maxMm > 50) return 'El espesor máximo no puede pasar de 50 mm.';
+    return null;
+}
+
+// Muestra el alto que va a tener (sale de la proporción de la foto).
+function mostrarMedidas(o, imagen) {
+    const marco = o.marco ? 2 * MARCO_MM : 0;
+    const alto = (o.anchoMm * imagen.height) / imagen.width;
+    $('medidasLitofania').textContent =
+        o.anchoMm > 0 ? formato.milimetros({ x: o.anchoMm + marco, y: alto + marco, z: o.maxMm || 0 }) : '';
+}
+
+// Decodifica la foto en el hilo principal; null si no se puede abrir.
+async function decodificarFoto(buffer) {
+    try {
+        return await createImageBitmap(new Blob([buffer]));
+    } catch {
+        alert('No pudimos abrir esa imagen. Probá con una foto PNG, JPG o WebP.');
+        return null;
+    }
+}
+
+// Escala la foto a grises y pide el STL al worker.
+async function generarStl(imagen, o) {
+    const { ancho, alto } = resolucionLitofania(imagen.width, imagen.height, o.anchoMm);
+    const grises = escalaDeGrises(imagen, ancho, alto);
+    const { stl } = await litofaniaAStl({ ...o, grises, ancho, alto });
+    return stl;
+}
+
 // Arma la hoja. `abrir()` y `cerrar()` son abrirHoja/cerrarHojas de navegacion.js (paso1-modelo las pasa);
 // `cargar(nombre, generar)` carga el modelo, donde `generar()` devuelve una
 // promesa con el STL. Devuelve { abrirFoto(nombre, buffer) }.
@@ -31,33 +76,8 @@ export function prepararLitofania({ abrir, cerrar, cargar }) {
     const form = $('formLitofania');
     let foto = null; // { nombre, imagen: ImageBitmap, url }
 
-    function leerOpciones() {
-        const f = form.elements;
-        return {
-            tipo: f.tipo.value,
-            anchoMm: Number(f.ancho.value),
-            minMm: Number(f.minimo.value),
-            maxMm: Number(f.maximo.value),
-            marco: f.marco.checked,
-        };
-    }
-
-    // Muestra el alto que va a tener (sale de la proporción de la foto).
     function actualizarMedidas() {
-        if (!foto) return;
-        const o = leerOpciones();
-        const marco = o.marco ? 2 * MARCO_MM : 0;
-        const alto = (o.anchoMm * foto.imagen.height) / foto.imagen.width;
-        $('medidasLitofania').textContent =
-            o.anchoMm > 0 ? formato.milimetros({ x: o.anchoMm + marco, y: alto + marco, z: o.maxMm || 0 }) : '';
-    }
-
-    function validar(o) {
-        if (!(o.anchoMm >= 10 && o.anchoMm <= 500)) return 'El ancho tiene que estar entre 10 y 500 mm.';
-        if (!(o.minMm >= 0.2)) return 'El espesor mínimo tiene que ser de al menos 0,2 mm.';
-        if (!(o.maxMm >= o.minMm)) return 'El espesor máximo tiene que ser mayor o igual que el mínimo.';
-        if (o.maxMm > 50) return 'El espesor máximo no puede pasar de 50 mm.';
-        return null;
+        if (foto) mostrarMedidas(leerOpciones(form), foto.imagen);
     }
 
     form.addEventListener('input', actualizarMedidas);
@@ -65,29 +85,19 @@ export function prepararLitofania({ abrir, cerrar, cargar }) {
 
     form.addEventListener('submit', e => {
         e.preventDefault();
-        const o = leerOpciones();
+        const o = leerOpciones(form);
         const error = validar(o);
         $('errorLitofania').textContent = error || '';
         $('errorLitofania').hidden = !error;
         if (error || !foto) return;
         const { nombre, imagen } = foto;
         cerrar();
-        cargar(nombreLitofania(nombre), async () => {
-            const { ancho, alto } = resolucionLitofania(imagen.width, imagen.height, o.anchoMm);
-            const grises = escalaDeGrises(imagen, ancho, alto);
-            const { stl } = await litofaniaAStl({ ...o, grises, ancho, alto });
-            return stl;
-        });
+        cargar(nombreLitofania(nombre), () => generarStl(imagen, o));
     });
 
     async function abrirFoto(nombre, buffer) {
-        let imagen;
-        try {
-            imagen = await createImageBitmap(new Blob([buffer]));
-        } catch {
-            alert('No pudimos abrir esa imagen. Probá con una foto PNG, JPG o WebP.');
-            return;
-        }
+        const imagen = await decodificarFoto(buffer);
+        if (!imagen) return;
         if (foto) {
             foto.imagen.close?.();
             URL.revokeObjectURL(foto.url);

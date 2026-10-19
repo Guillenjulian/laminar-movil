@@ -1,0 +1,137 @@
+{
+    "_nota": "Perfil de impresora. Las claves de 'dispositivo' y 'proceso' son las de Kiri:Moto; ver src/perfiles/LEEME.md. Las claves que empiezan con _ son comentarios y se ignoran.",
+    "id": "prusa-mk4",
+    "nombre": "Prusa MK4",
+    "marca": "Prusa",
+    "estado": "revisado",
+    "aviso": "G-code estilo Prusa (G29 con malla de la cama).",
+    "adhesion": "falda",
+    "_nota_perfil": "Se omitió M862.3 (verificación de modelo) para que sirva también en MK4S. Nextruder directo, retracción 0,7 mm. Velocidades conservadoras (el equipo admite más).",
+    "pausa": ["M600"],
+    "limites": {
+        "_nota": "Máximos del fabricante. La app no deja pasar estas temperaturas.",
+        "hotendMax": 290,
+        "camaMax": 120
+    },
+    "dispositivo": {
+        "deviceName": "Prusa MK4",
+        "bedWidth": 250,
+        "bedDepth": 210,
+        "maxHeight": 220,
+        "_nota_origen": "originCenter false = el origen (0,0) es la esquina frontal izquierda de la cama.",
+        "originCenter": false,
+        "bedRound": false,
+        "bedBelt": false,
+        "fwRetract": false,
+        "filamentSource": "direct",
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extNozzle": 0.4,
+                "extFilament": 1.75,
+                "extOffsetX": 0,
+                "extOffsetY": 0
+            }
+        ],
+        "gcodePre": [
+            "; --- Inicio: Prusa MK4 (laminar-movil) ---",
+            "M17                          ; encender motores",
+            "M140 S{bed_temp}             ; calentar cama",
+            "M104 S170                    ; precalentar boquilla sin que gotee",
+            "M190 S{bed_temp}             ; esperar la cama",
+            "G28                          ; home de todos los ejes",
+            "M555 X0 Y0 W250 H210         ; área de la malla de nivelado: toda la cama",
+            "G29                          ; malla de nivelado",
+            "M104 S{temp}                 ; temperatura de impresión",
+            "M109 S{temp}                 ; esperar la boquilla",
+            "G90                          ; coordenadas absolutas",
+            "M83                          ; extrusor relativo",
+            "G92 E0",
+            "G1 Z2.0 F3000",
+            "G1 X10 Y5 Z0.2 F5000         ; ir al borde frontal",
+            "G1 X240 Y5 Z0.2 F1500 E14    ; línea de purga",
+            "G1 X240 Y5.5 Z0.2 F5000",
+            "G1 X10 Y5.5 Z0.2 F1500 E14   ; segunda línea de purga",
+            "G92 E0",
+            "G1 Z2.0 F3000"
+        ],
+        "gcodePost": [
+            "; --- Fin ---",
+            "G91                          ; coordenadas relativas",
+            "G1 E-2 F2700                 ; retraer",
+            "G1 E-2 Z0.2 F2400            ; retraer y subir",
+            "G1 X5 Y5 F3000               ; alejarse de la pieza",
+            "G1 Z10                       ; subir más",
+            "G90",
+            "G1 X0 Y{top} F3000           ; presentar la pieza",
+            "M106 S0                      ; apagar ventilador",
+            "M104 S0                      ; apagar boquilla",
+            "M140 S0                      ; apagar cama",
+            "M84 X Y E                    ; soltar motores (menos Z)"
+        ],
+        "_nota_ventilador": "Sin gcodeFan, Kiri no prende nunca el ventilador de capa.",
+        "gcodeFan": ["M106 S{fan_speed}"],
+        "gcodeTrack": ["M73 P{progress}"],
+        "gcodeLayer": [";LAYER:{layer}"]
+    },
+    "proceso": {
+        "_nota": "Valores base para cualquier calidad. Velocidades en mm/s, distancias en mm.",
+        "outputRetractDist": 0.7,
+        "outputRetractSpeed": 35,
+        "outputRetractWipe": 0,
+        "outputRetractDwell": 0,
+        "zHopDistance": 0,
+        "outputSeekrate": 180,
+        "firstLayerRate": 30,
+        "firstLayerFillRate": 30,
+        "outputMaxFlowrate": 15,
+        "outputBrimCount": 2,
+        "outputBrimOffset": 3,
+        "sliceFillType": "hex",
+        "sliceSupportType": "disabled"
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceShells": 2,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "sliceFillSparse": 0.15,
+                "outputFeedrate": 150,
+                "outputFinishrate": 100
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceShells": 3,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "sliceFillSparse": 0.2,
+                "outputFeedrate": 100,
+                "outputFinishrate": 60
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceShells": 3,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "sliceFillSparse": 0.2,
+                "outputFeedrate": 70,
+                "outputFinishrate": 40
+            }
+        }
+    }
+}

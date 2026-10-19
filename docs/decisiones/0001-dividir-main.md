@@ -84,7 +84,9 @@ Nivel 5   main.js ──► (todos los de abajo)
 Nivel 4   paso4-resultado ──► vista-capas, paso2-config
 Nivel 3   paso2-config ──► impresoras
 Nivel 2   paso1-modelo   impresoras   vista-capas   paso3-laminar   ──► navegacion
+                         (vista-capas también ──► pausas-ui)
 Nivel 1   navegacion ──► estado
+          pausas-ui ──► estado, util-dom   (ver enmienda al final)
 Nivel 0   estado, util-dom, actualizacion  ──► hojas ya existentes (avanzado, formato, materiales,
                                               litofania, visor, motor/*, perfiles/*, almacen, config)
 ```
@@ -98,10 +100,13 @@ navegacion      → estado, util-dom
 paso1-modelo    → estado, navegacion, util-dom, ui/visor, ui/litofania, ui/formato, motor/motor,
                   motor/transformar, perfiles/perfiles, almacen, config
 impresoras      → estado, navegacion, util-dom, perfiles/perfiles, perfiles/generico
+                  (enmienda: perfiles/generico pasó a formulario-impresora; + formulario-impresora)
+formulario-impresora → estado, navegacion, util-dom, perfiles/perfiles, perfiles/generico (enmienda)
 paso2-config    → estado, impresoras, util-dom, ui/avanzado, ui/materiales, ui/iconos-relleno,
                   perfiles/perfiles
 vista-capas     → estado, navegacion, util-dom, ui/visor, ui/formato, motor/motor, motor/tipos-linea,
-                  perfiles/perfiles, config
+                  perfiles/perfiles, config, pausas-ui   (arista agregada al extraer las pausas)
+pausas-ui       → estado, util-dom, ui/formato, motor/tipos-linea, perfiles/perfiles
 paso3-laminar   → estado, navegacion, util-dom, motor/motor, perfiles/perfiles, config
 paso4-resultado → estado, navegacion, util-dom, vista-capas, paso2-config, ui/formato, ui/materiales,
                   motor/pausas, perfiles/perfiles
@@ -109,8 +114,8 @@ actualizacion   → util-dom
 main            → almacen y todos los módulos de arriba
 ```
 
-Orden topológico que lo demuestra: `util-dom → avanzado → estado → navegacion → impresoras, vista-capas,
-paso1, paso3 → paso2 → paso4 → main` (`actualizacion` en cualquier punto después de `util-dom`).
+Orden topológico que lo demuestra: `util-dom → avanzado → estado → navegacion → impresoras, pausas-ui,
+vista-capas, paso1, paso3 → paso2 → paso4 → main` (`actualizacion` en cualquier punto después de `util-dom`).
 Nadie importa a `paso1`, `paso3`, `paso4` ni `actualizacion` salvo `main`.
 
 ### 3. Módulos: contratos exactos
@@ -297,6 +302,8 @@ Privadas: `opcion(grupo, valor, titulo, detalle, marcado)`, `dibujarMaterial`, `
 
 #### 3.5 `src/ui/impresoras.js` — ~250 líneas
 
+> Ver enmienda al final: el formulario de "Mi impresora" se extrajo a `formulario-impresora.js`.
+
 **Responsabilidad:** elegir la impresora (hoja con búsqueda), mostrar la tarjeta de la elegida y administrar "Mi impresora" (formulario, copiar, editar, borrar).
 
 ```js
@@ -369,7 +376,7 @@ Privada: `archivoGcode()` (File text/plain con las pausas insertadas; sólo la u
   (`filasResumen`), `motor/pausas` (`insertarPausas`), `perfiles/perfiles` (`buscarImpresora`,
   `materiales`, `lineasPausa`).
 
-#### 3.8 `src/ui/vista-capas.js` — ~250 líneas
+#### 3.8 `src/ui/vista-capas.js` — ~250 líneas (las pausas se extrajeron a pausas-ui, ver enmienda)
 
 **Responsabilidad:** vista previa capa por capa (visor, deslizador, reproducción) y pausas de filamento con sus colores.
 **Dueño exclusivo de `visorCapas`, `capas` y `reproduccion`.**
@@ -583,10 +590,10 @@ de dos tareas encadenadas (A, B, F): siete carriles independientes en total.
 | `reproduccion` (variable) | `vista-capas.js` | privada |
 | `armarVistaPrevia` | `vista-capas.js` | export |
 | `irACapa` | `vista-capas.js` | privada |
-| `colorFilamento` | `vista-capas.js` | privada |
-| `dibujarPausas` | `vista-capas.js` | privada |
-| `actualizarModoColor` | `vista-capas.js` | privada |
-| `pintarRecorridos` | `vista-capas.js` | privada |
+| `colorFilamento` | `vista-capas.js` (→ pausas-ui, ver enmienda) | privada |
+| `dibujarPausas` | `vista-capas.js` (→ pausas-ui, ver enmienda) | privada |
+| `actualizarModoColor` | `vista-capas.js` (→ pausas-ui, ver enmienda) | privada |
+| `pintarRecorridos` | `vista-capas.js` (→ pausas-ui, ver enmienda) | privada |
 | `pararReproduccion` | `vista-capas.js` | privada |
 | `registrarServiceWorker` | `actualizacion.js` | export |
 
@@ -606,7 +613,7 @@ de dos tareas encadenadas (A, B, F): siete carriles independientes en total.
 | `input` de inicio/fin/pausa, `change` de `firmware` y `extrusor`, `submit` del formulario, `#borrarImpresora` | `impresoras.js` |
 | `#laminar.onclick`, `#cancelar.onclick` | `paso3-laminar.js` |
 | `#compartir.onclick`, `#descargar.onclick`, `#otro.onclick` | `paso4-resultado.js` |
-| `#pausarCapa`, `#listaPausas` (`click`, `input`), `#modoColor`, `#capa` (`input`), `#capaMenos`, `#capaMas`, `#soloCapa`, `#reproducir` | `vista-capas.js` |
+| `#pausarCapa`, `#listaPausas` (`click`, `input`), `#modoColor`, `#capa` (`input`), `#capaMenos`, `#capaMas`, `#soloCapa`, `#reproducir` | `vista-capas.js` (`#pausarCapa`, `#listaPausas`, `#modoColor` → pausas-ui, ver enmienda) |
 | Bloque final: `await cargarPreferencias()`, `dibujarOpciones()`, `mostrar(1)`, `mostrarRecientes()`, `almacen.pedirAlmacenamientoPersistente()`, `registrarServiceWorker()` | `main.js` |
 
 **Tamaños estimados (todos bajo el tope de 300):** `util-dom` 12 · `estado` 110 · `navegacion` 85 ·
@@ -642,3 +649,31 @@ diferencia son imports, JSDoc de contrato y funciones extraídas. Si `paso1-mode
 
 **Reversa:** cada tarea de la ola 2 es un commit independiente; revertir R*n* restaura el código viejo en
 `main.js` (los módulos nuevos quedan sin uso, sin efectos).
+
+## Enmienda (2026-10-18): formulario-impresora.js
+
+`impresoras.js` llegó a 288 líneas, así que se aplicó el plan B de la sección 3.5: el formulario de
+"Mi impresora" (crear, copiar, editar, borrar) vive ahora en `src/ui/formulario-impresora.js`
+(refactor puro, sin cambio de comportamiento).
+
+- **Export:** `iniciarFormularioImpresora({ elegir })`, con `elegir: (id: string) => void`. Cablea
+  `#nuevaImpresora`, el botón Editar/Copiar de `#impresoraElegida`, `#borrarImpresora` y `#formImpresora`.
+- **Callback `elegir(id)`:** se llama al guardar (id de la propia) y al borrar la elegida
+  (`IMPRESORA_INICIAL`), antes de cerrar las hojas. `impresoras.js` lo implementa con su
+  `elegirImpresora(id, alElegir)`, así el módulo nuevo no importa a `impresoras.js` (sin ciclos).
+- **Aristas:** `impresoras → formulario-impresora`; `formulario-impresora → estado, navegacion,
+  util-dom, perfiles/perfiles, perfiles/generico`. `impresoras` ya no importa `perfiles/generico`.
+- Tamaños finales: `impresoras.js` ~102 líneas, `formulario-impresora.js` ~199.
+
+## Enmienda (2026-10-18): pausas-ui.js
+
+Se extrajo la lógica de pausas de filamento de `vista-capas.js` (317 líneas) a `src/ui/pausas-ui.js`, sin
+cambios de comportamiento. Ahora `vista-capas.js` tiene ~174 líneas y `pausas-ui.js` ~187.
+
+- **Exports de `pausas-ui`:** `conectarPausas(deps)` (aridad 1; la llama `iniciarVistaCapas()`) y `dibujarPausas()`.
+  `deps` = `{ capas: () => capas, visor: () => visorCapas, irACapa, pararReproduccion }`: `vista-capas` sigue
+  siendo dueño exclusivo de `visorCapas`, `capas` y `reproduccion`, y se los presta por callbacks.
+- **Dónde viven ahora:** `colorFilamento`, `actualizarModoColor`, `pintarRecorridos` y `tablaColores` (privadas) y los
+  listeners de `#pausarCapa`, `#listaPausas` (`click`, `input`) y `#modoColor` están en `pausas-ui.js`.
+- **Aristas nuevas:** `vista-capas → pausas-ui`; `pausas-ui → estado, util-dom, ui/formato, motor/tipos-linea,
+  perfiles/perfiles`. Sin ciclos (`pausas-ui` no importa `vista-capas`). Verificado por `npm run test:contratos`.

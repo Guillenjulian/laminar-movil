@@ -78,6 +78,7 @@ export function mostrarResultado() {
         ['Capas', formato.numero(info.capas)],
         ['Calidad', `${cal.nombre} · ${materiales[estado.material].nombre}${estado.soportes ? ' · con soportes' : ''}`],
         ['Relleno y adhesión', resumenPersonal(valoresActuales())],
+        ...(info.copias > 1 ? [['Piezas', `${info.copias} piezas`]] : []),
         ['Tamaño', formato.milimetros(info.tamano)],
         ['Archivo', formato.bytes(gcode.length)],
     ];
@@ -88,7 +89,7 @@ export function mostrarResultado() {
     if (info.decimado) {
         const d = info.decimado;
         notas.push(
-            `Simplificamos el modelo de ${formato.triangulos(d.original)} a ${formato.triangulos(d.final)} ` +
+            `Simplificamos ${info.copias > 1 ? 'las piezas' : 'el modelo'} de ${formato.triangulos(d.original)} a ${formato.triangulos(d.final)} ` +
                 `para que entre en la memoria del celu (detalle mínimo ≈ ${formato.numero(d.precisionMm, 2)} mm).`,
         );
     }

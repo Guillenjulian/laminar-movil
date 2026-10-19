@@ -13,6 +13,11 @@ export const CONTRATOS = {
         exports: {
             estado: 'valor',
             matrizModelo: 0,
+            crearPieza: 1,
+            piezaActiva: 0,
+            matrizPieza: 1,
+            copiasTotales: 0,
+            piezasParaMotor: 0,
             valoresActuales: 0,
             guardarPreferencias: 0,
             guardarPropias: 0,
@@ -21,7 +26,15 @@ export const CONTRATOS = {
         importa: [PERFILES, 'almacen', 'motor/transformar', 'motor/tipos-linea', 'ui/avanzado'],
     },
     'ui/navegacion': {
-        exports: { iniciarNavegacion: 0, mostrar: 1, irA: 1, abrirHoja: 1, cerrarHojas: 0, alMostrarPaso: 1 },
+        exports: {
+            iniciarNavegacion: 0,
+            mostrar: 1,
+            irA: 1,
+            abrirHoja: 1,
+            cerrarHojas: 0,
+            alMostrarPaso: 1,
+            irAPaso1: 0,
+        },
         importa: ['ui/estado', 'ui/util-dom'],
     },
     'ui/paso1-modelo': {
@@ -30,14 +43,29 @@ export const CONTRATOS = {
             VISOR,
             'ui/litofania',
             'ui/torres',
-            FORMATO,
             MOTOR,
-            'motor/transformar',
             PERFILES,
             'almacen',
-            'config',
             'ui/recientes',
+            'ui/ajuste-modelo',
+            'ui/piezas-ui',
         ),
+    },
+    'ui/acomodo': {
+        exports: { acomodarPiezas: 1 },
+        importa: ['config', 'motor/piezas', 'motor/transformar', PERFILES, 'ui/estado'],
+    },
+    'ui/ajuste-modelo': {
+        exports: { crearAjuste: 1 },
+        importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/transformar', PERFILES, 'config'],
+    },
+    'ui/piezas-ui': {
+        exports: { crearPiezas: 1 },
+        importa: ['ui/estado', 'ui/util-dom', 'config', 'motor/piezas', 'ui/acomodo', 'ui/copias-ui'],
+    },
+    'ui/copias-ui': {
+        exports: { crearCopias: 1 },
+        importa: ['ui/estado', 'ui/util-dom', 'config', 'motor/piezas'],
     },
     'ui/torres': {
         exports: { prepararTorre: 1 },
@@ -49,12 +77,17 @@ export const CONTRATOS = {
     },
     'ui/impresoras': {
         exports: { iniciarImpresoras: 1, dibujarImpresoraElegida: 0 },
+        importa: conBase(PERFILES, 'ui/formulario-impresora'),
+    },
+    'ui/formulario-impresora': {
+        exports: { iniciarFormularioImpresora: 1 },
         importa: conBase(PERFILES, 'perfiles/generico'),
     },
     'ui/paso2-config': {
         exports: { iniciarPaso2: 0, dibujarOpciones: 0, resumenPersonal: 1 },
         importa: [
             'ui/estado',
+            'ui/acomodo',
             'ui/util-dom',
             'ui/impresoras',
             'ui/avanzado',
@@ -71,11 +104,15 @@ export const CONTRATOS = {
     },
     'ui/vista-capas': {
         exports: { iniciarVistaCapas: 0, armarVistaPrevia: 0 },
-        importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config'),
+        importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config', 'ui/pausas-ui'),
+    },
+    'ui/pausas-ui': {
+        exports: { conectarPausas: 1, dibujarPausas: 0 },
+        importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/tipos-linea', PERFILES],
     },
     'ui/paso3-laminar': {
         exports: { iniciarPaso3: 1 },
-        importa: conBase(MOTOR, PERFILES, 'perfiles/cambios', 'perfiles/torres', 'config'),
+        importa: conBase(MOTOR, PERFILES, 'perfiles/cambios', 'perfiles/torres', 'config', 'ui/acomodo'),
     },
     'ui/paso4-resultado': {
         exports: { iniciarPaso4: 1, mostrarResultado: 0 },
@@ -89,5 +126,9 @@ export const CONTRATOS = {
             'perfiles/cambios',
         ),
     },
+    'ui/visor-cara': { exports: { crearSelectorCara: 1 }, importa: [] },
+    'ui/visor-recorridos': { exports: { crearRecorridos: 1 }, importa: ['motor/tipos-linea'] },
+    'ui/visor-cama': { exports: { reemplazarCama: 3 }, importa: [] },
+    'ui/visor': { exports: { crearVisor: 1 }, importa: ['ui/visor-cara', 'ui/visor-recorridos', 'ui/visor-cama'] },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

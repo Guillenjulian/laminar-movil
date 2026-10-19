@@ -8,8 +8,9 @@ import { materiales, armarConfiguracion } from '../perfiles/perfiles.js';
 import * as formato from './formato.js';
 import * as almacen from '../almacen.js';
 
-// Se leen una sola vez al cargar la app (main.js ya espera con top-level await).
-let precios = (await almacen.leerAjuste('precios').catch(() => null)) || {};
+// Se leen una sola vez al arrancar: `iniciarMateriales()` devuelve la promesa y main.js la espera
+// antes del primer dibujo.
+let precios = {};
 
 const escapar = texto =>
     String(texto).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -82,7 +83,8 @@ export function filasResumen(mmFilamento, diametro, id) {
 /**
  * Registra el listener de "Poné el precio": vuelve al paso 2 (el resultado se
  * abre reemplazando al paso 3, así que "atrás" lleva a la configuración) y
- * pone el foco en el precio. Llamar una sola vez desde main.js.
+ * pone el foco en el precio. Llamar una sola vez desde main.js. Devuelve una promesa que se cumple
+ * cuando los precios guardados ya están cargados (main.js la espera antes del primer dibujo).
  */
 export function iniciarMateriales() {
     document.addEventListener('click', e => {
@@ -92,4 +94,10 @@ export function iniciarMateriales() {
             once: true,
         });
     });
+    return almacen
+        .leerAjuste('precios')
+        .catch(() => null)
+        .then(guardados => {
+            precios = guardados || {};
+        });
 }

@@ -1,56 +1,23 @@
-// Carga los perfiles (impresoras y materiales) y arma la configuración final
-// que recibe el motor. Para sumar una impresora alcanza con agregar un JSON
-// en src/perfiles/impresoras/ (se detecta solo, ver LEEME.md).
-//
-// Hay tres tipos de impresora (campo `estado`):
-//   revisado  -> perfiles hechos a mano en src/perfiles/impresoras/*.json
-//   importado -> traídos de Kiri:Moto (src/perfiles/impresoras/kiri/), sin revisar
-//   propio    -> creados por el usuario con "Mi impresora" (guardados en el celu)
+// Materiales y opciones, y la configuración final que recibe el motor. El catálogo de
+// impresoras vive en catalogo.js y lo que se lee de un perfil en valores.js; se re-exportan desde acá,
+// así que los demás módulos siguen importando todo de perfiles.js.
 
 import materiales from './materiales.json';
 import opciones from './opciones.json';
-import { perfilPropio } from './generico.js';
+import { buscarImpresora } from './catalogo.js';
+import { esBowden } from './valores.js';
 import { validarCambios, cambiosARangos } from './cambios.js';
 
-// Vite junta todos los JSON de las carpetas en tiempo de build.
-const archivos = import.meta.glob('./impresoras/**/*.json', { eager: true, import: 'default' });
-const incluidas = Object.values(archivos).map(i => ({ estado: 'revisado', ...i }));
-
-export const IMPRESORA_INICIAL = 'creality-ender-3-v3-se';
-const ORDEN = { propio: 0, revisado: 1, importado: 2 };
-
-let propias = [];
-
-// Las impresoras del usuario (datos del formulario, ver generico.js).
-export function ponerImpresorasPropias(lista) {
-    propias = lista.map(perfilPropio);
-}
-
-// Todas: primero las propias, después las revisadas y al final las importadas.
-export function listaImpresoras() {
-    return [...propias, ...incluidas].sort(
-        (a, b) =>
-            ORDEN[a.estado] - ORDEN[b.estado] ||
-            (a.marca || '').localeCompare(b.marca || '') ||
-            a.nombre.localeCompare(b.nombre),
-    );
-}
-
+export {
+    IMPRESORA_INICIAL,
+    ponerImpresorasPropias,
+    listaImpresoras,
+    idVigente,
+    existeImpresora,
+    buscarImpresora,
+} from './catalogo.js';
+export { lineasPausa, valoresDeCalidad, esBowden, valoresDeAvanzado } from './valores.js';
 export { materiales, opciones };
-
-export function existeImpresora(id) {
-    return listaImpresoras().some(i => i.id === id);
-}
-
-// G-code que se inserta para pausar en una capa (cambio de filamento).
-export function lineasPausa(imp) {
-    return imp.pausa?.length ? imp.pausa : ['M600'];
-}
-
-export function buscarImpresora(id) {
-    const lista = listaImpresoras();
-    return lista.find(i => i.id === id) || lista.find(i => i.id === IMPRESORA_INICIAL) || lista[0];
-}
 
 // Saca las claves que empiezan con "_" (son comentarios dentro del JSON).
 function sinComentarios(obj) {
@@ -63,20 +30,6 @@ function sinComentarios(obj) {
         return limpio;
     }
     return obj;
-}
-
-// Valores que trae la calidad elegida (para mostrarlos en "Personalizar").
-export function valoresDeCalidad(impresoraId, calidad) {
-    const imp = buscarImpresora(impresoraId);
-    const p = { ...imp.proceso, ...(imp.calidades[calidad] || imp.calidades.normal).proceso };
-    return {
-        patron: p.sliceFillType || 'hex',
-        densidad: p.sliceFillSparse ?? 0.2,
-        paredes: p.sliceShells ?? 3,
-        arriba: p.sliceTopLayers ?? 3,
-        abajo: p.sliceBottomLayers ?? 3,
-        adhesion: imp.adhesion || 'falda',
-    };
 }
 
 // Pasa las opciones de "Personalizar" a claves de Kiri. Sólo las que el
@@ -106,34 +59,6 @@ export const COSTURAS = {
     azar: { nombre: 'Al azar', descripcion: 'Cada capa en otro lugar: no se nota una línea.' },
     giro: { nombre: 'Girando', descripcion: 'El arranque da vueltas alrededor de la pieza a medida que sube.' },
 };
-
-// Extrusor Bowden: la impresora retrae más de 2 mm (retracción en mm).
-export const esBowden = retraccionMm => retraccionMm > 2;
-
-// Valores "de fábrica" de Avanzado para la impresora, calidad y material
-// elegidos (lo que se usa si el usuario no toca nada).
-export function valoresDeAvanzado(impresoraId, calidad, material) {
-    const imp = buscarImpresora(impresoraId);
-    const p = { ...imp.proceso, ...(imp.calidades[calidad] || imp.calidades.normal).proceso };
-    const mat = (materiales[material] || materiales.pla).proceso;
-    const { hotendMax = Infinity, camaMax = Infinity } = imp.limites || {};
-    return {
-        jarron: false,
-        alturaVariable: false,
-        costura: 'ultima',
-        // si el perfil no las define, valen las de Kiri (defaults.js)
-        retraccion: p.outputRetractDist ?? 1.5,
-        zHop: p.zHopDistance ?? 0.2,
-        coasting: p.outputCoastDist ?? 0,
-        wipe: p.outputRetractWipe ?? 0,
-        compAgujeros: 0,
-        compExterior: 0,
-        velocidad: 100,
-        tempBoquilla: Math.min(mat.outputTemp, hotendMax),
-        tempCama: Math.min(mat.outputBedTemp, camaMax),
-        ventilador: Math.round(((mat.outputFanSpeed ?? 255) * 100) / 255),
-    };
-}
 
 // Pasa lo que el usuario cambió en "Avanzado" a claves de Kiri. Se aplica
 // sobre el proceso ya combinado (la velocidad escala la de la calidad y la
@@ -213,6 +138,35 @@ function limitarBoquilla(campos, imp, avisos) {
 }
 
 /**
+ * Avisos del material: el propio (ej. "necesita gabinete") y, para los que no se llevan bien con
+ * Bowden (TPU), si la impresora retrae más de 2 mm.
+ * @param {object} mat material (`aviso`, `avisoBowden`)
+ * @param {number | undefined} retraccion retracción de la impresora y la calidad, en mm
+ * @param {string[]} avisos avisos de armarConfiguracion
+ */
+function avisosDeMaterial(mat, retraccion, avisos) {
+    if (mat.aviso) avisos.push(mat.aviso);
+    if (mat.avisoBowden && esBowden(retraccion)) avisos.push(mat.avisoBowden);
+}
+
+/**
+ * Recorta las temperaturas del proceso final (boquilla y cama) a los límites de la impresora y avisa.
+ * @param {object} proceso proceso final; se modifica
+ * @param {object} imp perfil de la impresora (`nombre`, `limites`)
+ * @param {string[]} avisos avisos de armarConfiguracion
+ */
+function limitarTemperaturas(proceso, imp, avisos) {
+    limitarBoquilla(proceso, imp, avisos);
+    const { camaMax } = imp.limites || {};
+    for (const clave of ['outputBedTemp', 'firstLayerBedTemp']) {
+        if (camaMax && proceso[clave] > camaMax) {
+            avisos.push(`La cama se limitó a ${camaMax} °C (máximo de la ${imp.nombre}).`);
+            proceso[clave] = camaMax;
+        }
+    }
+}
+
+/**
  * Cambios por altura (ADR 0002): los valida, los pasa a `proceso.ranges` de Kiri y recorta la temperatura de
  * cada rango a `hotendMax`. Con altura variable (sin jarrón) los ignora; en jarrón descarta relleno y patrón.
  * Sin cambios no toca `proceso`. Los avisos se agregan a `avisos`.
@@ -277,20 +231,8 @@ export function armarConfiguracion({
     const avisos = [];
     aplicarCambios(proceso, cambios, imp, personal.avanzado, avisos);
 
-    // Avisos del material: el propio (ej. "necesita gabinete") y, para los que
-    // no se llevan bien con Bowden (TPU), si la impresora retrae más de 2 mm.
-    if (mat.aviso) avisos.push(mat.aviso);
-    const retraccion = { ...imp.proceso, ...cal.proceso }.outputRetractDist;
-    if (mat.avisoBowden && esBowden(retraccion)) avisos.push(mat.avisoBowden);
-
-    limitarBoquilla(proceso, imp, avisos);
-    const { camaMax } = imp.limites || {};
-    for (const clave of ['outputBedTemp', 'firstLayerBedTemp']) {
-        if (camaMax && proceso[clave] > camaMax) {
-            avisos.push(`La cama se limitó a ${camaMax} °C (máximo de la ${imp.nombre}).`);
-            proceso[clave] = camaMax;
-        }
-    }
+    avisosDeMaterial(mat, { ...imp.proceso, ...cal.proceso }.outputRetractDist, avisos);
+    limitarTemperaturas(proceso, imp, avisos);
 
     proceso.processName = `${imp.nombre} · ${cal.nombre} · ${mat.nombre}`;
     return { dispositivo, proceso, avisos };
