@@ -163,6 +163,14 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
 | `LEEME.md` | Referencia de todas las claves |
 
+### Red local (`src/red/`)
+Envío opcional del G-code a OctoPrint o Moonraker (ADR 0007). Puro o con efectos inyectados: sin DOM, sin `console`, sin `fetch` propio.
+
+| Archivo | Responsabilidad | Depende de |
+|---|---|---|
+| `direccion.js` | `normalizarDireccion` (acepta sólo http/https, sin usuario, query ni fragmento; devuelve `direccion`, `http`, `nombreSinLocal`) y `esDireccionLocal(url)` (IPv4 privada, `.local`, `.lan`, `.home.arpa`, una etiqueta, IPv6 fc00::/7 y fe80::/10; `localhost` no) que reusa el transporte. Sin imports | — |
+| `peticiones.js` | Pedidos exactos de cada tipo (`peticionVersion`, `peticionEstado`, `peticionSubida` con multipart y nombre saneado) y lectura de respuestas (`leerVersion`, `estaOcupada`, `empezoAImprimir`, `ayudaCors`). La clave va sólo en `X-Api-Key`. Sin imports | — |
+
 ### Motor externo: `vendor/kiri/`
 Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano.** Los parches están en el script y marcados `PARCHE laminar-movil`. Detalle en `vendor/kiri/ORIGEN.md`.
 
