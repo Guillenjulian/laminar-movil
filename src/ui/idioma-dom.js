@@ -32,7 +32,7 @@ export function traducirDom(raiz) {
             const atributo = par.slice(0, corte).trim();
             const clave = par.slice(corte + 1).trim();
             if (corte > 0 && ATRIBUTOS_TRADUCIBLES.includes(atributo) && existe(clave))
-                el.setAttribute(atributo, t(clave)); // t-dinamica: viene de data-t-attr;
+                el.setAttribute(atributo, t(clave)); // t-dinamica: viene de data-t-attr
         }
     }
 }

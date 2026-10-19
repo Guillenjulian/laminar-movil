@@ -120,7 +120,12 @@ export function analizarJs(js) {
 function marcadaDinamica(js, codigo, indice) {
     const linea = codigo.slice(0, indice).split('\n').length;
     const lineas = js.split('\n');
-    return [lineas[linea - 1], lineas[linea - 2]].some(l => /\/\/ t-dinamica:\s*\S/.test(l ?? ''));
+    const marca = /\/\/ t-dinamica:\s*\S/;
+    // La línea anterior sólo exime si es únicamente un comentario (si no, la marca es de su propia llamada).
+    return (
+        marca.test(lineas[linea - 1] ?? '') ||
+        (/^\s*\/\//.test(lineas[linea - 2] ?? '') && marca.test(lineas[linea - 2]))
+    );
 }
 
 /** Importaciones con alias de t, existe o marcar (`import { t as x }`): el escáner no las reconocería.

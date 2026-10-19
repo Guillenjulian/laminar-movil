@@ -191,9 +191,10 @@ function cableado({ revisar }) {
 /** Marca `// t-dinamica:` y alias de t/existe/marcar. */
 function marcasDinamicas({ revisar }) {
     revisar(
-        'usos: // t-dinamica: motivo (misma línea o anterior) no cuenta como dinámica; sin motivo, sí',
+        'usos: // t-dinamica: motivo (misma línea o comentario anterior) no cuenta como dinámica; sin motivo, sí',
         usosEnJs('t(clave); // t-dinamica: viene de data-t').dinamicas.length === 0 &&
             usosEnJs('// t-dinamica: viene de data-t\nt(clave);').dinamicas.length === 0 &&
+            usosEnJs('t(clave); // t-dinamica: x\nt(otra);').dinamicas.length === 1 &&
             usosEnJs('t(clave); // t-dinamica:').dinamicas.length === 1 &&
             usosEnJs('// t-dinamica: x\n\nt(clave);').dinamicas.length === 1,
     );
