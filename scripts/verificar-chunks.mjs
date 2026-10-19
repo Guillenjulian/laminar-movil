@@ -22,7 +22,7 @@ const TOPE_CLAUSURA = 400000;
 const MARCA_VISOR = 'WebGLRenderer';
 const MARCA_JSZIP = 'generateAsync'; // API de jszip; no aparece en el código propio de la app
 const MIN_CLAVES_TEXTOS = 3;
-const MARCA_IDIOMA = /["']idioma["']/; // la clave de ajuste que lee src/ui/idioma.js: si está en la clausura, el módulo llegó
+const MARCA_IDIOMA = /["'`]idioma["'`]/; // la clave de ajuste que lee src/ui/idioma.js: si está en la clausura, el módulo llegó
 const CARPETA_TEXTOS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'textos');
 
 const carpeta = path.resolve(process.argv[2] ?? 'dist');
