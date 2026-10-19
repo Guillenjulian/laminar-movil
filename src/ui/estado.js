@@ -17,6 +17,7 @@ import {
     opciones,
     valoresDeCalidad,
 } from '../perfiles/perfiles.js';
+import { normalizarSoportes } from '../perfiles/soportes.js';
 import { validarAvanzado } from './avanzado.js';
 import * as almacen from '../almacen.js';
 
@@ -35,7 +36,8 @@ export const estado = {
     propias: [], // datos de "Mi impresora" (guardados en el celu)
     calidad: 'normal',
     material: 'pla',
-    soportes: false,
+    soportes: 'no', // 'no' | 'normal' | 'arbol' (ADR 0004); usar siempre `!== 'no'`, nunca la verdad del texto
+    ultimoIdBloqueo: 0, // último id de zona sin soporte (secuencial de sesión, nunca se reutiliza)
     personal: {}, // ajustes de "Personalizar" que el usuario cambió (el resto sale de la calidad)
     avanzado: {}, // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
     cambios: [], // cambios por altura (ADR 0002, ver src/ui/cambios.js); no se persiste: dependen del modelo
@@ -60,6 +62,8 @@ export const estado = {
  * @property {'modelo'|'litofania'|'torre'} origen
  * @property {{x:number,y:number}[]} posiciones centro de cada copia en mm (no se persiste)
  * @property {{x:number,y:number,z:number}} [tamano] medida real ya transformada (la guarda la UI desde el visor)
+ * @property {object[]} bloqueos zonas sin soporte en el marco de la pieza (ADR 0004; no se persisten)
+ * @property {string|null} firmaBloqueos JSON de [rotacion, escala] con que se marcaron (null sin zonas)
  */
 
 let ultimoId = 0;
@@ -81,6 +85,8 @@ export function crearPieza(d) {
         copias: 1,
         origen: d.origen ?? 'modelo',
         posiciones: [{ x: 0, y: 0 }],
+        bloqueos: [],
+        firmaBloqueos: null,
     };
 }
 
@@ -119,14 +125,15 @@ export function copiasTotales() {
 }
 
 /**
- * Arma el argumento `piezas` de `laminar`: copia cada `stl`, matriz de 9 números y posiciones.
- * @returns {{stl:ArrayBuffer, transformacion:number[], posiciones:{x:number,y:number}[]}[]}
+ * Arma el argumento `piezas` de `laminar`: copia cada `stl`, matriz de 9 números, posiciones y zonas sin soporte.
+ * @returns {{stl:ArrayBuffer, transformacion:number[], posiciones:{x:number,y:number}[], bloqueos:object[]}[]}
  */
 export function piezasParaMotor() {
     return estado.piezas.map(p => ({
         stl: p.stl.slice(0),
         transformacion: matrizPieza(p),
         posiciones: p.posiciones.map(q => ({ ...q })),
+        bloqueos: structuredClone(p.bloqueos ?? []),
     }));
 }
 
@@ -196,7 +203,7 @@ export async function cargarPreferencias() {
     if (existeImpresora(p.impresoraId)) estado.impresoraId = idVigente(p.impresoraId);
     if (buscarImpresora(estado.impresoraId).calidades[p.calidad]) estado.calidad = p.calidad;
     if (materiales[p.material]) estado.material = p.material;
-    estado.soportes = !!p.soportes;
+    estado.soportes = normalizarSoportes(p.soportes); // antes era true/false
     // Del personalizado, sólo lo que sigue siendo válido.
     const pers = p.personal || {};
     if (opciones.patrones[pers.patron]) estado.personal.patron = pers.patron;

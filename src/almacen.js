@@ -2,6 +2,8 @@
 //
 // Stores:
 //   ajustes  -> clave/valor (ej. 'preferencias' -> { impresoraId, calidad, material, soportes })
+//               (`soportes`: 'no' | 'normal' | 'arbol'; las versiones viejas guardaban true/false y
+//               `cargarPreferencias` los migra con `normalizarSoportes`, ADR 0004)
 //   modelos  -> datos de cada modelo reciente { id, nombre, bytes, fecha, rotacion?, escala? }
 //               (rotacion: matriz 3×3 de 9 números; los registros viejos no los tienen)
 //   archivos -> el STL de cada modelo (id -> ArrayBuffer), aparte para no

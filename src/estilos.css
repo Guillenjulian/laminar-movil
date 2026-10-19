@@ -163,6 +163,37 @@ h2:first-child {
     height: 100%;
     display: block;
 }
+/* Aviso mientras carga three.js (ADR 0006); con error, un botón para reintentar. */
+.visor-estado {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    text-align: center;
+    color: var(--suave);
+    background: var(--tarjeta);
+}
+.visor-estado:empty {
+    display: none;
+}
+.visor[data-visor='error'] .visor-estado {
+    color: var(--texto);
+    background: var(--error);
+}
+.visor-estado-boton {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--error-borde);
+    border-radius: var(--radio);
+    padding: 12px 16px;
+    cursor: pointer;
+}
+.visor-estado-boton:focus-visible {
+    outline: 3px solid var(--acento);
+    outline-offset: 2px;
+}
 .ayuda-gestos {
     position: absolute;
     left: 0;
@@ -327,7 +358,11 @@ h2:first-child {
     border-color: var(--error-borde);
 }
 
-.aviso-entran:empty {
+.aviso-entran:empty,
+#avisoVista:empty,
+#tipoSoportesZonas:empty,
+#bloqueoAyuda:empty,
+#estadoRed:empty {
     margin: 0;
     padding: 0;
     border: 0;
@@ -1022,4 +1057,41 @@ input[type='range'] {
     gap: 8px;
     max-width: 640px;
     margin: 0 auto;
+}
+
+/* --- Soportes (paso 2) y zonas sin soporte (paso 1), ADR 0004 --- */
+.opcion-soporte small {
+    display: block;
+    margin: 4px 14px 0;
+    color: var(--suave);
+}
+.zonas-sin-soporte {
+    margin: 12px 0;
+}
+.zonas-sin-soporte .fila-escala {
+    margin-top: 8px;
+}
+.zonas-sin-soporte .fila-escala > span:first-child {
+    flex: 1;
+    font-weight: 600;
+}
+.zonas-sin-soporte .boton[aria-pressed='true'] {
+    border-color: var(--acento);
+    background: color-mix(in srgb, var(--acento) 18%, transparent);
+}
+.zonas-sin-soporte .piezas {
+    margin: 8px 0;
+}
+
+/* --- Envío por red local en el pie del paso 4 (ADR 0007, T7) --- */
+.envio-red {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.envio-red .nota:empty {
+    display: none;
+}
+.envio-red:not(:has(button:not([hidden]), .nota:not(:empty))) {
+    display: none; /* vacío: que no sume el espacio entre botones */
 }

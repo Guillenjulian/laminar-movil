@@ -16,7 +16,7 @@ import { validarCantidad } from '../motor/piezas.js';
 import { acomodarPiezas } from './acomodo.js';
 import { crearCopias } from './copias-ui.js';
 import { estado, crearPieza, piezaActiva, copiasTotales } from './estado.js';
-import { $, escapar } from './util-dom.js';
+import { $, anunciar, escapar } from './util-dom.js';
 
 const TEXTO_NO_ENTRAN = 'No entran todas en la cama: achicá, rotá, bajá las copias o quitá piezas.';
 
@@ -32,6 +32,8 @@ const TEXTO_NO_ENTRAN = 'No entran todas en la cama: achicá, rotá, bajá las c
  * @param {() => void} ctx.elegirOtro vuelve a la pantalla inicial (se llama si se quita la última pieza)
  * @param {(nombre: string, stl: ArrayBuffer) => (Promise<void>|void)} ctx.guardar guarda el modelo en recientes
  *   (el mismo camino que usa paso1 al montar un modelo)
+ * @param {() => void} [ctx.alReacomodar] se llama al terminar cada `reacomodar()` (pieza activa, copias o posiciones
+ *   cambiadas): paso1 lo usa para redibujar las marcas de zonas sin soporte (ADR 0004)
  * @returns {{conectar: () => void, dibujar: () => void, reacomodar: () => void}}
  *   `conectar()` cablea chips, copias, "Agregar pieza" y "Ejemplo" (una vez);
  *   `dibujar()` redibuja chips y "Agregar pieza" (llamar tras cargar un modelo desde cero);
@@ -70,7 +72,7 @@ function conectar(u) {
 /** Lee el archivo (`obtener` devuelve su buffer), lo suma como pieza nueva, la deja activa y enfoca su chip. */
 async function agregar(u, nombre, obtener) {
     if (sinLugar()) return;
-    $('cargando').hidden = false;
+    anunciar($('cargando'), 'Leyendo el modelo…');
     try {
         const d = await u.ctx.leer(nombre, await obtener());
         if (!estado.piezas.length || sinLugar()) return; // cambió mientras leía
@@ -87,7 +89,7 @@ async function agregar(u, nombre, obtener) {
     } catch (err) {
         alert('No pudimos leer el archivo: ' + err.message);
     } finally {
-        $('cargando').hidden = true;
+        anunciar($('cargando'), '');
     }
 }
 
@@ -181,6 +183,7 @@ function reacomodar(u) {
     }
     botonesAgregar();
     u.copias.dibujar();
+    u.ctx.alReacomodar?.();
 }
 
 /** Texto de la chip: número, nombre y, si hay más de una, las copias. */

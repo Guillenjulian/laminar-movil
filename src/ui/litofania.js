@@ -7,8 +7,7 @@
 import { litofaniaAStl } from '../motor/motor.js';
 import { resolucionLitofania, MARCO_MM } from '../motor/litofania.js';
 import * as formato from './formato.js';
-
-const $ = id => document.getElementById(id);
+import { $, anunciar } from './util-dom.js';
 
 // 'stl' | 'obj' | '3mf' | 'imagen' | null (no lo sabemos leer)
 export function tipoArchivo(nombre) {
@@ -87,8 +86,7 @@ export function prepararLitofania({ abrir, cerrar, cargar }) {
         e.preventDefault();
         const o = leerOpciones(form);
         const error = validar(o);
-        $('errorLitofania').textContent = error || '';
-        $('errorLitofania').hidden = !error;
+        anunciar($('errorLitofania'), error || '');
         if (error || !foto) return;
         const { nombre, imagen } = foto;
         cerrar();

@@ -7,22 +7,32 @@
         <link rel="manifest" href="./manifest.webmanifest" />
         <link rel="icon" href="./favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="./iconos/apple-touch-icon.png" />
-        <meta name="description" content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión." />
-        <title>Laminar Móvil</title>
+        <meta
+            name="description"
+            content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión."
+            data-t-attr="content:app.descripcion"
+        />
+        <title data-t="app.titulo">Laminar Móvil</title>
         <link rel="stylesheet" href="./src/estilos.css" />
         <link rel="stylesheet" href="./src/estilos-formatos.css" />
         <link rel="stylesheet" href="./src/estilos-materiales.css" />
         <link rel="stylesheet" href="./src/estilos-avanzado.css" />
+        <link rel="stylesheet" href="./src/estilos-a11y.css" />
     </head>
     <body>
         <header class="barra">
             <button class="atras" id="atras" aria-label="Volver" hidden>‹</button>
             <h1>Laminar Móvil</h1>
+            <!-- Selector de idioma (ADR 0008): oculto hasta que estén migradas todas las áreas (I14). -->
+            <button class="boton-idioma" id="idioma" lang="en" aria-label="Cambiar el idioma a English" hidden>
+                English
+            </button>
+            <p class="solo-lectores" id="estadoIdioma" role="status"></p>
             <ol class="pasos" aria-label="Pasos">
-                <li data-paso="1">1</li>
-                <li data-paso="2">2</li>
-                <li data-paso="3">3</li>
-                <li data-paso="4">4</li>
+                <li data-paso="1"><span class="solo-lectores">Paso </span>1<span class="solo-lectores"> de 4</span></li>
+                <li data-paso="2"><span class="solo-lectores">Paso </span>2<span class="solo-lectores"> de 4</span></li>
+                <li data-paso="3"><span class="solo-lectores">Paso </span>3<span class="solo-lectores"> de 4</span></li>
+                <li data-paso="4"><span class="solo-lectores">Paso </span>4<span class="solo-lectores"> de 4</span></li>
             </ol>
         </header>
 
@@ -34,6 +44,7 @@
 
             <!-- Paso 1: subir el STL -->
             <section class="pantalla" data-paso="1">
+                <h2 class="solo-lectores">Paso 1: tu modelo</h2>
                 <div class="sin-modelo" id="sinModelo">
                     <h2>Subí tu modelo</h2>
                     <p>
@@ -60,17 +71,60 @@
                     </div>
                 </div>
                 <div class="con-modelo" id="conModelo" hidden>
-                    <div class="visor" id="visor" aria-label="Vista 3D del modelo">
-                        <p class="ayuda-gestos">1 dedo: girar · 2 dedos: zoom · doble toque: centrar</p>
+                    <div
+                        class="visor"
+                        id="visor"
+                        role="group"
+                        aria-label="Vista 3D del modelo"
+                        aria-describedby="descripcionVisor"
+                    >
+                        <p class="ayuda-gestos" aria-hidden="true">
+                            1 dedo: girar · 2 dedos: zoom · doble toque: centrar
+                        </p>
+                        <p class="solo-lectores">Para girar y escalar usá los botones de debajo.</p>
                     </div>
+                    <p class="solo-lectores" id="descripcionVisor">La cama está vacía.</p>
+                    <!-- Zonas sin soporte de la pieza activa (ADR 0004; sólo modelos) -->
+                    <div class="zonas-sin-soporte" id="bloqueosPanel" hidden>
+                        <button type="button" class="boton" id="bloqueoMarcar" aria-pressed="false">
+                            Marcar zona sin soporte
+                        </button>
+                        <div class="fila-escala" role="group" aria-labelledby="bloqueoRadioEtiqueta">
+                            <span id="bloqueoRadioEtiqueta">Radio de la zona</span>
+                            <button
+                                type="button"
+                                class="boton-capa"
+                                id="bloqueoRadioMenos"
+                                aria-label="Achicar el radio de la zona"
+                            >
+                                −
+                            </button>
+                            <output id="bloqueoRadioNum" class="copias-num" for="bloqueoRadioMenos bloqueoRadioMas">
+                                8
+                            </output>
+                            <span>mm</span>
+                            <button
+                                type="button"
+                                class="boton-capa"
+                                id="bloqueoRadioMas"
+                                aria-label="Agrandar el radio de la zona"
+                            >
+                                +
+                            </button>
+                        </div>
+                        <ul class="piezas" id="bloqueoLista" aria-label="Zonas sin soporte"></ul>
+                        <p class="aviso" id="bloqueoAyuda" aria-live="polite"></p>
+                        <p class="aviso" id="bloqueoNota"></p>
+                    </div>
+
                     <div class="ficha">
                         <ul class="piezas" id="listaPiezas" aria-label="Piezas" hidden></ul>
                         <p class="solo-lectores" id="avisoPiezas" aria-live="polite"></p>
                         <p class="nombre" id="nombreModelo"></p>
                         <p id="datosModelo"></p>
-                        <div class="aviso" id="avisoModelo" hidden></div>
+                        <div class="aviso" role="status" id="avisoModelo" hidden></div>
                         <div class="aviso" id="avisoEntran" role="alert" hidden></div>
-                        <div class="aviso" id="avisoTorre" hidden></div>
+                        <div class="aviso" role="status" id="avisoTorre" hidden></div>
 
                         <!-- Copias de la pieza activa (sólo modelos) -->
                         <div class="copias-pieza" id="copiasPieza" hidden>
@@ -119,7 +173,9 @@
                                 <button type="button" class="boton" data-rotar="x">↻ X 90°</button>
                                 <button type="button" class="boton" data-rotar="y">↻ Y 90°</button>
                                 <button type="button" class="boton" data-rotar="z">↻ Z 90°</button>
-                                <button type="button" class="boton" id="apoyarCara">Apoyar cara</button>
+                                <button type="button" class="boton" id="apoyarCara" aria-pressed="false">
+                                    Apoyar cara
+                                </button>
                                 <button type="button" class="boton" id="ajustarCama" hidden>
                                     Achicar para que entre
                                 </button>
@@ -141,7 +197,7 @@
                         <button class="boton chico" id="otroModelo">Elegir otro modelo</button>
                     </div>
                 </div>
-                <p class="cargando" id="cargando" hidden>Leyendo el modelo…</p>
+                <p class="cargando" role="status" id="cargando" hidden>Leyendo el modelo…</p>
             </section>
 
             <!-- Paso 2: impresora y calidad -->
@@ -160,13 +216,9 @@
                 <div class="opciones" id="materiales"></div>
                 <div id="tarjetaMaterial"></div>
 
-                <label class="interruptor">
-                    <span>
-                        <b>Soportes</b><br />
-                        <small>Para partes que quedan "en el aire". Tarda más y gasta más filamento.</small>
-                    </span>
-                    <input type="checkbox" id="soportes" />
-                </label>
+                <h2 id="tipoSoportesEtiqueta">Soportes</h2>
+                <div class="opciones" id="tipoSoportes" role="radiogroup" aria-labelledby="tipoSoportesEtiqueta"></div>
+                <p class="aviso" id="tipoSoportesZonas" role="status"></p>
 
                 <!-- Ajustes finos: todo a la vista dentro de un único desplegable (sin submenús) -->
                 <details class="personalizar" id="personalizar">
@@ -183,20 +235,41 @@
 
                     <h3>Paredes</h3>
                     <div class="contadores">
-                        <div class="contador" data-clave="paredes" data-min="1" data-max="8">
-                            <span>Paredes</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaParedes"
+                            data-clave="paredes"
+                            data-min="1"
+                            data-max="8"
+                        >
+                            <span id="etiquetaParedes">Paredes</span>
                             <button type="button" data-delta="-1" aria-label="Menos paredes">−</button>
                             <output></output>
                             <button type="button" data-delta="1" aria-label="Más paredes">+</button>
                         </div>
-                        <div class="contador" data-clave="arriba" data-min="0" data-max="15">
-                            <span>Capas sólidas arriba</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaArriba"
+                            data-clave="arriba"
+                            data-min="0"
+                            data-max="15"
+                        >
+                            <span id="etiquetaArriba">Capas sólidas arriba</span>
                             <button type="button" data-delta="-1" aria-label="Menos capas arriba">−</button>
                             <output></output>
                             <button type="button" data-delta="1" aria-label="Más capas arriba">+</button>
                         </div>
-                        <div class="contador" data-clave="abajo" data-min="0" data-max="15">
-                            <span>Capas sólidas abajo</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaAbajo"
+                            data-clave="abajo"
+                            data-min="0"
+                            data-max="15"
+                        >
+                            <span id="etiquetaAbajo">Capas sólidas abajo</span>
                             <button type="button" data-delta="-1" aria-label="Menos capas abajo">−</button>
                             <output></output>
                             <button type="button" data-delta="1" aria-label="Más capas abajo">+</button>
@@ -242,26 +315,26 @@
 
                     <h3>Retracción y viajes</h3>
                     <div class="contadores">
-                        <div class="contador" data-av="retraccion">
-                            <span>Retracción</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaRetraccion" data-av="retraccion">
+                            <span id="etiquetaRetraccion">Retracción</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos retracción">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más retracción">+</button>
                         </div>
-                        <div class="contador" data-av="zHop">
-                            <span>Z-hop (subir al viajar)</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaZHop" data-av="zHop">
+                            <span id="etiquetaZHop">Z-hop (subir al viajar)</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos z-hop">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más z-hop">+</button>
                         </div>
-                        <div class="contador" data-av="coasting">
-                            <span>Coasting (cortar antes)</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaCoasting" data-av="coasting">
+                            <span id="etiquetaCoasting">Coasting (cortar antes)</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos coasting">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más coasting">+</button>
                         </div>
-                        <div class="contador" data-av="wipe">
-                            <span>Wipe (limpiar al retraer)</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaWipe" data-av="wipe">
+                            <span id="etiquetaWipe">Wipe (limpiar al retraer)</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos wipe">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más wipe">+</button>
@@ -273,14 +346,24 @@
                         En mm, en total (no por lado). +0,1 agranda el agujero o la pieza 0,1 mm; − los achica.
                     </p>
                     <div class="contadores">
-                        <div class="contador" data-av="compAgujeros">
-                            <span>Agujeros</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaCompAgujeros"
+                            data-av="compAgujeros"
+                        >
+                            <span id="etiquetaCompAgujeros">Agujeros</span>
                             <button type="button" data-paso-av="-1" aria-label="Achicar agujeros">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Agrandar agujeros">+</button>
                         </div>
-                        <div class="contador" data-av="compExterior">
-                            <span>Contorno exterior</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaCompExterior"
+                            data-av="compExterior"
+                        >
+                            <span id="etiquetaCompExterior">Contorno exterior</span>
                             <button type="button" data-paso-av="-1" aria-label="Achicar contorno">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Agrandar contorno">+</button>
@@ -296,14 +379,19 @@
 
                     <h3>Temperatura y ventilador</h3>
                     <div class="contadores">
-                        <div class="contador" data-av="tempBoquilla">
-                            <span>Boquilla</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaTempBoquilla"
+                            data-av="tempBoquilla"
+                        >
+                            <span id="etiquetaTempBoquilla">Boquilla</span>
                             <button type="button" data-paso-av="-1" aria-label="Bajar boquilla">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Subir boquilla">+</button>
                         </div>
-                        <div class="contador" data-av="tempCama">
-                            <span>Cama</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaTempCama" data-av="tempCama">
+                            <span id="etiquetaTempCama">Cama</span>
                             <button type="button" data-paso-av="-1" aria-label="Bajar cama">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Subir cama">+</button>
@@ -342,7 +430,16 @@
             <!-- Paso 3: laminando -->
             <section class="pantalla centrada" data-paso="3" hidden>
                 <h2 id="tituloLaminando">Laminando…</h2>
-                <div class="progreso" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progreso">
+                <div
+                    class="progreso"
+                    role="progressbar"
+                    aria-labelledby="tituloLaminando"
+                    aria-valuetext="0 %, Leyendo el archivo"
+                    aria-valuenow="0"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    id="progreso"
+                >
                     <div class="relleno" id="relleno"></div>
                 </div>
                 <p class="porcentaje" id="porcentaje">0 %</p>
@@ -350,15 +447,21 @@
                 <p class="nota">
                     Podés dejar el celu quieto: el laminado sigue aunque la pantalla no cambie por un rato.
                 </p>
-                <div class="aviso error" id="errorLaminado" hidden></div>
+                <div class="aviso error" role="alert" id="errorLaminado" hidden></div>
             </section>
 
             <!-- Paso 4: listo -->
             <section class="pantalla" data-paso="4" hidden>
-                <h2>¡Listo! 🎉</h2>
+                <h2>¡Listo! <span aria-hidden="true">🎉</span></h2>
 
                 <!-- Vista previa capa por capa -->
-                <div class="visor visor-capas" id="visorCapas" aria-label="Vista previa de los recorridos">
+                <div
+                    class="visor visor-capas"
+                    id="visorCapas"
+                    role="group"
+                    aria-label="Vista previa de los recorridos"
+                    aria-describedby="textoCapa resumen"
+                >
                     <p class="cargando-capas" id="cargandoCapas">Armando la vista previa…</p>
                 </div>
                 <div class="control-capas" id="controlCapas" hidden>
@@ -371,11 +474,15 @@
                         <button type="button" class="boton-capa" id="capaMas" aria-label="Capa siguiente">+</button>
                     </div>
                     <div class="fila-capa">
-                        <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">▶</button>
+                        <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">
+                            <span aria-hidden="true">▶</span>
+                        </button>
                         <span class="texto-capa" id="textoCapa"></span>
                         <label class="tilde-capa"><input type="checkbox" id="soloCapa" /> Sólo esta</label>
                     </div>
-                    <button type="button" class="boton" id="pausarCapa">⏸ Pausar acá para cambiar filamento</button>
+                    <button type="button" class="boton" id="pausarCapa">
+                        <span aria-hidden="true">⏸</span> Pausar acá para cambiar filamento
+                    </button>
                     <div class="modo-color" id="modoColor" role="group" aria-label="Colores de la vista previa" hidden>
                         <span>Colores:</span>
                         <button type="button" data-modo="tipo">Tipo de línea</button>
@@ -383,11 +490,12 @@
                     </div>
                     <ul class="filamentos" id="listaPausas"></ul>
                     <ul class="leyenda" id="leyenda"></ul>
-                    <p class="aviso" id="avisoVista" hidden></p>
+                    <p class="aviso" id="avisoVista" role="status"></p>
                 </div>
 
                 <dl class="resumen" id="resumen"></dl>
                 <div class="aviso" id="avisoResultado" hidden></div>
+                <p class="nota" id="estadoEntrega" role="status"></p>
                 <p class="nota">Se guarda como <b id="nombreArchivo"></b>.</p>
                 <p class="nota">
                     Pasá el archivo a la tarjeta microSD de la impresora (o mandalo por la app que uses).
@@ -396,10 +504,17 @@
         </main>
 
         <!-- Pantallas que se abren encima (el botón "atrás" del celu las cierra) -->
-        <section class="hoja" id="hojaImpresoras" hidden aria-label="Elegir impresora">
+        <section
+            class="hoja"
+            id="hojaImpresoras"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloImpresoras"
+        >
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Elegí tu impresora</h1>
+                <h1 id="tituloImpresoras">Elegí tu impresora</h1>
             </header>
             <div class="contenido-hoja">
                 <input
@@ -414,7 +529,14 @@
             </div>
         </section>
 
-        <section class="hoja" id="hojaMiImpresora" hidden aria-label="Mi impresora">
+        <section
+            class="hoja"
+            id="hojaMiImpresora"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloMiImpresora"
+        >
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
                 <h1 id="tituloMiImpresora">Mi impresora</h1>
@@ -521,16 +643,23 @@
                     <p class="nota">Variables: {temp}, {bed_temp}, {layer}, {layers}, {top} (fondo de la cama).</p>
                 </fieldset>
 
-                <p class="aviso error" id="errorImpresora" hidden></p>
+                <p class="aviso error" role="alert" id="errorImpresora" hidden></p>
                 <button type="submit" class="boton grande primario">Guardar impresora</button>
                 <button type="button" class="boton enlace" id="borrarImpresora" hidden>Borrar esta impresora</button>
             </form>
         </section>
 
-        <section class="hoja" id="hojaLitofania" hidden aria-label="Litofanía desde una foto">
+        <section
+            class="hoja"
+            id="hojaLitofania"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloLitofania"
+        >
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Litofanía desde una foto</h1>
+                <h1 id="tituloLitofania">Litofanía desde una foto</h1>
             </header>
             <form class="contenido-hoja formulario" id="formLitofania" novalidate>
                 <figure class="foto-litofania">
@@ -596,15 +725,15 @@
                     </p>
                 </fieldset>
 
-                <p class="aviso error" id="errorLitofania" hidden></p>
+                <p class="aviso error" role="alert" id="errorLitofania" hidden></p>
                 <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
             </form>
         </section>
 
-        <section class="hoja" id="hojaTorre" hidden aria-label="Torre de calibración">
+        <section class="hoja" id="hojaTorre" hidden role="dialog" aria-modal="true" aria-labelledby="tituloTorre">
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Torre de calibración</h1>
+                <h1 id="tituloTorre">Torre de calibración</h1>
             </header>
             <form class="contenido-hoja formulario" id="formTorre" novalidate>
                 <p class="nota">
@@ -641,8 +770,82 @@
                     </p>
                 </fieldset>
                 <p class="aviso" id="avisoTorreHoja" hidden></p>
-                <p class="aviso error" id="errorTorre" hidden></p>
+                <p class="aviso error" role="alert" id="errorTorre" hidden></p>
                 <button type="submit" class="boton grande primario">Crear torre</button>
+            </form>
+        </section>
+
+        <section class="hoja" id="hojaRed" hidden role="dialog" aria-modal="true" aria-labelledby="tituloRed">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1 id="tituloRed">Enviar por red local <small>experimental</small></h1>
+            </header>
+            <form class="contenido-hoja formulario" id="formRed" novalidate>
+                <p class="nota" id="notaRed">
+                    Para mandar el G-code directo a tu impresora con OctoPrint o Moonraker, sin pasar por el archivo. El
+                    celu y la impresora tienen que estar en la misma red. Es experimental: puede no andar en todos los
+                    navegadores.
+                </p>
+                <p class="nota" id="impresoraRed"></p>
+                <label
+                    >Tipo
+                    <select name="tipo">
+                        <option value="octoprint">OctoPrint</option>
+                        <option value="moonraker">Moonraker (Klipper)</option>
+                    </select>
+                </label>
+                <label
+                    >Dirección
+                    <input
+                        name="direccion"
+                        inputmode="url"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        placeholder="http://192.168.1.50"
+                        aria-describedby="ayudaDireccionRed"
+                    />
+                </label>
+                <p class="nota" id="ayudaDireccionRed">La IP o el nombre de la impresora, con el puerto si lo usa.</p>
+                <label
+                    >Clave de API
+                    <input name="claveApi" type="password" autocomplete="off" aria-describedby="ayudaClaveRed" />
+                </label>
+                <button
+                    type="button"
+                    class="boton chico"
+                    id="verClaveRed"
+                    aria-pressed="false"
+                    aria-label="Mostrar la clave"
+                >
+                    Mostrar
+                </button>
+                <p class="nota" id="ayudaClaveRed">
+                    Se guarda en este celu, sin cifrar, y sólo se manda a la dirección de arriba. Si ya hay una
+                    guardada, dejalo vacío para no cambiarla.
+                </p>
+                <label class="tilde"
+                    ><input type="checkbox" name="imprimir" aria-describedby="ayudaImprimirRed" /> Empezar a imprimir al
+                    terminar</label
+                >
+                <p class="nota" id="ayudaImprimirRed">Apagado, sólo sube el archivo. Prendido, te pide confirmar.</p>
+                <button type="button" class="boton" id="probarRed">Probar conexión</button>
+                <p class="aviso" id="estadoRed" role="status"></p>
+                <div id="ayudaRed" hidden>
+                    <p class="nota">Si no anda, probá una de estas salidas:</p>
+                    <ul class="nota">
+                        <li>Abrí la impresora y subí ahí el archivo que descargaste.</li>
+                        <li>
+                            Usá una dirección https con certificado válido, por ejemplo con Tailscale. Uno autofirmado
+                            no sirve.
+                        </li>
+                        <li>En Chrome: candado de la barra de direcciones, Permisos, Red local, Permitir.</li>
+                    </ul>
+                </div>
+                <p class="nota">Origen de esta app, para habilitarlo en CORS de la impresora: <b id="origenRed"></b></p>
+                <button type="button" class="boton" id="abrirImpresoraRed" disabled>Abrir la impresora</button>
+                <button type="submit" class="boton grande primario">Guardar</button>
+                <button type="button" class="boton" id="quitarRed" hidden>Quitar</button>
             </form>
         </section>
 
@@ -654,6 +857,22 @@
             <div data-paso="4" hidden>
                 <button class="boton grande primario" id="compartir">Compartir G-code</button>
                 <button class="boton grande" id="descargar">Descargar</button>
+                <button class="boton grande" id="enviarRed" hidden>Enviar a la impresora</button>
+                <div class="envio-red" id="envioRed">
+                    <p class="nota" id="progresoEnvioRed" role="status"></p>
+                    <button class="boton" id="cancelarEnvio" aria-label="Cancelar el envío a la impresora" hidden>
+                        Cancelar
+                    </button>
+                    <button
+                        class="boton"
+                        id="ayudaEnvioRed"
+                        hidden
+                        aria-label="Ver qué hacer si no llega a la impresora"
+                    >
+                        Ver qué hacer
+                    </button>
+                </div>
+                <button class="boton enlace" id="configurarRed" hidden>Enviar por red…</button>
                 <button class="boton enlace" id="otro">Laminar otro modelo</button>
             </div>
         </footer>

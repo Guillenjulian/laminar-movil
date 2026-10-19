@@ -22,7 +22,10 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
 1. **Subir STL, OBJ o 3MF**, o generar una **litofanía o relieve desde una foto** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
    **Acomodar el modelo en la cama**: escala (%), rotar de a 90° en X/Y/Z, **apoyar cara** (tocás una
    cara y queda sobre la cama) y "Achicar para que entre" si es más grande que la cama.
-2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
+   **Zonas sin soporte**: con "Marcar zona sin soporte", un toque sobre la pieza deja una esfera donde no querés
+   soportes (hasta 20 por pieza). "Apoyar cara" y marcar zonas no van juntos: es uno u otro.
+2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y los soportes:
+   No, Normal o Árbol (el árbol usa menos material).
    En **Personalizar**: patrón de relleno (panal, cuadrícula, giroide, cúbico, triángulos, líneas),
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
    En **Avanzado**: modo jarrón (espiral), altura de capa variable, costura, retracción, z-hop,
@@ -34,6 +37,7 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
    línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores,
    con la vista previa pintada del color de cada filamento)
    y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
+   Las Bambu Lab (A1, A1 mini, P1S y X1C) bajan un **`.gcode.3mf`** (ZIP con el G-code y los metadatos que espera Bambu) en vez de `.gcode`. Los perfiles no están validados con la impresora.
 
 Además:
 
@@ -42,11 +46,16 @@ Además:
 - Avisa si el modelo no entra en la cama y limita las temperaturas a los máximos de la impresora.
 - **Varias piezas y copias en la cama**: agregás piezas (archivo o cubo de ejemplo), les ponés copias y la app
   las acomoda sola (ADR 0003). Las copias que no entran se marcan en rojo y "Siguiente" queda deshabilitado.
+- **Envío por red local (experimental)**: si configurás OctoPrint o Moonraker para una impresora, el paso 4 puede
+  subirle el G-code por la red de la casa (ADR 0007). Descargar y Compartir siempre quedan disponibles.
+- **Accesibilidad**: contraste AA, foco visible, hojas que se manejan con lector de pantalla y los errores, avisos
+  y progreso se anuncian en voz alta (ADR 0008).
 
 Impresoras:
 
 - **Perfiles revisados a mano** (con pruebas automáticas): Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE
-  y K1; Elegoo Neptune 4; Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06.
+  y K1; Elegoo Neptune 4; Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06; Bambu Lab A1, A1 mini, P1S y X1C (salen como
+  `.gcode.3mf`, sin validar con la impresora).
 - **48 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
   marcadas "sin revisar".
 - **Mi impresora**: cada usuario puede cargar la suya (medidas, boquilla, Marlin/Klipper, G-code)
@@ -67,8 +76,10 @@ Pruebas automáticas (usan Chromium; en otra máquina definí `CHROMIUM_PATH`):
 
 ```bash
 npm run build
+npm run test:chunks  # tamaño de los chunks del build: el principal y la carga inicial tienen tope, y el visor está en el service worker
 npm run test:motor   # lamina mallas de prueba y valida el G-code (perfil, calidades, soportes, malla de 1,2 M triángulos)
 npm run test:transformar  # matrices de escala/rotación (Node, sin navegador)
+npm run test:visor-carga  # fachada del visor que carga three.js bajo demanda (Node, sin navegador)
 npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
 ```
 
@@ -139,8 +150,8 @@ Las claves son las de Kiri:Moto y están explicadas en español en
 prende nunca el ventilador de capa. Los materiales se agregan en `src/perfiles/materiales.json`.
 
 Las 50 importadas se regeneran con `npm run importar:impresoras` (usa el clon de grid-apps de
-`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Bambu Lab,
-Makerbot) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
+`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Makerbot; las
+Bambu Lab tienen perfil revisado propio) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
 
 ## Cómo está armado
 
@@ -258,6 +269,41 @@ Esto queda pendiente de validar a mano:
       tienen G-code de inicio dudoso (la app lo avisa cuando no usa `{temp}`/`{bed_temp}`).
 - [ ] En Kiri, a igual porcentaje, el giroide usa bastante menos material que el panal (cubo de
       20 mm al 20 %: 1,18 m contra 2,08 m). Revisar si conviene compensar la densidad por patrón.
+
+### Bambu Lab: `.gcode.3mf` (ADR 0005)
+
+- [ ] Abrir el `.gcode.3mf` en **Bambu Studio** sin errores, con tiempo y gramos a la vista (y qué hace con el `3dmodel.model` sin malla).
+- [ ] Abrirlo en **Bambu Handy** y que muestre el resumen.
+- [ ] **Imprimir un cubo por SD y por LAN** en A1 y P1S, y que la impresora no rechace el archivo por el MD5.
+- [ ] La pausa **`M400 U1`**: que pause, muestre el aviso en la pantalla y retome. Qué pasa con la temperatura durante la pausa.
+- [ ] **Compartir en Android (Chrome) e iOS (Safari)**: qué MIME acepta `canShare` para el `.gcode.3mf` (`application/octet-stream`, `application/zip`, `model/3mf`).
+- [ ] Las miniaturas: que la pantalla de la impresora y Bambu Studio las muestren.
+- [ ] Volver con "Adelante" al paso 4 después de cambiar el material: que el archivo que se descarga o comparte tenga el G-code del material nuevo.
+- [ ] Filamento: el color de `slice_info.config` es fijo (`#FFFFFF`) para todos los materiales. El código de bandeja (`tray_info_idx`) ya sale de `materiales.json` (`bambu`); validar esos códigos contra un `slice_info.config` real de Bambu Studio.
+
+### Soportes árbol y zonas sin soporte (ADR 0004)
+
+- [ ] **Imprimir con soporte árbol** una pieza con voladizo: que la tapa apoye bien sobre los troncos y que
+      los troncos se despeguen fácil.
+- [ ] **Zona sin soporte en una pieza real**: que la zona marcada se vea sin soporte al imprimir y que el
+      voladizo que cae dentro se imprima como avisa la app.
+- [ ] **Marcar zonas con el dedo en un celu real**: el toque, el radio y quitar una zona.
+
+### Envío por red local (ADR 0007, T10)
+
+- [ ] Chrome en Android (pestaña y app instalada) contra una OctoPrint y una Moonraker reales: `https://<app>` → `http://IP`,
+      con el permiso de Red local aceptado y con el permiso denegado (el mensaje se entiende y "Abrir la impresora" funciona).
+- [ ] CORS en cada impresora ("Allow Cross Origin" en OctoPrint, `cors_domains` en Moonraker) con el origen de la app:
+      si piden reiniciar y qué muestra la app cuando no está habilitado.
+- [ ] iPhone, Firefox y Chrome con el permiso denegado: que caigan al plan B (abrir la impresora) y que el texto sea claro.
+- [ ] "Empezar a imprimir" en las dos impresoras, y el caso "bloqueado" con la casilla encendida (la subida puede haber llegado igual).
+- [ ] Archivos grandes (un G-code de 20 MB por Wi-Fi desde un celu de gama baja) y si nginx o haproxy rechazan la subida (413).
+- [ ] Los demás [A VALIDAR] del ADR 0007 (texto de `state`, `done`, `print_started`, sonda ante LNA denegado).
+
+### Accesibilidad (ADR 0008)
+
+- [ ] Probar con TalkBack (Android) y VoiceOver (iPhone) en un celu real: el paso actual, las hojas (Escape y retorno
+      del foco), los errores y avisos, el deslizador de capas y la descripción del visor.
 
 ### Otros
 

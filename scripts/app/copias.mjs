@@ -11,6 +11,7 @@ import path from 'node:path';
 import { acomodar } from '../../src/motor/piezas.js';
 import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
 import { CAMA, xDeCapa } from './piezas.mjs';
+import { esperarVisor } from '../lib/visor.mjs';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarCopias(ctx) {
@@ -24,7 +25,10 @@ export async function probarCopias(ctx) {
 
 const chips = pagina => pagina.locator('#listaPiezas .chip');
 /** Cantidad de piezas que tiene el visor (data-piezas del canvas, ver visor.js). */
-const enVisor = pagina => pagina.evaluate(() => Number(document.querySelector('#visor canvas').dataset.piezas));
+const enVisor = async pagina => {
+    await esperarVisor(pagina, '#visor');
+    return pagina.evaluate(() => Number(document.querySelector('#visor canvas').dataset.piezas));
+};
 
 const copiasEnVisor = pagina => pagina.evaluate(() => Number(document.getElementById('listaPiezas').dataset.copias));
 const numCopias = pagina => pagina.textContent('#copiasNum').then(t => t.trim());

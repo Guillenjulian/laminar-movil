@@ -19,6 +19,7 @@ import { buscarImpresora, lineasPausa } from '../perfiles/perfiles.js';
  * @property {() => (object|null)} visor visor de la vista previa (o null).
  * @property {(n: number) => void} irACapa muestra la capa n.
  * @property {() => void} pararReproduccion detiene la reproducción.
+ * @property {() => void} alCambiarPausas se llama después de cada cambio real de pausas (agregar o quitar).
  */
 
 /** @type {DepsPausas|null} */
@@ -43,6 +44,7 @@ export function conectarPausas(d) {
             estado.modoColor = 'filamento'; // con pausas, lo natural es ver los colores
         }
         dibujarPausas();
+        d.alCambiarPausas();
         d.irACapa(n);
     };
     conectarLista(d);
@@ -60,7 +62,7 @@ export function conectarPausas(d) {
  * @param {DepsPausas} d lo que necesita de vista-capas.
  * @returns {void}
  */
-function conectarLista({ irACapa, pararReproduccion }) {
+function conectarLista({ irACapa, pararReproduccion, alCambiarPausas }) {
     $('listaPausas').onclick = e => {
         const b = e.target.closest('button[data-capa]');
         if (!b) return;
@@ -68,6 +70,7 @@ function conectarLista({ irACapa, pararReproduccion }) {
         if (b.classList.contains('quitar')) {
             estado.pausas.delete(n);
             dibujarPausas();
+            alCambiarPausas();
         }
         pararReproduccion();
         irACapa(n);
@@ -110,7 +113,7 @@ export function dibujarPausas() {
         <input type="color" value="${escapar(colorFilamento(i))}" data-filamento="${i}" aria-label="Color del filamento ${i + 1}">
         <button type="button" class="ir" data-capa="${t.desde}">
             <b>Filamento ${i + 1}</b> · capas ${t.desde + 1}–${t.hasta + 1}
-            ${t.pausa ? `<small>⏸ pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}
+            ${t.pausa ? `<small><span aria-hidden="true">⏸</span> pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}
         </button>
         ${t.pausa ? `<button type="button" class="quitar" data-capa="${t.desde}" aria-label="Quitar la pausa de la capa ${t.desde + 1}">×</button>` : ''}
     </li>`,

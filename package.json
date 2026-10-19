@@ -1,6 +1,6 @@
 {
     "name": "laminar-movil",
-    "version": "0.3.0",
+    "version": "0.5.0",
     "private": true,
     "description": "Laminador STL → G-code 100% en el navegador, pensado para el celu. Motor: Kiri:Moto.",
     "license": "MIT",
@@ -17,14 +17,21 @@
         "test:torres": "node scripts/probar-torres.mjs",
         "test:cambios": "node scripts/probar-cambios.mjs",
         "test:piezas": "node scripts/probar-piezas.mjs",
+        "test:soportes": "node scripts/probar-soportes.mjs",
+        "test:red": "node scripts/probar-red.mjs",
+        "test:visor": "node scripts/probar-visor.mjs",
         "test:recorridos": "node scripts/probar-recorridos.mjs",
+        "test:visor-carga": "node scripts/probar-visor-carga.mjs",
+        "test:textos": "node scripts/probar-textos.mjs",
+        "test:chunks": "node scripts/verificar-chunks.mjs",
         "test:contratos": "CONTRATOS_ESTRICTO=1 node scripts/probar-contratos.mjs",
         "iconos": "python3 scripts/generar-iconos.py",
         "importar:impresoras": "node scripts/importar-impresoras-kiri.mjs",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "test:a11y": "node scripts/probar-a11y.mjs"
     },
     "dependencies": {
         "@tweenjs/tween.js": "^25.0.0",
@@ -35,6 +42,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "axe-core": "4.14.0",
         "esbuild": "^0.28.2",
         "eslint": "^10.13.0",
         "eslint-config-prettier": "^10.1.8",

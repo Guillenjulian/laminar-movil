@@ -7,6 +7,8 @@
 // Precondición: paso 4 con la vista de capas lista (vista-capas.mjs), sin pausas.
 // Deja: paso 4 con UNA pausa (entre Z 2,80 y Z 3,08) y el resumen visible.
 
+import { esperarVisor } from '../lib/visor.mjs';
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarPausas(ctx) {
     const { page: pagina, ok: revisar, captura } = ctx;
@@ -45,13 +47,27 @@ async function revisarLista({ page: pagina, ok: revisar }) {
     );
     revisar('la capa muestra la pausa', (await pagina.textContent('#textoCapa')).endsWith('⏸'));
     revisar('marcas sobre el deslizador', (await pagina.locator('#marcasPausa i').count()) === 2);
+    // ADR 0008, A1: con el deslizador de 44 px de alto la marca sigue centrada sobre el carril.
+    const centros = await pagina.evaluate(() => {
+        const centro = el => {
+            const r = el.getBoundingClientRect();
+            return r.top + r.height / 2;
+        };
+        return [centro(document.querySelector('#marcasPausa i')), centro(document.getElementById('capa'))];
+    });
+    revisar(
+        'la marca de pausa está centrada sobre el deslizador (±2 px)',
+        Math.abs(centros[0] - centros[1]) <= 2,
+        `marca ${centros[0].toFixed(1)}, deslizador ${centros[1].toFixed(1)}`,
+    );
     revisar('el botón ahora quita la pausa', /Quitar/.test(await pagina.textContent('#pausarCapa')));
 }
 
 // Cuenta píxeles verdes en el centro del visor. Fuerza un dibujo y lee el canvas en ese mismo
 // cuadro: si el visor ya dibujó en un cuadro anterior, WebGL descartó la imagen.
-const verdes = pagina =>
-    pagina.evaluate(
+const verdes = async pagina => {
+    await esperarVisor(pagina, '#visorCapas');
+    return pagina.evaluate(
         () =>
             new Promise(listo => {
                 document.getElementById('capa').dispatchEvent(new Event('input'));
@@ -69,6 +85,7 @@ const verdes = pagina =>
                 });
             }),
     );
+};
 
 // Filamento 2 en verde puro: en la capa 20 tiene que verse verde; por tipo de línea, no.
 async function revisarColorFilamento({ page: pagina, ok: revisar, captura }) {

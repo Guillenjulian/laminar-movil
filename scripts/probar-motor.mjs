@@ -22,8 +22,14 @@ import { probarCambios } from './motor/cambios.mjs';
 import { probarTorres } from './motor/torres.mjs';
 import { probarPiezasKiri } from './motor/piezas-kiri.mjs';
 import { probarPerfilesRevisados } from './motor/perfiles-revisados.mjs';
+import { probarBambuPerfiles } from './motor/bambu-perfiles.mjs';
 import { probarPiezas } from './motor/piezas.mjs';
 import { probarPiezasExtra } from './motor/piezas-extra.mjs';
+import { probarSoportesGanchos } from './motor/soportes-ganchos.mjs';
+import { probarSoportesKiri } from './motor/soportes-kiri.mjs';
+import { probarSignoDePos } from './motor/soportes-signo.mjs';
+import { probarSoportesProgreso } from './motor/soportes-progreso.mjs';
+import { probarWatchdog } from './motor/watchdog.mjs';
 
 const modoDev = process.argv.includes('--dev');
 const servidor = modoDev
@@ -71,8 +77,14 @@ try {
     await probarTorres(ctx); // torres de calibración (ADR 0002)
     await probarPiezasKiri(ctx); // varias piezas con track.pos (ADR 0003, T0)
     await probarPerfilesRevisados(ctx); // 8 impresoras populares revisadas
+    await probarBambuPerfiles(ctx); // 4 perfiles Bambu Lab y salidaDe (ADR 0005)
     await probarPiezas(ctx); // varias piezas con track.pos (ADR 0003)
     await probarPiezasExtra(ctx); // cama centrada, progreso y cancelación con 3 copias
+    await probarSoportesGanchos(ctx); // ganchos de soportes con puente de mentira (ADR 0004, T0)
+    await probarSoportesKiri(ctx); // soportes árbol y zonas con el puente real (ADR 0004, T4)
+    await probarSignoDePos(ctx); // el signo de `pos` en la cama local del árbol (ADR 0004, T6)
+    await probarSoportesProgreso(ctx); // islotes y malla pesada con soportes: termina y avisa (bug del 41 %)
+    await probarWatchdog(ctx); // laminado trabado: se cancela con aviso; la cola cede el hilo
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());

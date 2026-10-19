@@ -2,11 +2,11 @@
 #
 # Corre en cada pull request y en cada push a main. Flujo:
 #   1. npm ci con la versión de Node de .node-version (cache de npm).
-#   2. lint y format:check (rápidos, fallan primero).
+#   2. lint, format:check y test:textos (textos e idioma, ADR 0008; Node puro, sin build; rápidos, fallan primero).
 #   3. build de producción (dist/), que necesitan test:motor y test:app.
 #   4. Chromium: se instala con la versión de playwright-core del lock y su
 #      ruta se pasa a los scripts en CHROMIUM_PATH (la leen probar-motor y probar-app).
-#   5. Las suites: transformar y formatos (Node), motor y app (Chromium), y contratos.
+#   5. Las suites: visor-carga y chunks (tamaño del principal, ADR 0006), transformar, formatos y red local (Node), motor, app y accesibilidad con axe (Chromium), y contratos.
 # Una corrida nueva del mismo PR cancela la anterior.
 name: CI
 
@@ -45,8 +45,17 @@ jobs:
             - name: Format check
               run: npm run format:check
 
+            - name: Test textos
+              run: npm run test:textos
+
             - name: Build
               run: npm run build
+
+            - name: Test visor-carga
+              run: npm run test:visor-carga
+
+            - name: Test chunks
+              run: npm run test:chunks
 
             - name: Instalar Chromium
               run: |
@@ -71,11 +80,23 @@ jobs:
             - name: Test recorridos
               run: npm run test:recorridos
 
+            - name: Test red local
+              run: npm run test:red
+
+            - name: Test soportes
+              run: npm run test:soportes
+
+            - name: Test visor
+              run: npm run test:visor
+
             - name: Test motor
               run: npm run test:motor
 
             - name: Test app
               run: npm run test:app
+
+            - name: Test accesibilidad
+              run: npm run test:a11y
 
             - name: Test contratos
               run: npm run test:contratos

@@ -8,12 +8,13 @@
 import { estado } from './estado.js';
 import { alMostrarPaso } from './navegacion.js';
 import { $ } from './util-dom.js';
-import { crearVisor } from './visor.js';
+import { crearVisor } from './visor-carga.js';
 import * as formato from './formato.js';
 import { leerRecorridos } from '../motor/motor.js';
 import { TIPOS } from '../motor/tipos-linea.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxSegmentosVista } from '../config.js';
+import { textoAvisoVista } from './aviso-vista.js';
 import { conectarPausas, dibujarPausas } from './pausas-ui.js';
 
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
@@ -24,9 +25,10 @@ let reproduccion = null;
  * Cablea #capa, #capaMenos, #capaMas, #soloCapa, #reproducir, #pausarCapa, #listaPausas y #modoColor;
  * se suscribe a alMostrarPaso (pausa el visor si paso ≠ 4 y para la reproducción).
  * Llamar una vez, después de iniciarNavegacion().
+ * @param {{alCambiarPausas: () => void}} callbacks `alCambiarPausas`: lo llama cada cambio de pausas (main: precarga del paso 4).
  * @returns {void}
  */
-export function iniciarVistaCapas() {
+export function iniciarVistaCapas({ alCambiarPausas }) {
     alMostrarPaso(p => {
         visorCapas?.pausar(p !== 4);
         if (p !== 4) pararReproduccion();
@@ -37,6 +39,7 @@ export function iniciarVistaCapas() {
         visor: () => visorCapas,
         irACapa,
         pararReproduccion,
+        alCambiarPausas,
     });
 }
 
@@ -55,10 +58,11 @@ export async function armarVistaPrevia() {
     pararReproduccion();
     visorCapas?.quitarRecorridos(); // liberar la memoria de la vista anterior
     $('controlCapas').hidden = true;
+    $('avisoVista').textContent = ''; // el aviso es de la vista anterior
     $('cargandoCapas').hidden = false;
     $('cargandoCapas').textContent = 'Armando la vista previa…';
     try {
-        const r = await leerRecorridos(resultado.gcode, maxSegmentosVista());
+        const r = await leerRecorridos(resultado.gcode, maxSegmentosVista(), { auto: true });
         if (estado.resultado !== resultado) return; // ya se laminó otra cosa
         if (!(r.inicioCapa.length - 1)) throw new Error('el G-code no tiene recorridos');
         mostrarRecorridos(r, resultado);
@@ -86,10 +90,8 @@ function mostrarRecorridos(r, resultado) {
     $('leyenda').innerHTML = TIPOS.slice(0, -1)
         .map(t => `<li><i style="background: rgb(${t.color.join(',')})"></i>${t.nombre}</li>`)
         .join('');
-    $('avisoVista').hidden = !r.incompleta;
-    $('avisoVista').textContent = r.incompleta
-        ? `El archivo es muy grande para mostrarlo entero en este equipo: la vista llega hasta la capa ${total}. El G-code está completo.`
-        : '';
+    const aviso = textoAvisoVista(r, total);
+    $('avisoVista').textContent = aviso;
     $('cargandoCapas').hidden = true;
     $('controlCapas').hidden = false;
     irACapa(total - 1);
@@ -106,18 +108,35 @@ function irACapa(n) {
     $('capa').value = n;
     visorCapas.mostrarCapa(n, $('soloCapa').checked);
     const z = formato.numero(capas.zCapa[n], 2);
-    $('textoCapa').textContent = `Capa ${n + 1}/${capas.total} · Z ${z} mm${estado.pausas.has(n) ? ' · ⏸' : ''}`;
+    const pausada = estado.pausas.has(n);
+    // El ⏸ de #textoCapa es decoración (aria-hidden): la pausa se dice acá.
+    $('capa').setAttribute('aria-valuetext', `Capa ${n + 1} de ${capas.total}, ${z} mm${pausada ? ', con pausa' : ''}`);
+    ponerTexto($('textoCapa'), `Capa ${n + 1}/${capas.total} · Z ${z} mm${pausada ? ' · ' : ''}`, pausada ? '⏸' : '');
     // botón de pausa según la capa
     const b = $('pausarCapa');
     b.disabled = n === 0;
-    b.textContent =
-        n === 0
-            ? '⏸ No se puede pausar en la primera capa'
-            : estado.pausas.has(n)
-              ? '✕ Quitar la pausa de esta capa'
-              : '⏸ Pausar acá para cambiar filamento';
+    if (n === 0) ponerTexto(b, '', '⏸', ' No se puede pausar en la primera capa');
+    else if (estado.pausas.has(n)) ponerTexto(b, '', '✕', ' Quitar la pausa de esta capa');
+    else ponerTexto(b, '', '⏸', ' Pausar acá para cambiar filamento');
 }
 
+/**
+ * Deja en `el`: `antes`, el glifo en un `<span aria-hidden="true">` (decoración: no entra en el nombre accesible,
+ * ADR 0008) y `despues`. Sin glifo, sólo el texto.
+ * @param {HTMLElement} el
+ * @param {string} antes
+ * @param {string} glifo
+ * @param {string} [despues]
+ * @returns {void}
+ */
+function ponerTexto(el, antes, glifo, despues = '') {
+    el.replaceChildren(antes);
+    if (!glifo) return void el.append(despues);
+    const s = el.ownerDocument.createElement('span');
+    s.setAttribute('aria-hidden', 'true');
+    s.textContent = glifo;
+    el.append(s, despues);
+}
 /**
  * Cablea el deslizador, los botones de capa, "solo esta capa" y la reproducción.
  * @returns {void}
@@ -149,7 +168,7 @@ function alternarReproduccion() {
     let n = Number($('capa').value);
     if (n >= capas.total - 1) n = 0;
     const paso = Math.max(1, Math.round(capas.total / 240));
-    $('reproducir').textContent = '❚❚';
+    ponerTexto($('reproducir'), '', '❚❚');
     $('reproducir').setAttribute('aria-label', 'Pausar');
     reproduccion = setInterval(() => {
         irACapa(n);
@@ -169,6 +188,6 @@ function pararReproduccion() {
     if (!reproduccion) return;
     clearInterval(reproduccion);
     reproduccion = null;
-    $('reproducir').textContent = '▶';
+    ponerTexto($('reproducir'), '', '▶');
     $('reproducir').setAttribute('aria-label', 'Reproducir');
 }

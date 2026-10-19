@@ -9,11 +9,12 @@
 // a armarConfiguracion como `personal.avanzado`, que lo traduce a claves de Kiri.
 
 import { buscarImpresora, valoresDeAvanzado, COSTURAS } from '../perfiles/perfiles.js';
+import { numeroHasta } from './formato.js';
 
 const $ = id => document.getElementById(id);
 
 // Contadores ±: paso, mínimo, máximo y cómo se muestran.
-const mm = v => `${v.toLocaleString('es-AR', { maximumFractionDigits: 2 })} mm`;
+const mm = v => `${numeroHasta(v, 2)} mm`;
 const conSigno = v => (v > 0 ? '+' : v < 0 ? '−' : '') + mm(Math.abs(v));
 const CONTADORES = {
     retraccion: { paso: 0.1, min: 0, max: 10, ver: mm },

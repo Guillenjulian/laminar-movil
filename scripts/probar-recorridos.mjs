@@ -7,6 +7,10 @@ import assert from 'node:assert/strict';
 import { probarTramos } from './recorridos/tramos.mjs';
 import { probarCapas } from './recorridos/capas.mjs';
 import { probarLimites } from './recorridos/limites.mjs';
+import { probarNiveles } from './recorridos/niveles.mjs';
+import { probarAuto } from './recorridos/auto.mjs';
+import { probarAviso } from './recorridos/aviso.mjs';
+import { probarWorker } from './recorridos/worker.mjs';
 
 let fallas = 0;
 let aciertos = 0;
@@ -29,6 +33,10 @@ const ctx = { revisar, igual };
 probarTramos(ctx);
 probarCapas(ctx);
 probarLimites(ctx);
+probarNiveles(ctx);
+probarAuto(ctx);
+probarAviso(ctx);
+await probarWorker(ctx);
 
 console.log(fallas ? `\n✘ ${fallas} FALLAS (${aciertos} OK)` : `\nTODAS LAS PRUEBAS OK (${aciertos})`);
 process.exit(fallas ? 1 : 0);

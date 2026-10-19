@@ -1,0 +1,139 @@
+// Pruebas de `normalizarDireccion` (ADR 0007, 6.1 y sección 5). Puro: sin red ni DOM.
+import { CASOS_LOCAL } from './lib/impresora-falsa.mjs';
+
+const ok = (direccion, http, nombreSinLocal) => ({ ok: true, direccion, http, nombreSinLocal });
+
+function aceptadas(n, revisar, igual) {
+    console.log('\nnormalizarDireccion: lo que acepta');
+    const casos = [
+        ['192.168.1.50', ok('http://192.168.1.50', true, false)],
+        ['http://192.168.1.50', ok('http://192.168.1.50', true, false)],
+        ['  192.168.1.50  ', ok('http://192.168.1.50', true, false)],
+        ['192.168.1.50:5000', ok('http://192.168.1.50:5000', true, false)],
+        ['http://192.168.1.50:7125/', ok('http://192.168.1.50:7125', true, false)],
+        ['http://192.168.1.50///', ok('http://192.168.1.50', true, false)],
+        ['http://192.168.1.50/octoprint/', ok('http://192.168.1.50/octoprint', true, false)],
+        ['http://192.168.1.50/OctoPrint', ok('http://192.168.1.50/OctoPrint', true, false)],
+        ['HTTP://Octopi.LOCAL/', ok('http://octopi.local', true, false)],
+        ['https://impresora.tail1234.ts.net', ok('https://impresora.tail1234.ts.net', false, false)],
+        ['https://192.168.1.50:8443/', ok('https://192.168.1.50:8443', false, false)],
+    ];
+    for (const [texto, esperado] of casos) {
+        revisar(`acepta ${JSON.stringify(texto)}`, igual(n(texto), esperado), JSON.stringify(n(texto)));
+    }
+}
+
+function nombres(n, revisar) {
+    console.log('\nnormalizarDireccion: http y nombreSinLocal (IP privada y .local detectados)');
+    const sinLocal = texto => n(texto).nombreSinLocal;
+    for (const url of [
+        'http://octopi',
+        'http://mainsail:7125',
+        'http://impresora.lan',
+        'http://x.home.arpa',
+        'http://[fd00::1]:5000',
+        'http://[fe80::1]',
+    ]) {
+        revisar(`${url}: nombreSinLocal false (ya lleva la marca de red local)`, sinLocal(url) === false);
+    }
+    for (const url of ['http://octopi.ejemplo.com', 'http://mi-impresora.casa']) {
+        revisar(`${url}: nombreSinLocal true (nombre con punto fuera de la lista)`, sinLocal(url) === true);
+    }
+    revisar('http://octopi.local: nombreSinLocal false', sinLocal('http://octopi.local') === false);
+    revisar('https://x.ts.net: nombreSinLocal false', sinLocal('https://x.ts.net') === false);
+    revisar('https://octopi: nombreSinLocal false (no es http)', sinLocal('https://octopi') === false);
+    revisar(
+        'http: true para http y false para https',
+        n('x.local').http === true && n('https://x.local').http === false,
+    );
+}
+
+function ipYPuntoFinal(n, revisar) {
+    console.log('\nnormalizarDireccion: IP literales y punto final');
+    const sinLocal = texto => n(texto).nombreSinLocal;
+    for (const url of [
+        'http://192.168.0.2',
+        'http://10.0.0.7:5000',
+        'http://8.8.8.8',
+        'http://127.0.0.1:5000',
+        'http://169.254.1.1',
+        'http://100.64.0.5',
+        'http://[::1]',
+    ]) {
+        revisar(`${url}: nombreSinLocal false (IP literal, no es un nombre)`, sinLocal(url) === false);
+    }
+    const punto = n('http://x.local.:7125/');
+    revisar(
+        'host con punto final: sin el punto, local y puerto conservado',
+        punto.ok && punto.direccion === 'http://x.local:7125' && punto.nombreSinLocal === false,
+        JSON.stringify(punto),
+    );
+    const publico = n('http://x.ejemplo.com.');
+    revisar(
+        'x.ejemplo.com. sin punto final y nombreSinLocal true',
+        publico.direccion === 'http://x.ejemplo.com' && publico.nombreSinLocal === true,
+        JSON.stringify(publico),
+    );
+}
+
+function rechazadas(n, revisar) {
+    console.log('\nnormalizarDireccion: lo que rechaza');
+    const malas = [
+        'javascript:alert(1)',
+        'file:///x',
+        'ftp://x',
+        'data:text/html,hola',
+        'http://user:pass@192.168.1.50',
+        'http://user@192.168.1.50',
+        'http://192.168.1.50?x=1',
+        'http://192.168.1.50/?',
+        'http://192.168.1.50#a',
+        'http://192.168.1.50/octoprint#a',
+        '',
+        '   ',
+        'http://',
+        'http://exa mple.local',
+    ];
+    for (const texto of malas) {
+        const r = n(texto);
+        const bien = r.ok === false && typeof r.motivo === 'string' && r.motivo.length > 0;
+        revisar(`rechaza ${JSON.stringify(texto)} con un motivo`, bien, JSON.stringify(r));
+    }
+    const r = n('http://usuario:SECRETO-XYZ@192.168.1.50');
+    revisar(
+        'el motivo no repite la contraseña escrita',
+        r.ok === false && !String(r.motivo).includes('SECRETO-XYZ'),
+        r.motivo,
+    );
+}
+
+function locales(modulo, revisar) {
+    console.log('\nesDireccionLocal (misma tabla que targetAddressSpace)');
+    for (const [url, local] of CASOS_LOCAL) {
+        let r;
+        try {
+            r = modulo.esDireccionLocal(url);
+        } catch (e) {
+            r = e.message;
+        }
+        revisar(`esDireccionLocal(${url}) → ${local}`, r === local, String(r));
+    }
+}
+
+export default async function ({ revisar, igual, cargar }) {
+    const modulo = await cargar('direccion');
+    if (!modulo) return;
+    // Un fallo inesperado de la función cuenta como falla del caso, no corta el resto.
+    const n = texto => {
+        try {
+            return modulo.normalizarDireccion(texto);
+        } catch (e) {
+            return { ok: 'lanzó', motivo: e.message, direccion: undefined };
+        }
+    };
+    aceptadas(n, revisar, igual);
+    nombres(n, revisar);
+    ipYPuntoFinal(n, revisar);
+    rechazadas(n, revisar);
+    locales(modulo, revisar);
+}

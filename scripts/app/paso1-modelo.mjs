@@ -7,6 +7,8 @@
 // probarModelo  — precondición: página sin abrir. Deja: paso 1 con el cubo cargado.
 // probarGestos  — precondición: paso 1 con un modelo cargado. Deja: igual, con captura "1-modelo".
 
+import { esperarVisor } from '../lib/visor.mjs';
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarModelo(ctx) {
     const { page: pagina, base, ok: revisar, visible, captura, elegirArchivo, stlPesado } = ctx;
@@ -17,6 +19,7 @@ export async function probarModelo(ctx) {
 
     // Modelo pesado: tiene que avisar que se va a simplificar.
     await elegirArchivo(stlPesado);
+    await pagina.waitForFunction(() => /Modelo pesado/.test(document.getElementById('avisoModelo').textContent));
     const aviso = await pagina.textContent('#avisoModelo');
     revisar('aviso de modelo pesado', /Modelo pesado/.test(aviso), `"${aviso.slice(0, 60)}…"`);
     await pagina.waitForTimeout(800);
@@ -32,6 +35,7 @@ export async function probarModelo(ctx) {
 export async function probarGestos(ctx) {
     const { page: pagina, captura } = ctx;
     // Gestos: un arrastre con un dedo no tiene que romper nada.
+    await esperarVisor(pagina, '#visor');
     const caja = await pagina.locator('#visor canvas').boundingBox();
     await pagina.touchscreen.tap(caja.x + caja.width / 2, caja.y + caja.height / 2);
     await pagina.waitForTimeout(500);

@@ -39,7 +39,7 @@ function crearArchivos() {
 }
 
 async function abrirPagina(navegador) {
-    const contexto = await navegador.newContext({ ...devices['Pixel 7'], acceptDownloads: true });
+    const contexto = await navegador.newContext({ ...devices['Pixel 7'], locale: 'es-AR', acceptDownloads: true });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', e => console.log('[error]', e.message));
     pagina.on('requestfailed', r => console.log('[falló]', r.url(), r.failure()?.errorText));

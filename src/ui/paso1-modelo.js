@@ -11,15 +11,17 @@
 import { leerParaVista, convertirAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import * as almacen from '../almacen.js';
-import { crearVisor } from './visor.js';
+import { crearVisor } from './visor-carga.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
 import { estado, crearPieza } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
 import { crearAjuste } from './ajuste-modelo.js';
 import { crearPiezas } from './piezas-ui.js';
+import { crearBloqueosUI } from './bloqueos-ui.js';
+import { textoDescripcionVisor } from './visor-descripcion.js';
 
 export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
@@ -31,7 +33,9 @@ const ajuste = crearAjuste({
     alCambiar: () => {
         programarGuardado();
         piezas.reacomodar();
+        bloqueos.sincronizar(); // después de acomodar: si cambió la pieza, vacía las zonas y lo avisa (ADR 0004)
     },
+    alActivarCara: () => bloqueos.apagar(), // "apoyar cara" y "marcar zona" son modos excluyentes
     torres: () => torres,
 });
 const piezas = crearPiezas({
@@ -41,7 +45,29 @@ const piezas = crearPiezas({
     leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
     elegirOtro: elegirOtroModelo,
     guardar: almacen.guardarModelo, // las piezas agregadas también van a recientes
+    alReacomodar: () => {
+        ajuste.actualizarAviso(); // 1 pieza y 1 copia: lo dice #avisoModelo; con más, #avisoEntran
+        bloqueos.dibujar(); // cambió la pieza activa, las copias o sus posiciones: las marcas siguen
+        describirVisor();
+    },
 });
+// Panel "Zona sin soporte" (ADR 0004): sólo modelos; el aviso va a la región viva del panel.
+const bloqueos = crearBloqueosUI({
+    visor: () => visor,
+    avisar: msg => {
+        $('bloqueoAyuda').textContent = msg;
+    },
+    nuevoId: () => ++estado.ultimoIdBloqueo,
+    cancelarCara: () => ajuste.cancelarCara(),
+});
+
+/** Escribe en #descripcionVisor qué hay en la cama (A4 del ADR 0008); no es región viva: se lee al recorrer. */
+function describirVisor() {
+    $('descripcionVisor').textContent = textoDescripcionVisor({
+        piezas: estado.piezas.map(({ nombre, tamano, copias }) => ({ nombre, tamano: tamano ?? null, copias })),
+        entra: estado.entra,
+    });
+}
 
 /**
  * Cablea #archivo, #foto, #otroModelo, #ejemplo, #siguiente, la lista de recientes, escala,
@@ -67,6 +93,7 @@ export function iniciarPaso1() {
     conectarSubida();
     ajuste.conectar();
     piezas.conectar();
+    bloqueos.conectar();
 }
 
 /**
@@ -94,6 +121,8 @@ export function elegirOtroModelo() {
     estado.activa = null;
     estado.torre = null;
     visor?.quitarModelo();
+    bloqueos.dibujar(); // sin pieza: esconde el panel y saca las marcas
+    describirVisor();
     $('conModelo').hidden = true;
     $('sinModelo').hidden = false;
     $('siguiente').disabled = true;
@@ -148,7 +177,7 @@ async function cargarArchivo(
         alert('No sabemos leer ese archivo. Elegí un modelo STL, OBJ o 3MF (o una foto para hacer una litofanía).');
         return;
     }
-    $('cargando').hidden = false;
+    anunciar($('cargando'), 'Leyendo el modelo…');
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
@@ -161,7 +190,7 @@ async function cargarArchivo(
         $('sinModelo').hidden = !!estado.stl;
         alert('No pudimos leer el archivo: ' + err.message);
     } finally {
-        $('cargando').hidden = true;
+        anunciar($('cargando'), '');
     }
 }
 
@@ -185,7 +214,15 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     $('ajustesModelo').hidden = !!torre;
 
     $('conModelo').hidden = false;
-    if (!visor) visor = crearVisor($('visor'));
+    if (!visor) {
+        // Mientras three.js carga, la medida real no existe: al quedar listo se rehace con ella (ADR 0006).
+        visor = crearVisor($('visor'), {
+            alListo: () => {
+                ajuste.aplicar();
+                piezas.reacomodar();
+            },
+        });
+    }
     const imp = buscarImpresora(estado.impresoraId).dispositivo;
     visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
 
@@ -205,5 +242,7 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     ajuste.cancelarCara();
     ajuste.aplicar();
     piezas.dibujar();
+    bloqueos.dibujar(); // el panel sólo se ve con un modelo (no con torre ni litofanía)
+    describirVisor();
     $('siguiente').disabled = false;
 }

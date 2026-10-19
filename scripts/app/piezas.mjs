@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import { acomodar } from '../../src/motor/piezas.js';
 import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
 import { puntosDeCapa } from '../lib/gcode.mjs';
+import { esperarVisor } from '../lib/visor.mjs';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarPiezas(ctx) {
@@ -32,7 +33,10 @@ export async function probarPiezas(ctx) {
 const chips = pagina => pagina.locator('#listaPiezas .chip');
 const pulsadas = pagina => chips(pagina).evaluateAll(b => b.map(x => x.getAttribute('aria-pressed')).join());
 /** Cantidad de piezas que tiene el visor (data-piezas del canvas, ver visor.js). */
-const enVisor = pagina => pagina.evaluate(() => Number(document.querySelector('#visor canvas').dataset.piezas));
+const enVisor = async pagina => {
+    await esperarVisor(pagina, '#visor');
+    return pagina.evaluate(() => Number(document.querySelector('#visor canvas').dataset.piezas));
+};
 const medidas = pagina => pagina.textContent('#datosModelo').then(t => t.split(' · ')[0]);
 
 /** Suma el cubo de ejemplo como pieza nueva y espera a que haya `n` chips. */
@@ -229,6 +233,7 @@ async function probarUnaNoEntra({ page: pagina, ok: revisar }) {
     await pagina.tap('#siguiente');
     await pagina.tap('#laminar');
     await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
+    await pagina.waitForFunction(() => document.getElementById('errorLaminado').textContent !== '');
     const texto = await pagina.textContent('#errorLaminado');
     revisar(
         'una pieza que no entra: mensaje detallado del worker',

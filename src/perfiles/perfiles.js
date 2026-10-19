@@ -7,6 +7,7 @@ import opciones from './opciones.json';
 import { buscarImpresora } from './catalogo.js';
 import { esBowden } from './valores.js';
 import { validarCambios, cambiosARangos } from './cambios.js';
+import { normalizarSoportes, procesoDeSoportes } from './soportes.js';
 
 export {
     IMPRESORA_INICIAL,
@@ -16,7 +17,7 @@ export {
     existeImpresora,
     buscarImpresora,
 } from './catalogo.js';
-export { lineasPausa, valoresDeCalidad, esBowden, valoresDeAvanzado } from './valores.js';
+export { lineasPausa, salidaDe, valoresDeCalidad, esBowden, valoresDeAvanzado } from './valores.js';
 export { materiales, opciones };
 
 // Saca las claves que empiezan con "_" (son comentarios dentro del JSON).
@@ -198,6 +199,7 @@ function aplicarCambios(proceso, cambios, imp, av = {}, avisos) {
 // Combina, en este orden (lo último gana):
 //   proceso base de la impresora → calidad → material → adhesión → personalizado → avanzado → soportes → extras
 //   → cambios por altura (se agregan aparte, como `proceso.ranges`)
+// `soportes` es 'no' | 'normal' | 'arbol' (también acepta el boolean viejo: true es 'normal', ADR 0004).
 // y recorta las temperaturas a los límites de la impresora.
 // Devuelve { dispositivo, proceso, avisos }.
 export function armarConfiguracion({
@@ -225,7 +227,7 @@ export function armarConfiguracion({
     const proceso = sinComentarios({
         ...combinado,
         ...avanzadoAProceso(personal.avanzado, combinado, dispositivo),
-        ...(soportes ? { sliceSupportType: 'automatic' } : {}),
+        ...procesoDeSoportes(normalizarSoportes(soportes)),
         ...extras,
     });
     const avisos = [];

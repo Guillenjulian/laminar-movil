@@ -12,12 +12,17 @@
 import { MARCA as MARCA_ESPIRAL } from './espiral.js';
 import { OTRO, tipoDe, valor } from './recorridos-lista.js';
 import { Tramos } from './recorridos-tramos.js';
+import { NIVELES } from './recorridos-niveles.js';
 
 /** Estado del recorrido del G-code y los resultados que se van armando. */
 class Lector {
-    /** @param {number} maxSegmentos tope de tramos guardados */
-    constructor(maxSegmentos) {
-        this.tramos = new Tramos(maxSegmentos);
+    /**
+     * @param {number} maxSegmentos tope de tramos guardados
+     * @param {number} nivel nivel de simplificación (0 a 3)
+     */
+    constructor(maxSegmentos, nivel) {
+        this.tramos = new Tramos(maxSegmentos, nivel);
+        this.leidoHasta = 0; // posición en el texto de la primera línea no leída
         // posición y modo actuales
         this.x = 0;
         this.y = 0;
@@ -41,12 +46,16 @@ class Lector {
      */
     leer(gcode) {
         let inicio = 0;
+        this.leidoHasta = gcode.length;
         while (inicio < gcode.length) {
             let fin = gcode.indexOf('\n', inicio);
             if (fin < 0) fin = gcode.length;
             const offLinea = inicio;
             inicio = fin + 1;
-            if (!this.linea(gcode.slice(offLinea, fin), offLinea)) break;
+            if (!this.linea(gcode.slice(offLinea, fin), offLinea)) {
+                this.leidoHasta = offLinea;
+                break;
+            }
         }
     }
 
@@ -191,14 +200,19 @@ class Lector {
  *
  * @param {string} gcode
  * @param {number} maxSegmentos tope de tramos (Infinity para no limitar)
+ * @param {{ nivel?: 0|1|2|3 }} [opciones] nivel de simplificación (ver recorridos-niveles.js); omitido = 0, igual que antes
  * @returns {{ posiciones: Uint16Array, colores: Uint8Array, tipos: Uint8Array, inicioCapa: Uint32Array,
- *   pausaCapa: Float64Array, zCapa: Float32Array, caja: {min: number[], max: number[]}, incompleta: boolean }}
- *   `posiciones`: 6 por tramo (ver CUANTIZADO); `colores`: 6 por tramo; `tipos`: índice en TIPOS de cada tramo;
- *   `inicioCapa`: índice del primer tramo de cada capa, + uno final; `pausaCapa`: posición en el texto donde
+ *   pausaCapa: Float64Array, zCapa: Float32Array, caja: {min: number[], max: number[]}, incompleta: boolean,
+ *   nivel: number, simplificado: boolean, leidoHasta: number }}
+ *   `nivel`: el usado; `simplificado`: nivel > 0 y se unió algún tramo que el nivel 0 no habría unido; `leidoHasta`:
+ *   posición de la primera línea no leída (`gcode.length` si se leyó todo); `posiciones`: 6 por tramo (ver CUANTIZADO);
+ *   `colores`: 6 por tramo; `tipos`: índice en TIPOS de cada tramo; `inicioCapa`: índice del primer tramo de cada capa, + uno final; `pausaCapa`: posición en el texto donde
  *   insertar una pausa antes de cada capa (justo antes de subir Z, con la capa anterior terminada).
  */
-export function leer(gcode, maxSegmentos) {
-    const lector = new Lector(maxSegmentos);
+export function leer(gcode, maxSegmentos, opciones) {
+    const nivel = NIVELES[opciones?.nivel] ? opciones.nivel : 0;
+    const lector = new Lector(maxSegmentos, nivel);
     lector.leer(gcode);
-    return lector.tramos.resultado();
+    const { tramos, leidoHasta } = lector;
+    return { ...tramos.resultado(), nivel, simplificado: tramos.simplificado, leidoHasta };
 }

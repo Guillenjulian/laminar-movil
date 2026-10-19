@@ -9,6 +9,7 @@ import { estado, guardarPreferencias } from './estado.js';
 import { abrirHoja, cerrarHojas } from './navegacion.js';
 import { iniciarFormularioImpresora } from './formulario-impresora.js';
 import { $, escapar } from './util-dom.js';
+import { numeroHasta } from './formato.js';
 import { listaImpresoras, buscarImpresora } from '../perfiles/perfiles.js';
 
 const ETIQUETAS = {
@@ -19,7 +20,7 @@ const ETIQUETAS = {
 
 function detalleImpresora(i) {
     const d = i.dispositivo;
-    return `Cama ${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm · boquilla ${d.extruders[0].extNozzle.toLocaleString('es-AR', { maximumFractionDigits: 2 })} mm`;
+    return `Cama ${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm · boquilla ${numeroHasta(d.extruders[0].extNozzle, 2)} mm`;
 }
 
 /** Dibuja en #impresoraElegida la tarjeta de la impresora elegida (nombre, etiqueta de estado,
@@ -62,7 +63,7 @@ function dibujarListaImpresoras() {
         grupos
             .map(
                 g =>
-                    `<h3>${escapar(g.titulo)}</h3>` +
+                    `<h2>${escapar(g.titulo)}</h2>` +
                     g.items
                         .map(
                             i =>

@@ -1,4 +1,4 @@
-// Visor: elegir una cara del modelo con un toque (modo "apoyar cara") y avisar qué pieza se tocó.
+// Visor: elegir una cara del modelo con un toque (modo "apoyar cara") y avisar qué pieza y qué punto se tocó.
 // Lo usa visor.js; no toca el DOM al importarse (el elemento llega por parámetro).
 
 import * as THREE from 'three';
@@ -18,16 +18,24 @@ const MAX_DURACION_MS = 400; // más que esto era una pulsación larga
  * @returns {{
  *   elegirCara: (activo: boolean, alElegir?: (normal: number[], id: number) => void) => void,
  *   alTocarPieza: (fn: ((id: number) => void) | null) => void,
+ *   alTocarPunto: (fn: ((toque: {id: number, punto: {x: number, y: number, z: number}}) => void) | null) => void,
  *   quitarResaltado: () => void,
  *   destruir: () => void,
  * }}
  */
 export function crearSelectorCara(ctx) {
     // Estado compartido por las funciones de abajo: dependencias más lo que se va eligiendo.
-    const est = { ...ctx, alElegirCara: null, alTocar: null, resaltado: null, rayo: new THREE.Raycaster() };
+    const est = {
+        ...ctx,
+        alElegirCara: null,
+        alTocar: null,
+        alTocarPunto: null,
+        resaltado: null,
+        rayo: new THREE.Raycaster(),
+    };
     const quitarOyentes = escucharToques(
         est.dom,
-        () => !!(est.alElegirCara || est.alTocar),
+        () => !!(est.alElegirCara || est.alTocar || est.alTocarPunto),
         (cx, cy) => tocarModelo(est, cx, cy),
     );
     return {
@@ -39,6 +47,10 @@ export function crearSelectorCara(ctx) {
         // Con un toque sobre una pieza (haya o no modo "apoyar cara") avisamos su id.
         alTocarPieza(fn) {
             est.alTocar = fn;
+        },
+        // Con un toque sobre una pieza avisamos su id y el punto tocado en el marco de la pieza (ver puntoEnMarcoPieza).
+        alTocarPunto(fn) {
+            est.alTocarPunto = fn;
         },
         quitarResaltado: () => quitarResaltado(est),
         // Saca los oyentes del `dom` y el resaltado.
@@ -93,6 +105,8 @@ function tocarModelo(est, cx, cy) {
     const hallado = buscarToque(est, cx, cy);
     if (!hallado) return;
     const { toque, id } = hallado;
+    // El punto va ANTES que el id: así quien marca zonas ve todavía la pieza activa de antes del toque (ADR 0004).
+    est.alTocarPunto?.({ id, punto: puntoEnMarcoPieza(toque.point, toque.object) });
     est.alTocar?.(id);
     if (!est.alElegirCara) return;
     // La normal del triángulo viene en coordenadas del modelo: la llevamos a las
@@ -103,6 +117,22 @@ function tocarModelo(est, cx, cy) {
         .normalize();
     resaltar(est, toque.object, toque.face, normal);
     est.alElegirCara([normal.x, normal.y, normal.z], id);
+}
+
+/**
+ * Pasa un punto del mundo al marco de la pieza (ya transformada y centrada en X/Y, apoyada en Z=0: el de `centrar()`).
+ * La malla tocada es una copia: lo único que la separa de ese marco es su posición en la cama, que es el centro de su
+ * caja en X/Y (el marco tiene el centro en el origen y la base en Z=0). Se mide con los vértices, no con la caja
+ * original, porque al girar la caja alineada a los ejes sale más grande. Ojo: el motor centra la malla ya decimada
+ * (`prepararPiezas`), así que con decimación el centro del motor puede diferir del de acá hasta media celda
+ * (menos de 0,2 mm con los topes reales); sin decimar coinciden.
+ * @param {THREE.Vector3} punto  en coordenadas del mundo
+ * @param {THREE.Object3D} malla  la copia tocada
+ * @returns {{x: number, y: number, z: number}}
+ */
+function puntoEnMarcoPieza(punto, malla) {
+    const centro = new THREE.Box3().setFromObject(malla, true).getCenter(new THREE.Vector3());
+    return { x: punto.x - centro.x, y: punto.y - centro.y, z: punto.z };
 }
 
 function materialResaltado() {

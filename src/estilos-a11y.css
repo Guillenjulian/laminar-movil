@@ -1,0 +1,129 @@
+/* Accesibilidad (ADR 0008, A.1). Se carga DESPUÉS de las demás hojas y sobrescribe por orden: no se toca estilos.css. */
+
+:root {
+    --acento-enlace: #a85a00; /* texto naranja: 5,09:1 sobre blanco, 4,75:1 sobre --fondo */
+    --borde-control: #7d8794; /* borde de campos y botones: 3,64:1 sobre blanco */
+    --foco: #0b57d0; /* anillo de foco y borde de lo elegido */
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --acento-enlace: #f08a24;
+        --borde-control: #6b7684;
+        --foco: #8ab4f8;
+    }
+}
+
+/* --- Texto naranja y números de la barra de pasos --- */
+.enlace,
+#avanzado .contador.cambiado output {
+    color: var(--acento-enlace);
+}
+.pasos li {
+    color: var(--texto);
+}
+.pasos li.actual {
+    color: var(--acento-texto);
+}
+
+/* --- Bordes de controles (1.4.11) --- */
+.fila-escala input,
+.chip,
+.chip-quitar,
+.borrar,
+.boton,
+.opcion,
+.patron,
+.atajo,
+.contador button,
+.buscar,
+.formulario input:not([type='checkbox']),
+.formulario select,
+.formulario textarea,
+.boton-capa,
+.modo-color button,
+.cambio input[type='number'],
+.campo-precio input {
+    border-color: var(--borde-control);
+}
+.interruptor input {
+    background: var(--borde-control);
+}
+/* Lo elegido: borde en --foco además del relleno, para que no dependa sólo del color. */
+.boton.activo,
+.chip[aria-pressed='true'],
+.opcion:has(input:checked),
+.patron:has(input:checked),
+.atajo.activo,
+.modo-color button.activo,
+.zonas-sin-soporte .boton[aria-pressed='true'] {
+    border-color: var(--foco);
+}
+
+/* --- Foco (2.4.7, 1.4.11) --- */
+:focus-visible,
+.visor-estado-boton:focus-visible,
+.campo-precio input:focus {
+    outline: 3px solid var(--foco);
+    outline-offset: 2px;
+}
+.patron:has(input:focus-visible) {
+    outline: 3px solid var(--foco);
+    outline-offset: 2px;
+}
+
+/* --- Alto de toque (2.5.8) --- */
+.fila-capa input[type='range'] {
+    min-height: 44px;
+}
+.tilde-capa {
+    min-height: 44px;
+}
+
+/* Con el deslizador de 44 px las marcas de pausa se centran sobre el carril (en estilos.css van a top: 4px). */
+.marcas-pausa i {
+    top: 50%;
+    transform: translateY(-50%);
+}
+/* La lista de filamentos recorta lo que sobresale: el anillo va hacia adentro. */
+.filamentos :focus-visible {
+    outline-offset: -3px;
+}
+
+/* --- Movimiento (2.3.3) --- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition: none !important;
+        animation: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* A3 */
+/* Títulos de grupo de la hoja de impresoras: eran h3 (ADR 0008, H12); mismo aspecto. */
+.contenido-hoja h2 {
+    margin: 14px 0 2px;
+    font-size: 0.9rem;
+    color: var(--suave);
+}
+
+/* A4 */
+/* Sin reglas: la descripción del visor usa .solo-lectores (estilos.css) y el resto es semántica (ADR 0008, A4). */
+
+/* I3 */
+.barra h1 {
+    min-width: 0;
+}
+.boton-idioma {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--borde-control);
+    border-radius: 8px;
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+}

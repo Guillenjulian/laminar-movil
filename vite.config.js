@@ -22,12 +22,13 @@ function serviceWorker() {
                     if (f.isDirectory()) recorrer(ruta);
                     else {
                         const rel = path.relative(salida, ruta).split(path.sep).join('/');
-                        // La página de diagnóstico (y su worker de pruebas) no hace falta offline.
+                        // La página de diagnóstico (y sus workers de pruebas) no hace falta offline.
                         if (
                             rel === 'sw.js' ||
                             rel.startsWith('prueba-motor') ||
                             rel.includes('pruebaMotor') ||
-                            rel.includes('prueba-piezas')
+                            rel.includes('prueba-piezas') ||
+                            rel.includes('minions-prueba')
                         )
                             continue;
                         archivos.push(rel === 'index.html' ? './' : rel);
@@ -57,6 +58,8 @@ export default defineConfig({
     },
     build: {
         target: 'es2022',
+        // El chunk del visor (three.js) pasa de 500 kB a propósito; el guardián real es scripts/verificar-chunks.mjs.
+        chunkSizeWarningLimit: 600,
         rollupOptions: {
             input: {
                 main: 'index.html',

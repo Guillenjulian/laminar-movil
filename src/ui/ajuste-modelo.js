@@ -12,7 +12,7 @@ import * as transformar from '../motor/transformar.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxTriangulos } from '../config.js';
 import * as formato from './formato.js';
-import { $ } from './util-dom.js';
+import { $, anunciar, escapar } from './util-dom.js';
 import { estado, matrizModelo, piezaActiva } from './estado.js';
 
 /**
@@ -21,6 +21,7 @@ import { estado, matrizModelo, piezaActiva } from './estado.js';
  * @param {() => (object|null)} ctx.visor visor del paso 1 (null si todavía no se creó)
  * @param {() => void} ctx.alCambiar se llama al final de cada cambio de escala o rotación
  *   (paso1: guardar el reciente; después, reacomodar las piezas)
+ * @param {() => void} [ctx.alActivarCara] se llama al entrar al modo "apoyar cara" (paso1 apaga el de marcar zonas)
  * @param {() => (object|null)} ctx.torres hoja de torres (su `revisar(torre)` se llama al avisar)
  * @returns {{conectar: () => void, aplicar: () => void, actualizarAviso: () => void, cancelarCara: () => void}}
  *   `conectar()` cablea escala, rotaciones, "ajustar a la cama", "restablecer" y "apoyar cara" (una vez);
@@ -76,18 +77,21 @@ function actualizarAviso(ctx) {
     const imp = buscarImpresora(estado.impresoraId);
     const noEntra = noEntraEnCama(tamanoActual(ctx), imp.dispositivo);
     const avisos = [];
-    if (noEntra) avisos.push(textoNoEntra(imp));
+    // Con varias piezas o copias lo dice #avisoEntran (alerta); acá sólo con una pieza y una copia, para no anunciarlo dos veces.
+    const sola = estado.piezas.length === 1 && estado.piezas[0].copias === 1;
+    if (noEntra && sola) avisos.push(textoNoEntra(imp));
     $('ajustarCama').hidden = !noEntra;
     const { triangulos } = estado.vista;
     if (triangulos > maxTriangulos()) avisos.push(textoPesado(triangulos));
-    $('avisoModelo').innerHTML = avisos.join('<br><br>');
-    $('avisoModelo').hidden = avisos.length === 0;
+    anunciar($('avisoModelo'), avisos.join('<br><br>'), true);
 }
 
 /** "Apoyar cara": el usuario toca una cara y el modelo gira para que quede sobre la cama. */
 function activarElegirCara(ctx, activo) {
     estado.eligiendoCara = activo;
     $('apoyarCara').classList.toggle('activo', activo);
+    $('apoyarCara').setAttribute('aria-pressed', String(activo));
+    if (activo) ctx.alActivarCara?.();
     $('apoyarCara').textContent = activo ? 'Cancelar' : 'Apoyar cara';
     $('ayudaCara').hidden = !activo;
     ctx.visor()?.elegirCara(activo, normal => {
@@ -140,7 +144,7 @@ function noEntraEnCama(t, d) {
 function textoNoEntra(imp) {
     const d = imp.dispositivo;
     return (
-        `<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
+        `<b>No entra en la ${escapar(imp.nombre)}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
         'Rotalo o achicalo con los botones de abajo.'
     );
 }

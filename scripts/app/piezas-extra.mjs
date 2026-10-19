@@ -20,6 +20,7 @@ import { SEPARACION_PIEZAS_MM } from '../../src/config.js';
 import { medir, multiplicar, rotacion90, rotacionQueApoya } from '../../src/motor/transformar.js';
 import { puntosDeCapa } from '../lib/gcode.mjs';
 import { CAMA } from './piezas.mjs';
+import { esperarVisor, tocarLienzo } from '../lib/visor.mjs';
 
 const LARGO = 40;
 const LADO = 10 * Math.SQRT2; // cateto del triángulo apoyado: la huella real mide LADO × LARGO
@@ -65,8 +66,8 @@ const medidas = pagina => pagina.textContent('#datosModelo').then(t => t.split('
  */
 async function apoyarCara({ page: pagina, ok: revisar, captura }, fx, fy, nombre) {
     await pagina.tap('#apoyarCara');
-    const l = await pagina.locator('#visor canvas').boundingBox();
-    await pagina.touchscreen.tap(l.x + l.width * fx, l.y + l.height * fy);
+    await esperarVisor(pagina, '#visor');
+    await tocarLienzo(pagina, fx, fy);
     const cayo = await pagina
         .waitForFunction(() => document.getElementById('ayudaCara').hidden, null, { timeout: 5000 })
         .then(
@@ -77,6 +78,7 @@ async function apoyarCara({ page: pagina, ok: revisar, captura }, fx, fy, nombre
     await captura('apoyar-cara-fallo');
     const chips = await pagina.locator('#listaPiezas .chip').count();
     const activa = await pagina.locator('#listaPiezas .chip[aria-pressed="true"]').allTextContents();
+    const l = await pagina.locator('#visor canvas').boundingBox();
     const caja = `x ${l.x}, y ${l.y}, ${l.width} × ${l.height}`;
     revisar(
         `${nombre}: el toque en ${fx}/${fy} del lienzo cae en la pieza (¿cambió el encuadre?)`,

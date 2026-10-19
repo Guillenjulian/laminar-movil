@@ -65,11 +65,21 @@ export function dibujarTarjeta(contenedor, config) {
     });
 }
 
+/**
+ * Gramos de un largo de filamento, con la densidad del material.
+ * @param {number} mmFilamento largo de filamento usado (mm)
+ * @param {number} diametro diámetro del filamento (mm)
+ * @param {string} id id del material (`materiales.json`); si no existe, PLA
+ * @returns {number} gramos (densidad del material, o 1,24 g/cm³ si no la trae)
+ */
+export function gramosDe(mmFilamento, diametro, id) {
+    return formato.gramos(mmFilamento, diametro, material(id).densidad || 1.24);
+}
+
 // Filas del resumen del paso 4: filamento (con la densidad del material) y costo.
 export function filasResumen(mmFilamento, diametro, id) {
-    const m = material(id);
-    const densidad = m.densidad || 1.24;
-    const g = formato.gramos(mmFilamento, diametro, densidad);
+    const densidad = material(id).densidad || 1.24;
+    const g = gramosDe(mmFilamento, diametro, id);
     const p = precio(id);
     const costo = p
         ? `≈ ${formato.pesos((g * p) / 1000)}`

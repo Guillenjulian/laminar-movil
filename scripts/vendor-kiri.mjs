@@ -183,6 +183,38 @@ parchar(
     'altura variable: resto de las capas',
 );
 
+// Soportes (ADR 0004): tres ganchos mínimos en processSupports. No importan nada: llaman a
+// `globalThis.laminarMovil?.…`, que instala src/motor/soportes-kiri.js. Sin puente instalado, Kiri se comporta igual.
+// A. Reemplaza el stub vacío de `sliceSupportTree`: el puente puede generar los soportes árbol y devolver true.
+parchar(
+    'kiri/mode/fdm/work/slice.js',
+    `        if (process.sliceSupportTree) {
+            // console.log('TREE OUTPUT');
+        }`,
+    `        // PARCHE laminar-movil: soportes árbol (ADR 0004)
+        const arbolListo = !!process.sliceSupportTree && !!globalThis.laminarMovil?.arbol?.(stack, widget.anno?.bloqueos, {
+            lineWidth, sliceHeight, angulo: process.sliceSupportAngle, cama: widget.anno?.cama,
+        });`,
+    'soportes árbol: stub de sliceSupportTree',
+);
+// B. Con árbol listo el bucle de acumulación no itera (el recorte final por sliceSupportGap/clips corre igual).
+parchar(
+    'kiri/mode/fdm/work/slice.js',
+    `        // perform accumulation top down
+        for (let slice of stack.slice().reverse()) {`,
+    `        // perform accumulation top down
+        for (let slice of arbolListo ? [] : stack.slice().reverse()) { // PARCHE laminar-movil`,
+    'soportes árbol: bucle de acumulación',
+);
+// C. Zonas sin soporte: se le resta al shadow de la capa antes de acumularlo hacia abajo.
+parchar(
+    'kiri/mode/fdm/work/slice.js',
+    '            // pump shadow to clean to clean it up',
+    `            shadow = globalThis.laminarMovil?.sinBloqueos?.(shadow, slice.z, widget.anno?.bloqueos, minArea) ?? shadow; // PARCHE laminar-movil
+            // pump shadow to clean to clean it up`,
+    'zonas sin soporte: antes de limpiar el shadow',
+);
+
 // 5. Escribir shims
 for (const [rel, codigo] of Object.entries(SHIMS)) {
     const dst = path.join(DESTINO, 'src', rel);
@@ -214,6 +246,7 @@ Parches (marcados con \`PARCHE laminar-movil\`):
 - \`src/kiri/mode/fdm/work/export.js\`: la macro \`{fan_speed}\` no se actualizaba cuando el ventilador cambia a mitad de capa (salía \`M106 S0\` y el ventilador quedaba apagado casi toda la impresión).
 - \`src/kiri/mode/fdm/work/prepare.js\`: el ventilador de "capa puente" no se aplica a la primera capa.
 - \`src/kiri/mode/fdm/work/slice.js\`: con altura de capa variable las capas quedaban sin altura (no subía Z) y se cortaban en el borde de arriba en vez del medio.
+- \`src/kiri/mode/fdm/work/slice.js\` (\`processSupports\`, ADR 0004): tres ganchos a \`globalThis.laminarMovil?.arbol\` y \`.sinBloqueos\` (soportes árbol y zonas sin soporte); sin el puente instalado no cambian nada.
 - \`src/ext/jspoly.js\` tiene un parche mínimo (se apagan \`require()\` de CommonJS que nunca corren en el navegador).
 
 No editar a mano: para actualizar, correr \`npm run vendor:kiri\`.

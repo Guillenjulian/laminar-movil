@@ -7,6 +7,52 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+## [0.5.0] - 2026-10-19
+
+Sprint 5: envío por red local a OctoPrint y Moonraker (experimental), accesibilidad y la base del inglés (todavía oculta).
+
+### Agregado
+
+- Envío del G-code por red local a OctoPrint o Moonraker (experimental, ADR 0007): hoja de configuración por impresora, botón "Enviar a la impresora" en el paso 4, plan B si el navegador lo bloquea y `npm run test:red`.
+- Accesibilidad (ADR 0008): contraste AA, anillo de foco, movimiento reducido, paso actual anunciado, hojas modales con Escape y retorno de foco, errores y avisos que se anuncian, contadores con nombre, descripción textual del visor y deslizador de capas con "Capa N de M, Z mm, con pausa".
+- Base del inglés, oculta hasta el sprint 6 (ADR 0008): diccionarios que se cargan bajo demanda, números y medidas según el idioma (`formato.js`) y `npm run test:textos`. Hasta que el inglés esté completo, la app arranca siempre en español.
+- Prueba automática de accesibilidad con axe (WCAG 2.2 AA) en la CI: `npm run test:a11y`.
+
+### Cambiado
+
+- El cliente de red se carga sólo al usarlo.
+- `anunciar` es compartido, en `util-dom`.
+
+### Corregido
+
+- El nombre de una impresora propia se escapa en el aviso "No entra".
+- Un doble Escape ya no saca de la app.
+- "1 triángulo" en singular (antes decía "1 triángulos").
+
+## [0.4.0] - 2026-10-19
+
+Sprint 4: soportes árbol y zonas sin soporte, `.gcode.3mf` para Bambu Lab, rendimiento y el arreglo del laminado colgado.
+
+### Agregado
+
+- Soportes de tipo **Normal** o **Árbol** (paso 2) y **zonas sin soporte** (paso 1): con "Marcar zona sin soporte" un toque sobre la pieza deja una esfera (radio de 2 a 40 mm) donde no se genera soporte; hasta 20 por pieza, valen para todas las copias, se ven en el visor y se vacían (con aviso) si cambia la escala, la rotación o "Apoyar cara". Los pasos 2 y 4 avisan "N zonas sin soporte" cuando hay soportes. El árbol usa menos material que las columnas normales, y los troncos que quedan colgados se podan (ADR 0004).
+- Las impresoras Bambu Lab (A1, A1 mini, P1S y X1C) entregan un `.gcode.3mf` en el paso 4: el mismo G-code con las pausas (`M400 U1`) dentro de un ZIP con el MD5 y los metadatos que espera Bambu (ADR 0005). Compartir lo arma por adelantado y avisa "Armando el archivo…"; las demás impresoras siguen bajando el `.gcode` de siempre. Los cuatro perfiles Bambu salen con aviso de "sin validar con la impresora".
+- Clave de perfil `salida` (y `modeloBambu`): dice si la descarga es `.gcode` o `.gcode.3mf`. Documentada en `src/perfiles/LEEME.md`.
+
+### Cambiado
+
+- El interruptor "Soportes" del paso 2 pasa a un selector No / Normal / Árbol. Las preferencias guardadas (`true`/`false`) se leen como Normal/No, y con Normal el G-code es el mismo de antes. La torre de calibración sigue sin soportes.
+- jszip y el armado del `.gcode.3mf` se cargan sólo al entregar un archivo Bambu (y quedan guardados para usar sin conexión): el chunk principal baja de 169 a 65 kB. El G-code plano no los baja nunca.
+- El importador de Kiri sigue salteando `Bambu.A1` y `Bambu.P1S`, con el motivo de que el perfil revisado a mano es el que se usa.
+- La app arranca más liviana: three.js se carga aparte, cuando hace falta (y se precarga en segundo plano). El chunk principal pasa de 594 a 62 kB.
+- La vista previa de G-codes enormes se simplifica si no entra en la memoria del equipo, y avisa. Antes se cortaba: ahora se ven todas las capas.
+
+### Corregido
+
+- El laminado ya no se queda colgado en ~41 % con piezas cuyas capas tienen muchas islas (por ejemplo un llavero con letras, con o sin soportes): Kiri mandaba la resta de polígonos a un pool de sub-workers que acá no existe y esperaba para siempre. Ahora `minions-locales.js` hace `subtract`, `union` y `fill` en el mismo worker, y `clip`/`sliceZ` fallan con un error claro en vez de quedarse esperando. Prueba nueva: `scripts/motor/soportes-progreso.mjs` (placa de 36 islotes y esfera rugosa con soportes).
+- La barra de progreso de los soportes automáticos avanza mientras se calculan las sombras, en vez de quedarse quieta y saltar al final: el cálculo cede el hilo cada ~100 ms (`cola-cediendo.js`).
+- Si el laminador pasa 240 s sin avisar nada, el paso 3 lo cancela y muestra "El laminado se trabó y lo cancelamos. Probá de nuevo; si vuelve a pasar, mandanos el archivo." (`laminar` acepta `plazoSinNoticiasMs`; los avisos de progreso reinician el plazo). Antes un cuelgue quedaba en silencio para siempre.
+
 ## [0.3.0] - 2026-10-18
 
 Sprint de deuda técnica.

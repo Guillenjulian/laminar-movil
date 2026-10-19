@@ -2,13 +2,13 @@
 /** Base común (estado, navegación y util-dom). NO la usa paso2-config: el ADR no le permite navegacion. */
 const conBase = (...otros) => ['ui/estado', 'ui/navegacion', 'ui/util-dom', ...otros];
 const PERFILES = 'perfiles/perfiles';
-const VISOR = 'ui/visor';
+const VISOR = 'ui/visor-carga';
 const FORMATO = 'ui/formato';
 const MOTOR = 'motor/motor';
 
 /** @type {Record<string, {exports: Record<string, number|'valor'>, importa: string[]}>} */
 export const CONTRATOS = {
-    'ui/util-dom': { exports: { $: 1, escapar: 1 }, importa: [] },
+    'ui/util-dom': { exports: { $: 1, escapar: 1, anunciar: 2 }, importa: [] },
     'ui/estado': {
         exports: {
             estado: 'valor',
@@ -23,7 +23,7 @@ export const CONTRATOS = {
             guardarPropias: 0,
             cargarPreferencias: 0,
         },
-        importa: [PERFILES, 'almacen', 'motor/transformar', 'motor/tipos-linea', 'ui/avanzado'],
+        importa: [PERFILES, 'perfiles/soportes', 'almacen', 'motor/transformar', 'motor/tipos-linea', 'ui/avanzado'],
     },
     'ui/navegacion': {
         exports: {
@@ -49,6 +49,8 @@ export const CONTRATOS = {
             'ui/recientes',
             'ui/ajuste-modelo',
             'ui/piezas-ui',
+            'ui/bloqueos-ui',
+            'ui/visor-descripcion',
         ),
     },
     'ui/acomodo': {
@@ -77,7 +79,7 @@ export const CONTRATOS = {
     },
     'ui/impresoras': {
         exports: { iniciarImpresoras: 1, dibujarImpresoraElegida: 0 },
-        importa: conBase(PERFILES, 'ui/formulario-impresora'),
+        importa: conBase(PERFILES, 'ui/formulario-impresora', FORMATO),
     },
     'ui/formulario-impresora': {
         exports: { iniciarFormularioImpresora: 1 },
@@ -94,6 +96,7 @@ export const CONTRATOS = {
             'ui/cambios',
             'ui/materiales',
             'ui/iconos-relleno',
+            'ui/soportes-tipo-ui',
             PERFILES,
             'perfiles/torres',
         ],
@@ -103,9 +106,20 @@ export const CONTRATOS = {
         importa: ['perfiles/cambios', 'ui/util-dom'],
     },
     'ui/vista-capas': {
-        exports: { iniciarVistaCapas: 0, armarVistaPrevia: 0 },
-        importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config', 'ui/pausas-ui'),
+        exports: { iniciarVistaCapas: 1, armarVistaPrevia: 0 },
+        importa: conBase(
+            VISOR,
+            FORMATO,
+            MOTOR,
+            'motor/tipos-linea',
+            PERFILES,
+            'config',
+            'ui/pausas-ui',
+            'ui/aviso-vista',
+        ),
     },
+    'ui/visor-descripcion': { exports: { textoDescripcionVisor: 1 }, importa: [FORMATO] },
+    'ui/aviso-vista': { exports: { textoAvisoVista: 2 }, importa: [] },
     'ui/pausas-ui': {
         exports: { conectarPausas: 1, dibujarPausas: 0 },
         importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/tipos-linea', PERFILES],
@@ -121,14 +135,96 @@ export const CONTRATOS = {
             'ui/paso2-config',
             FORMATO,
             'ui/materiales',
-            'motor/pausas',
+            'ui/entrega',
+            'ui/entrega-ui',
+            'ui/envio-ui',
+            'ui/soportes-tipo-ui',
             PERFILES,
             'perfiles/cambios',
+            'perfiles/soportes',
         ),
+    },
+    'ui/entrega': {
+        exports: { nombreEntrega: 2, mimeEntrega: 1, armarEntrega: 5 },
+        importa: ['motor/pausas', 'motor/bambu-3mf'],
+    },
+    'ui/entrega-ui': {
+        exports: {
+            entregaDe: 0,
+            archivoEntrega: 0,
+            precargar: 0,
+            programarPrecarga: 0,
+            soltarEntrega: 0,
+            esperarArchivo: 1,
+            puedeCompartir: 1,
+            paraCompartir: 1,
+        },
+        importa: ['ui/estado', 'ui/util-dom', 'ui/materiales', 'ui/entrega', PERFILES],
+    },
+    // Envío por red local (ADR 0007). Lo de src/red/ llega por `ctx` desde main.js, así que no se importa acá.
+    'ui/red-hoja': {
+        exports: { iniciarRedHoja: 1, abrirRedHoja: 0 },
+        importa: ['ui/estado', 'ui/navegacion', 'ui/util-dom', PERFILES],
+    },
+    'ui/envio-ui': {
+        exports: { iniciarEnvio: 1, actualizarEnvio: 0, cancelarEnvio: 0 },
+        importa: ['ui/estado', 'ui/util-dom', 'ui/entrega-ui', 'ui/entrega'],
     },
     'ui/visor-cara': { exports: { crearSelectorCara: 1 }, importa: [] },
     'ui/visor-recorridos': { exports: { crearRecorridos: 1 }, importa: ['motor/tipos-linea'] },
     'ui/visor-cama': { exports: { reemplazarCama: 3 }, importa: [] },
-    'ui/visor': { exports: { crearVisor: 1 }, importa: ['ui/visor-cara', 'ui/visor-recorridos', 'ui/visor-cama'] },
+    'ui/visor-bloqueos': { exports: { crearMarcasBloqueo: 1 }, importa: [] },
+    'ui/visor': {
+        exports: { crearVisor: 1 },
+        importa: ['ui/visor-cara', 'ui/visor-recorridos', 'ui/visor-cama', 'ui/visor-bloqueos'],
+    },
+    // Zonas sin soporte (paso 1) y tipo de soporte (paso 2), ADR 0004. El visor entra a bloqueos-ui por `ctx`.
+    'ui/bloqueos-ui': {
+        exports: { NOTA_VOLADIZO: 'valor', AVISO_VACIADAS: 'valor', firmaPieza: 1, chipZona: 4, crearBloqueosUI: 1 },
+        importa: ['motor/bloqueos', 'ui/estado', 'ui/util-dom'],
+    },
+    'ui/soportes-tipo-ui': {
+        exports: { OPCIONES_SOPORTE: 'valor', textoZonasSinSoporte: 1, zonasVigentes: 0, crearTipoSoportes: 1 },
+        importa: ['perfiles/soportes', 'ui/estado', 'ui/util-dom'],
+    },
+    // Único que importa ui/visor, con import() dinámico (three.js sale del chunk principal, ADR 0006).
+    'ui/visor-carga': { exports: { crearVisor: 2, precargarVisor: 0, armarVisorCarga: 1 }, importa: ['ui/visor'] },
+    // Idioma (ADR 0008, B.6/B.7). `ui/idioma` es hoja; es.js y en.js se importan con import() dinámico.
+    'textos/traducir': {
+        exports: {
+            IDIOMAS: 'valor',
+            IDIOMA_BASE: 'valor',
+            LOCALES: 'valor',
+            interpolar: 2,
+            elegirForma: 3,
+            traducir: 5,
+            elegirIdioma: 2,
+            variablesDe: 1,
+        },
+        importa: [],
+    },
+    'textos/atributos': { exports: { ATRIBUTOS_TRADUCIBLES: 'valor' }, importa: [] },
+    'textos/es': { exports: { default: 'valor' }, importa: [] },
+    'textos/en': { exports: { default: 'valor' }, importa: [] },
+    'ui/idioma': {
+        exports: {
+            ARRANQUE_AUTOMATICO: 'valor',
+            t: 2,
+            marcar: 1,
+            existe: 1,
+            idiomaActual: 0,
+            localeActual: 0,
+            iniciarIdioma: 1,
+            cambiarIdioma: 1,
+            alCambiarIdioma: 1,
+            ponerDiccionarios: 3,
+        },
+        importa: ['almacen', 'textos/traducir', 'textos/es', 'textos/en'],
+    },
+    // Sólo lo importa main.js (ADR 0008, B.7).
+    'ui/idioma-dom': {
+        exports: { traducirDom: 1, iniciarIdiomaDom: 0 },
+        importa: ['ui/idioma', 'ui/util-dom', 'textos/atributos'],
+    },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

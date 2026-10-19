@@ -1,0 +1,12 @@
+{
+    "formato.milimetros": "{x} × {y} × {z} mm",
+    "formato.triangulos.millones": "{n} millones de triángulos",
+    "formato.triangulos.miles": "{n} mil triángulos",
+    "formato.triangulos.cantidad": { "one": "{c} triángulo", "other": "{c} triángulos" },
+    "formato.duracion.minutos": "{min} min",
+    "formato.duracion.horas": "{h} h {min} min",
+    "formato.filamento": "{m} m (≈ {g} g)",
+    "formato.pesos": "$ {n}",
+    "formato.bytes.mb": "{n} MB",
+    "formato.bytes.kb": "{n} KB"
+}

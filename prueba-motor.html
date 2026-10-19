@@ -84,13 +84,29 @@
                 const piezas = [];
                 for (const p of pedidas) {
                     const stl = p.mismoQue === undefined ? await aBuffer(p) : piezas[p.mismoQue].stl;
-                    piezas.push({ stl, transformacion: p.transformacion, posiciones: p.posiciones });
+                    piezas.push({
+                        stl,
+                        transformacion: p.transformacion,
+                        posiciones: p.posiciones,
+                        bloqueos: p.bloqueos,
+                    });
                 }
                 return piezas;
             }
 
             const configurar = ({ impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', ...resto }) =>
                 armarConfiguracion({ impresoraId, calidad, material: 'pla', soportes: false, personal: {}, ...resto });
+
+            // Compara los minions locales con las funciones de polígonos de Kiri (scripts/motor/soportes-progreso.mjs).
+            window.probarMinions = () =>
+                new Promise((resolver, rechazar) => {
+                    const w = new Worker(new URL('./scripts/motor/minions-prueba.worker.js', import.meta.url), {
+                        type: 'module',
+                    });
+                    w.onmessage = e => (w.terminate(), resolver(e.data));
+                    w.onerror = e => (w.terminate(), rechazar(new Error(e.message)));
+                    w.postMessage(null);
+                });
 
             // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
             window.probar = async ({
@@ -100,11 +116,13 @@
                 stlBase64, // un STL ya armado (lo usan las pruebas que necesitan una malla propia)
                 piezas: pedidas, // varias piezas (ADR 0003): [{ caso | stlBase64 | mismoQue, transformacion?, posiciones }]
                 cancelarEn, // aborta (AbortSignal) cuando 'laminando' llega a este valor (0..1)
+                diagnostico, // true: el worker registra las llamadas de los ganchos de soportes y las devuelve en info.ganchos
                 ...config
             } = {}) => {
                 const piezas = pedidas && (await leerPiezas(pedidas));
                 const stl = pedidas ? null : await aBuffer({ stlBase64, caso });
                 const { dispositivo, proceso, avisos } = configurar(config);
+                if (diagnostico) proceso.laminarDiagnostico = true;
                 const inicio = performance.now();
                 const control = new AbortController();
                 window.progreso = []; // [etapa, valor] de cada aviso de progreso, para las pruebas

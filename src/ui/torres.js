@@ -13,7 +13,8 @@
 import { torreAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { armarTorre, valoresSugeridos } from '../perfiles/torres.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
+import { numeroHasta } from './formato.js';
 
 const TIPOS = {
     temperatura: { nombre: 'Torre de temperatura', unidad: '°C', paso: 5 },
@@ -27,7 +28,7 @@ const BLOQUES_MAX = 8;
 const resumenTorre = torre => {
     const { unidad } = TIPOS[torre.tipo];
     const decimales = unidad === 'mm' ? 1 : 0; // 0,5 mm de retracción no se puede redondear a 1
-    const ver = v => v.toLocaleString('es-AR', { maximumFractionDigits: decimales });
+    const ver = v => numeroHasta(v, decimales);
     return `${torre.bloques.map(b => ver(b.valor)).join(', ')} ${unidad}`;
 };
 
@@ -40,8 +41,7 @@ const leerNumero = texto => (texto.trim() === '' ? NaN : Number(texto.replace(',
 
 /** Muestra u oculta un mensaje de la hoja. @param {string} id @param {string} texto @returns {void} */
 function mensaje(id, texto) {
-    $(id).textContent = texto || '';
-    $(id).hidden = !texto;
+    anunciar($(id), texto || '');
 }
 
 /** Dibuja un campo por bloque, de abajo hacia arriba. @param {string} tipo @param {number[]} valores @returns {void} */
@@ -104,21 +104,6 @@ function avisarTorre(torre, impresoraId) {
     mensaje('avisoTorre', textos.join(' '));
 }
 
-/** Al cerrar la hoja (con "Crear torre" o con la flecha) el foco vuelve al botón que la abrió. Sólo si la
- *  hoja estaba abierta: `mostrar()` reasigna `hidden` también al abrir otras hojas.
- *  @returns {() => void} función que hay que llamar al abrir la hoja */
-function devolverFocoAlCerrar() {
-    let abierta = false;
-    new MutationObserver(() => {
-        if (!abierta || !$('hojaTorre').hidden) return;
-        abierta = false;
-        $('botonTorre').focus();
-    }).observe($('hojaTorre'), { attributeFilter: ['hidden'] });
-    return () => {
-        abierta = true;
-    };
-}
-
 /**
  * Arma la hoja y la conecta. `abrir` y `cerrar` son abrirHoja/cerrarHojas de navegacion.js;
  * `cargar(nombre, generar, torre)` carga el modelo (`generar()` devuelve una promesa con el STL);
@@ -141,8 +126,6 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
         ajustarCantidad(tipo(), Number(e.target.value));
     });
 
-    const marcarAbierta = devolverFocoAlCerrar();
-
     form.addEventListener('submit', e => {
         e.preventDefault();
         let torre;
@@ -164,7 +147,6 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
         abrir() {
             aviso = sugerir(form, contexto());
             abrir();
-            marcarAbierta();
             form.parentElement.scrollTo?.(0, 0);
             form.querySelector('input:checked').focus();
         },
