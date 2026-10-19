@@ -53,7 +53,11 @@ async function mapeo(T, revisar, igual) {
     );
     revisar('GET sin cuerpo', init.body == null);
     revisar('lleva una señal de aborto', init.signal instanceof AbortSignal);
-    revisar('no manda credenciales de cookies', init.credentials !== 'include');
+    revisar(
+        'no manda credenciales de cookies (credentials: omit)',
+        init.credentials === 'omit',
+        String(init.credentials),
+    );
 
     const g = fetchFalso({ status: 409, texto: 'ocupada' });
     const e = await intentar(() => T.crearTransporte({ fetch: g.fn })(pet()));
@@ -198,6 +202,83 @@ async function sonda(T, revisar) {
         JSON.stringify(vista),
     );
     await sondaFallida(T, revisar);
+    await sondaLocal(T, revisar);
+}
+
+async function sondaLocal(T, revisar) {
+    console.log('\nsondaSinCors: targetAddressSpace como el transporte');
+    const casos = [
+        ['http://192.168.1.50', true],
+        ['http://octopi.local:5000', true],
+        ['https://impresora.tail1234.ts.net', false],
+        ['http://8.8.8.8', false],
+    ];
+    for (const [url, local] of casos) {
+        const f = fetchFalso({ status: 0, texto: '' });
+        await intentar(() => T.sondaSinCors(url, f.fn));
+        const init = f.llamadas[0]?.init ?? {};
+        revisar(
+            `${url} → ${local ? "targetAddressSpace: 'local'" : 'sin targetAddressSpace'}`,
+            local ? init.targetAddressSpace === 'local' : !tiene(init),
+            JSON.stringify(init.targetAddressSpace),
+        );
+    }
+}
+
+/** Espía setTimeout/clearTimeout sólo para el tope pedido (`ms`); devuelve cuántos armó y cuántos quedaron sin limpiar. */
+function espiarTimers(ms) {
+    const { setTimeout: st, clearTimeout: ct } = globalThis;
+    const armados = new Set();
+    const limpios = new Set();
+    globalThis.setTimeout = (fn, t, ...resto) => {
+        const id = st(fn, t, ...resto);
+        if (t === ms) armados.add(id);
+        return id;
+    };
+    globalThis.clearTimeout = id => {
+        limpios.add(id);
+        return ct(id);
+    };
+    return {
+        restaurar() {
+            globalThis.setTimeout = st;
+            globalThis.clearTimeout = ct;
+            return { armados: armados.size, pendientes: [...armados].filter(id => !limpios.has(id)).length };
+        },
+    };
+}
+
+/** Señal falsa que cuenta add/removeEventListener (no aborta nunca). */
+function senalContada() {
+    const c = { altas: 0, bajas: 0, aborted: false };
+    c.addEventListener = () => c.altas++;
+    c.removeEventListener = () => c.bajas++;
+    return c;
+}
+
+async function limpieza(T, revisar) {
+    console.log('\ncrearTransporte: limpia siempre el timer y el listener de la señal');
+    const casos = [
+        ['éxito', { status: 200, texto: '{}' }],
+        ['fallo de red', 'rechazar'],
+    ];
+    for (const [nombre, como] of casos) {
+        const espia = espiarTimers(7777);
+        const senal = senalContada();
+        const f = fetchFalso(como);
+        await intentar(() => T.crearTransporte({ fetch: f.fn })(pet({ tiempoMs: 7777 }), { senal }));
+        const t = espia.restaurar();
+        revisar(`${nombre}: arma un timer y lo limpia`, t.armados === 1 && t.pendientes === 0, JSON.stringify(t));
+        revisar(
+            `${nombre}: saca el listener que puso en la señal`,
+            senal.altas === 1 && senal.bajas === 1,
+            JSON.stringify(senal),
+        );
+    }
+    const espia = espiarTimers(40);
+    await intentar(() => T.crearTransporte({ fetch: fetchFalso('colgar').fn })(pet({ tiempoMs: 40 })), 2000);
+    const t = espia.restaurar();
+    revisar('tiempo agotado: no deja timers pendientes', t.armados === 1 && t.pendientes === 0, JSON.stringify(t));
 }
 
 async function sondaFallida(T, revisar) {
@@ -221,6 +302,7 @@ export default async function ({ revisar, igual, cargar }) {
     await mapeo(T, revisar, igual);
     await espacioLocal(T, revisar);
     await errores(T, revisar);
+    await limpieza(T, revisar);
     await sinProgreso(T, revisar);
     await sonda(T, revisar);
 }

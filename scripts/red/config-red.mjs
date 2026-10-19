@@ -144,6 +144,100 @@ async function secreto(M, revisar) {
     revisar('ninguna función escribe en console', llamadas.length === 0, JSON.stringify(llamadas).slice(0, 200));
 }
 
+function claveYCabecera(M, revisar) {
+    console.log('\nvalidarConfig: la clave se recorta y debe servir de cabecera HTTP');
+    revisar(
+        'recorta espacios de la clave',
+        M.validarConfig({ ...ENDER, claveApi: `  ${CENTINELA}\n ` })?.claveApi === CENTINELA,
+    );
+    const malas = [
+        ['salto de línea en el medio', `AB\nCD`],
+        ['retorno de carro', `AB\rCD`],
+        ['tabulación', `AB\tCD`],
+        ['carácter de control', 'AB\u0001CD'],
+        ['fuera de Latin-1', 'AB€CD'],
+        ['emoji', 'AB🙂CD'],
+    ];
+    for (const [nombre, claveApi] of malas) {
+        revisar(`descarta: ${nombre}`, M.validarConfig({ ...ENDER, claveApi }) === null);
+    }
+    revisar('acepta Latin-1 (ñ)', M.validarConfig({ ...ENDER, claveApi: 'clavé-ñ' })?.claveApi === 'clavé-ñ');
+}
+
+async function claveMalaAlGuardar(M, revisar) {
+    const repo = M.crearRepositorioRed(almacenFalso());
+    const clave = 'SECRETA\nXYZ';
+    const r = await intentar(() => repo.guardar('a', { ...ENDER, claveApi: clave }));
+    const msg = String(r.error?.message);
+    revisar('guardar con clave inválida rechaza con un motivo claro', r.lanzo && /clave/i.test(msg), msg);
+    revisar('el motivo no repite la clave', !msg.includes('SECRETA') && !msg.includes('XYZ'), msg);
+}
+
+async function versionMayor(M, revisar, igual) {
+    console.log('\ncrearRepositorioRed: versión mayor a 1');
+    const futuro = { version: 2, porImpresora: { x: ENDER } };
+    const almacen = almacenFalso({ redImpresoras: futuro });
+    const repo = M.crearRepositorioRed(almacen);
+    revisar('leer → null', (await repo.leer('x')) === null);
+    const g = await intentar(() => repo.guardar('y', { ...ENDER }));
+    revisar(
+        'guardar rechaza con un error claro',
+        g.lanzo && /versión más nueva/.test(g.error.message),
+        String(g.error?.message),
+    );
+    const b = await intentar(() => repo.borrar('x'));
+    revisar('borrar rechaza con un error claro', b.lanzo && /versión más nueva/.test(b.error.message));
+    revisar(
+        'y no pisa lo guardado',
+        almacen.escrituras.length === 0 && igual(almacen.datos.get('redImpresoras'), futuro),
+    );
+    const corrupto = almacenFalso({ redImpresoras: { version: 1, porImpresora: 5 } });
+    await M.crearRepositorioRed(corrupto).guardar('y', { ...ENDER });
+    revisar(
+        'un registro corrupto sí se reemplaza',
+        igual(corrupto.datos.get('redImpresoras'), { version: 1, porImpresora: { y: ENDER } }),
+    );
+}
+
+async function idsPeligrosos(M, revisar, igual) {
+    console.log('\ncrearRepositorioRed: ids como __proto__, constructor y prototype');
+    for (const id of ['__proto__', 'constructor', 'prototype']) {
+        const repo = M.crearRepositorioRed(almacenFalso());
+        await repo.guardar('previa', { ...KLIPPER });
+        revisar(`${id}: sin configurar → null`, (await repo.leer(id)) === null);
+        await repo.guardar(id, { ...ENDER });
+        revisar(`${id}: ida y vuelta`, igual(await repo.leer(id), ENDER));
+        revisar(`${id}: no contamina Object.prototype`, {}.tipo === undefined && {}.direccion === undefined);
+        revisar(`otra impresora sigue sin configurar tras guardar ${id}`, (await repo.leer('otra')) === null);
+        revisar(`${id}: la anterior sigue intacta`, igual(await repo.leer('previa'), KLIPPER));
+        const vacio = M.crearRepositorioRed(almacenFalso());
+        await vacio.guardar(id, { ...ENDER });
+        revisar(`${id}: ida y vuelta desde un almacén vacío`, igual(await vacio.leer(id), ENDER));
+        await repo.borrar(id);
+        revisar(`${id}: borrar lo quita`, (await repo.leer(id)) === null);
+    }
+}
+
+async function noHereda(M, revisar) {
+    console.log('\ncrearRepositorioRed: no lee lo heredado del prototipo');
+    Object.prototype.heredada = { ...ENDER };
+    try {
+        const repo = M.crearRepositorioRed(almacenFalso({ redImpresoras: { version: 1, porImpresora: {} } }));
+        revisar('una propiedad heredada no cuenta como configurada', (await repo.leer('heredada')) === null);
+    } finally {
+        delete Object.prototype.heredada;
+    }
+}
+
+function describirRaro(M, revisar, igual) {
+    console.log('\ndescribirConfig: entradas raras y campos conocidos');
+    revisar("describirConfig(null) → ''", igual(M.describirConfig(null), ''));
+    revisar("describirConfig(undefined) → ''", igual(M.describirConfig(undefined), ''));
+    const d = M.describirConfig({ ...ENDER, extra: CENTINELA, otro: 1 });
+    revisar('sólo campos conocidos', igual(Object.keys(d).sort(), ['claveApi', 'direccion', 'imprimir', 'tipo']));
+    revisar('no filtra campos desconocidos', !JSON.stringify(d).includes(CENTINELA));
+}
+
 export default async function ({ revisar, igual, cargar }) {
     const M = await cargar('config-red');
     if (!M) return;
@@ -152,4 +246,10 @@ export default async function ({ revisar, igual, cargar }) {
     await ida(M, revisar, igual);
     await corrupto(M, revisar);
     await secreto(M, revisar);
+    claveYCabecera(M, revisar);
+    await claveMalaAlGuardar(M, revisar);
+    await versionMayor(M, revisar, igual);
+    await idsPeligrosos(M, revisar, igual);
+    await noHereda(M, revisar);
+    describirRaro(M, revisar, igual);
 }

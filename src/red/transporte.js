@@ -73,7 +73,10 @@ export function crearTransporte({ fetch: fetchInyectado } = {}) {
 export async function sondaSinCors(url, fetchFn) {
     try {
         const enviar = fetchFn ?? globalThis.fetch;
-        await enviar(url, { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(TOPE_SONDA_MS) });
+        const init = { mode: 'no-cors', cache: 'no-store', signal: AbortSignal.timeout(TOPE_SONDA_MS) };
+        // Igual que el transporte: sin esto Chrome bloquea la sonda de https a la red local y nunca se ve 'bloqueado'.
+        if (esDireccionLocal(url)) init.targetAddressSpace = 'local';
+        await enviar(url, init);
         return true;
     } catch {
         return false;
