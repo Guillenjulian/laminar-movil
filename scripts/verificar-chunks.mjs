@@ -22,7 +22,10 @@ const relativa = ruta => path.relative(carpeta, ruta).split(path.sep).join('/');
 
 // Mismo criterio que vite.config.js: las páginas de diagnóstico no van en el service worker.
 const esDeDiagnostico = nombre =>
-    nombre.startsWith('prueba-motor') || nombre.includes('pruebaMotor') || nombre.includes('prueba-piezas');
+    nombre.startsWith('prueba-motor') ||
+    nombre.includes('pruebaMotor') ||
+    nombre.includes('prueba-piezas') ||
+    nombre.includes('minions-prueba');
 
 const esWorker = nombre => /\.worker-/.test(nombre);
 
