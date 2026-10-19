@@ -6,7 +6,7 @@
 #   3. build de producción (dist/), que necesitan test:motor y test:app.
 #   4. Chromium: se instala con la versión de playwright-core del lock y su
 #      ruta se pasa a los scripts en CHROMIUM_PATH (la leen probar-motor y probar-app).
-#   5. Las suites: visor-carga y chunks (tamaño del principal, ADR 0006), transformar y formatos (Node), motor y app (Chromium), y contratos.
+#   5. Las suites: visor-carga y chunks (tamaño del principal, ADR 0006), transformar, formatos y red local (Node), motor y app (Chromium), y contratos.
 # Una corrida nueva del mismo PR cancela la anterior.
 name: CI
 
@@ -76,6 +76,9 @@ jobs:
 
             - name: Test recorridos
               run: npm run test:recorridos
+
+            - name: Test red local
+              run: npm run test:red
 
             - name: Test soportes
               run: npm run test:soportes

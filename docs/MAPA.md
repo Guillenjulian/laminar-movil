@@ -255,7 +255,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 
 ### CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, `test:visor-carga`, `test:chunks`, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:soportes`, `test:visor`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, `test:visor-carga`, `test:chunks`, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:red`, `test:soportes`, `test:visor`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
 
 ## 5. Dónde buscar si algo falla
 
