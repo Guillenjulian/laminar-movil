@@ -12,7 +12,7 @@ import * as transformar from '../motor/transformar.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxTriangulos } from '../config.js';
 import * as formato from './formato.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
 import { estado, matrizModelo, piezaActiva } from './estado.js';
 
 /**
@@ -77,12 +77,13 @@ function actualizarAviso(ctx) {
     const imp = buscarImpresora(estado.impresoraId);
     const noEntra = noEntraEnCama(tamanoActual(ctx), imp.dispositivo);
     const avisos = [];
-    if (noEntra) avisos.push(textoNoEntra(imp));
+    // Con varias piezas o copias lo dice #avisoEntran (alerta); acá sólo con una pieza y una copia, para no anunciarlo dos veces.
+    const sola = estado.piezas.length === 1 && estado.piezas[0].copias === 1;
+    if (noEntra && sola) avisos.push(textoNoEntra(imp));
     $('ajustarCama').hidden = !noEntra;
     const { triangulos } = estado.vista;
     if (triangulos > maxTriangulos()) avisos.push(textoPesado(triangulos));
-    $('avisoModelo').innerHTML = avisos.join('<br><br>');
-    $('avisoModelo').hidden = avisos.length === 0;
+    anunciar($('avisoModelo'), avisos.join('<br><br>'), true);
 }
 
 /** "Apoyar cara": el usuario toca una cara y el modelo gira para que quede sobre la cama. */

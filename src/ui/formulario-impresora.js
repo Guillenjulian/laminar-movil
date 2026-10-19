@@ -7,7 +7,7 @@
 
 import { estado, guardarPropias } from './estado.js';
 import { abrirHoja, cerrarHojas } from './navegacion.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
 import { existeImpresora, buscarImpresora, IMPRESORA_INICIAL, lineasPausa } from '../perfiles/perfiles.js';
 import { PLANTILLAS_GCODE } from '../perfiles/generico.js';
 
@@ -117,10 +117,11 @@ function leerFormulario() {
 }
 
 function mostrarErrorFormulario(campo) {
-    $('errorImpresora').textContent =
+    anunciar(
+        $('errorImpresora'),
         `Revisá "${campo.closest('label')?.firstChild.textContent.trim() || campo.name}": ` +
-        (campo.validationMessage || 'valor inválido');
-    $('errorImpresora').hidden = false;
+            (campo.validationMessage || 'valor inválido'),
+    );
     campo.focus();
 }
 

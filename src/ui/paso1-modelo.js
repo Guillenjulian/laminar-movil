@@ -14,7 +14,7 @@ import * as almacen from '../almacen.js';
 import { crearVisor } from './visor-carga.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
 import { estado, crearPieza } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
@@ -176,7 +176,7 @@ async function cargarArchivo(
         alert('No sabemos leer ese archivo. Elegí un modelo STL, OBJ o 3MF (o una foto para hacer una litofanía).');
         return;
     }
-    $('cargando').hidden = false;
+    anunciar($('cargando'), 'Leyendo el modelo…');
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
@@ -189,7 +189,7 @@ async function cargarArchivo(
         $('sinModelo').hidden = !!estado.stl;
         alert('No pudimos leer el archivo: ' + err.message);
     } finally {
-        $('cargando').hidden = true;
+        anunciar($('cargando'), '');
     }
 }
 

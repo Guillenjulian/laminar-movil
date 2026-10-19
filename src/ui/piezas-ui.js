@@ -16,7 +16,7 @@ import { validarCantidad } from '../motor/piezas.js';
 import { acomodarPiezas } from './acomodo.js';
 import { crearCopias } from './copias-ui.js';
 import { estado, crearPieza, piezaActiva, copiasTotales } from './estado.js';
-import { $, escapar } from './util-dom.js';
+import { $, anunciar, escapar } from './util-dom.js';
 
 const TEXTO_NO_ENTRAN = 'No entran todas en la cama: achicá, rotá, bajá las copias o quitá piezas.';
 
@@ -72,7 +72,7 @@ function conectar(u) {
 /** Lee el archivo (`obtener` devuelve su buffer), lo suma como pieza nueva, la deja activa y enfoca su chip. */
 async function agregar(u, nombre, obtener) {
     if (sinLugar()) return;
-    $('cargando').hidden = false;
+    anunciar($('cargando'), 'Leyendo el modelo…');
     try {
         const d = await u.ctx.leer(nombre, await obtener());
         if (!estado.piezas.length || sinLugar()) return; // cambió mientras leía
@@ -89,7 +89,7 @@ async function agregar(u, nombre, obtener) {
     } catch (err) {
         alert('No pudimos leer el archivo: ' + err.message);
     } finally {
-        $('cargando').hidden = true;
+        anunciar($('cargando'), '');
     }
 }
 

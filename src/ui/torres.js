@@ -13,7 +13,7 @@
 import { torreAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { armarTorre, valoresSugeridos } from '../perfiles/torres.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
 
 const TIPOS = {
     temperatura: { nombre: 'Torre de temperatura', unidad: '°C', paso: 5 },
@@ -40,8 +40,7 @@ const leerNumero = texto => (texto.trim() === '' ? NaN : Number(texto.replace(',
 
 /** Muestra u oculta un mensaje de la hoja. @param {string} id @param {string} texto @returns {void} */
 function mensaje(id, texto) {
-    $(id).textContent = texto || '';
-    $(id).hidden = !texto;
+    anunciar($(id), texto || '');
 }
 
 /** Dibuja un campo por bloque, de abajo hacia arriba. @param {string} tipo @param {number[]} valores @returns {void} */

@@ -45,6 +45,8 @@ async function probarEscala({ page: pagina, ok: revisar }) {
 
     await pagina.fill('#escala', '2000');
     await pagina.locator('#escala').blur();
+    // `anunciar` pone el texto en el siguiente frame.
+    await pagina.waitForFunction(() => /No entra/.test(document.getElementById('avisoModelo').textContent));
     revisar(
         'modelo que no entra: aviso y botón',
         /No entra/.test(await pagina.textContent('#avisoModelo')) && (await pagina.isVisible('#ajustarCama')),

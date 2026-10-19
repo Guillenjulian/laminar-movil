@@ -8,7 +8,7 @@ const MOTOR = 'motor/motor';
 
 /** @type {Record<string, {exports: Record<string, number|'valor'>, importa: string[]}>} */
 export const CONTRATOS = {
-    'ui/util-dom': { exports: { $: 1, escapar: 1 }, importa: [] },
+    'ui/util-dom': { exports: { $: 1, escapar: 1, anunciar: 2 }, importa: [] },
     'ui/estado': {
         exports: {
             estado: 'valor',

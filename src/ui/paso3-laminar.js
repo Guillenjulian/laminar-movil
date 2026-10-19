@@ -19,7 +19,7 @@ import { maxTriangulos } from '../config.js';
 import { acomodarPiezas } from './acomodo.js';
 import { estado, piezasParaMotor } from './estado.js';
 import { irA } from './navegacion.js';
-import { $ } from './util-dom.js';
+import { $, anunciar } from './util-dom.js';
 
 // Cada etapa del motor ocupa un tramo de la barra de progreso.
 const ETAPAS = {
@@ -90,7 +90,7 @@ function configuracionActual() {
 function prepararPantallaLaminado() {
     irA(3);
     $('tituloLaminando').textContent = 'Laminando…';
-    $('errorLaminado').hidden = true;
+    anunciar($('errorLaminado'), '');
     $('cancelar').textContent = 'Cancelar';
     ponerProgreso('leyendo', 0);
 }
@@ -127,8 +127,7 @@ async function ejecutarLaminado({ dispositivo, proceso, avisos, cambios, signal 
  */
 function mostrarError(mensaje) {
     $('tituloLaminando').textContent = 'No se pudo laminar';
-    $('errorLaminado').textContent = mensaje;
-    $('errorLaminado').hidden = false;
+    anunciar($('errorLaminado'), mensaje);
     $('cancelar').textContent = 'Volver';
 }
 
