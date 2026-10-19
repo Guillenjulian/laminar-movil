@@ -24,6 +24,13 @@ async function pruebaImprimirYHttp(c, tipo, revisar) {
         http.f.sondeadas.length === 1 && http.f.sondeadas[0] === 'http://192.168.1.50',
         http.f.sondeadas.join(),
     );
+    const direccion = 'http://192.168.1.50:5000/octoprint';
+    const conRuta = await probar(c, tipo, { modo: 'cors', config: { direccion } });
+    revisar(
+        'dirección con ruta y puerto: la sonda recibe exactamente el origen',
+        conRuta.f.sondeadas.length === 1 && conRuta.f.sondeadas[0] === 'http://192.168.1.50:5000',
+        conRuta.f.sondeadas.join(),
+    );
 }
 
 export default async function ({ revisar, cargar }) {
