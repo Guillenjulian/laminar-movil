@@ -178,5 +178,35 @@ export const CONTRATOS = {
     },
     // Único que importa ui/visor, con import() dinámico (three.js sale del chunk principal, ADR 0006).
     'ui/visor-carga': { exports: { crearVisor: 2, precargarVisor: 0, armarVisorCarga: 1 }, importa: ['ui/visor'] },
+    // Idioma (ADR 0008, B.6/B.7). `ui/idioma` es hoja; es.js y en.js se importan con import() dinámico.
+    'textos/traducir': {
+        exports: {
+            IDIOMAS: 'valor',
+            IDIOMA_BASE: 'valor',
+            LOCALES: 'valor',
+            interpolar: 2,
+            elegirForma: 3,
+            traducir: 5,
+            elegirIdioma: 2,
+            variablesDe: 1,
+        },
+        importa: [],
+    },
+    'textos/es': { exports: { default: 'valor' }, importa: [] },
+    'textos/en': { exports: { default: 'valor' }, importa: [] },
+    'ui/idioma': {
+        exports: {
+            t: 2,
+            marcar: 1,
+            existe: 1,
+            idiomaActual: 0,
+            localeActual: 0,
+            iniciarIdioma: 1,
+            cambiarIdioma: 1,
+            alCambiarIdioma: 1,
+            ponerDiccionarios: 3,
+        },
+        importa: ['almacen', 'textos/traducir', 'textos/es', 'textos/en'],
+    },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

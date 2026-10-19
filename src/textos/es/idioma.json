@@ -1,0 +1,7 @@
+{
+    "idioma.nombre.es": "Español",
+    "idioma.nombre.en": "English",
+    "idioma.cambiarA": "Cambiar el idioma a {idioma}",
+    "idioma.anuncio": "Idioma cambiado a {idioma}",
+    "idioma.error": "No se pudo cambiar el idioma. Probá de nuevo."
+}
