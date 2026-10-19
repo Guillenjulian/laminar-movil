@@ -73,22 +73,63 @@ function porEstado(m, revisar) {
     }
 }
 
-function cuerpoAjeno(m, revisar) {
-    console.log('\nerrorDeRespuesta: 200 con algo que no es lo esperado → respuesta');
-    for (const tipo of ['octoprint', 'moonraker']) {
-        for (const fase of ['version', 'estado']) {
-            for (const texto of ['<html><body>Hola</body></html>', '{"x":', '{}']) {
-                const e = m.errorDeRespuesta(tipo, fase, { estado: 200, texto }, { tieneClave: false });
-                revisar(
-                    `${tipo} ${fase} 200 ${JSON.stringify(texto)}`,
-                    forma(e) && e.codigo === 'respuesta',
-                    JSON.stringify(e),
-                );
-            }
-        }
+function lectura(m, revisar) {
+    console.log('\nerrorDeLectura: 200 con algo que no es lo esperado (lo decide peticiones.js)');
+    for (const [tipo, nombre] of [
+        ['octoprint', 'OctoPrint'],
+        ['moonraker', 'Moonraker'],
+    ]) {
+        const e = m.errorDeLectura(tipo);
+        revisar(
+            `${tipo}: código respuesta y nombra ${nombre}`,
+            forma(e) && e.codigo === 'respuesta' && e.mensaje.includes(`parece ser un ${nombre}`),
+            JSON.stringify(e),
+        );
     }
-    const cruzado = m.errorDeRespuesta('moonraker', 'version', { estado: 200, texto: OCTO_V }, { tieneClave: false });
-    revisar('versión de OctoPrint donde se esperaba Moonraker', cruzado?.codigo === 'respuesta');
+    revisar(
+        'errorDeRespuesta mira sólo el estado: un 200 con cuerpo cualquiera es éxito',
+        m.errorDeRespuesta('moonraker', 'version', { estado: 200, texto: '<html>' }, { tieneClave: false }) === null,
+    );
+}
+
+function porFase(m, revisar) {
+    console.log('\nerrorDeRespuesta: rechazado según la fase');
+    const cuerpo = { estado: 503, texto: '' };
+    for (const fase of ['version', 'estado']) {
+        const e = m.errorDeRespuesta('octoprint', fase, cuerpo, { tieneClave: false });
+        const todo = `${e.mensaje} ${e.pista}`;
+        revisar(
+            `${fase} 503: "respondió con un error (código 503)", sin hablar del archivo`,
+            e.codigo === 'rechazado' &&
+                /respondió con un error \(código 503\)/.test(e.mensaje) &&
+                !/archivo/.test(todo),
+            todo,
+        );
+    }
+    const s = m.errorDeRespuesta('octoprint', 'subida', cuerpo, { tieneClave: false });
+    revisar('subida 503: "no aceptó el archivo"', /no aceptó el archivo \(código 503\)/.test(s.mensaje), s.mensaje);
+}
+
+function tipoRaro(m, revisar) {
+    console.log('\nTipo desconocido: texto neutro, sin funciones ni excepciones');
+    for (const tipo of ['constructor', '__proto__', 'toString', undefined]) {
+        let todo;
+        try {
+            const ctx = { alcanzable: true, tipo, origenApp: 'https://x.app', http: true, imprimiendo: false };
+            todo = JSON.stringify([
+                m.errorDeLectura(tipo),
+                m.errorDeRespuesta(tipo, 'version', { estado: 500, texto: '' }, {}),
+                m.errorDeTransporte('red', ctx),
+            ]);
+        } catch (e) {
+            todo = `lanzó ${e}`;
+        }
+        revisar(
+            `tipo ${String(tipo)}`,
+            !/function|lanzó|\[native/.test(todo) && todo.includes('OctoPrint o Moonraker'),
+            todo,
+        );
+    }
 }
 
 function sinCuerpo(m, revisar) {
@@ -192,6 +233,24 @@ function advertenciaR2(m, revisar) {
     );
 }
 
+function avisoEnTiempo(m, revisar) {
+    console.log('\nerrorDeTransporte: el aviso de R2 también va en tiempo');
+    const ctx = imprimiendo => contexto({ imprimiendo, alcanzable: true });
+    const con = m.errorDeTransporte('tiempo', ctx(true));
+    const sin = m.errorDeTransporte('tiempo', ctx(false));
+    const todo = e => `${e.mensaje} ${e.pista}`;
+    revisar(
+        'tiempo con imprimir: avisa que puede que haya llegado',
+        con.codigo === 'tiempo' &&
+            /puede que el archivo haya llegado/.test(todo(con)) &&
+            /mirá la impresora antes de reintentar/.test(todo(con)),
+        todo(con),
+    );
+    revisar('tiempo sin imprimir: sin la advertencia', !/haya llegado|reintentar/.test(todo(sin)), todo(sin));
+    const c = m.errorDeTransporte('cancelado', ctx(true));
+    revisar('cancelado nunca lleva la advertencia', !/haya llegado|reintentar/.test(todo(c)), todo(c));
+}
+
 function direccion(m, revisar) {
     console.log('\nerrorDeDireccion');
     const e = m.errorDeDireccion('tiene usuario y contraseña');
@@ -201,6 +260,12 @@ function direccion(m, revisar) {
         JSON.stringify(e),
     );
     revisar('el mensaje da un ejemplo http://192.168.1.50', `${e.mensaje} ${e.pista}`.includes('http://192.168.1.50'));
+    const real = m.errorDeDireccion('Escribí la dirección de la impresora.');
+    revisar(
+        'sin doble punto ni oración entre paréntesis',
+        !/\.\./.test(`${real.mensaje} ${real.pista}`) && !/\(.*\.\)/.test(`${real.mensaje} ${real.pista}`),
+        `${real.mensaje} ${real.pista}`,
+    );
 }
 
 export default async function ({ revisar, cargar }) {
@@ -208,9 +273,12 @@ export default async function ({ revisar, cargar }) {
     if (!m) return;
     exitos(m, revisar);
     porEstado(m, revisar);
-    cuerpoAjeno(m, revisar);
+    lectura(m, revisar);
+    porFase(m, revisar);
+    tipoRaro(m, revisar);
     sinCuerpo(m, revisar);
     transporte(m, revisar);
     advertenciaR2(m, revisar);
+    avisoEnTiempo(m, revisar);
     direccion(m, revisar);
 }

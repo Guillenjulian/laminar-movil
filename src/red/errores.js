@@ -13,8 +13,8 @@
  */
 const TEXTOS = {
     direccion: {
-        mensaje: 'La dirección no es válida ({motivo}).',
-        pista: 'Probá con algo como http://192.168.1.50',
+        mensaje: 'La dirección no es válida. Probá con algo como http://192.168.1.50',
+        pista: '{motivo}',
     },
     'sin-llegada': {
         mensaje: 'No se pudo llegar a la impresora.',
@@ -32,6 +32,10 @@ const TEXTOS = {
         mensaje: 'La impresora respondió, pero no deja que esta página lea la respuesta (falta habilitar CORS).',
         pista: 'Habilitá este origen en la impresora: {origen}. En moonraker.conf, sección [authorization], sumalo a cors_domains y reiniciá Moonraker.',
     },
+    'bloqueado-otro': {
+        mensaje: 'La impresora respondió, pero no deja que esta página lea la respuesta (falta habilitar CORS).',
+        pista: 'Habilitá este origen en la impresora: {origen}. Buscá la opción de CORS en su configuración.',
+    },
     'aviso-imprimiendo': {
         mensaje: '',
         pista: 'Con "empezar a imprimir" prendido, puede que el archivo haya llegado: mirá la impresora antes de reintentar.',
@@ -45,9 +49,13 @@ const TEXTOS = {
         mensaje: 'La impresora está imprimiendo ahora.',
         pista: 'Podés subir el archivo sin imprimir, o esperar a que termine.',
     },
-    rechazado: {
+    'rechazado-subida': {
         mensaje: 'La impresora no aceptó el archivo (código {estado}).',
         pista: 'Probá de nuevo; si sigue, descargá el archivo y subilo desde la interfaz de la impresora.',
+    },
+    rechazado: {
+        mensaje: 'La impresora respondió con un error (código {estado}).',
+        pista: 'Puede estar reiniciándose o con el firmware desconectado.',
     },
     respuesta: {
         mensaje: 'Esa dirección no parece ser un {n}.',
@@ -58,6 +66,14 @@ const TEXTOS = {
 };
 
 const NOMBRES = { octoprint: 'OctoPrint', moonraker: 'Moonraker' };
+const NEUTRO = 'OctoPrint o Moonraker';
+
+/** Nombre del tipo; texto neutro si no es uno conocido (sin tocar el prototipo). */
+const nombreDe = tipo => (typeof tipo === 'string' && Object.hasOwn(NOMBRES, tipo) ? NOMBRES[tipo] : NEUTRO);
+
+/** `prefijo-tipo` si existe en `TEXTOS`; si no, `prefijo-otro`. */
+const claveDeTipo = (prefijo, tipo) =>
+    typeof tipo === 'string' && Object.hasOwn(TEXTOS, `${prefijo}-${tipo}`) ? `${prefijo}-${tipo}` : `${prefijo}-otro`;
 
 /** Arma el error de una clave de `TEXTOS` reemplazando las marcas de `datos`. */
 function armar(clave, codigo, datos = {}, estadoHttp) {
@@ -67,38 +83,17 @@ function armar(clave, codigo, datos = {}, estadoHttp) {
     return estadoHttp === undefined ? error : { ...error, estadoHttp };
 }
 
-/** Lee el JSON de un texto; null si no es JSON de objeto. */
-function leerJson(texto) {
-    try {
-        const valor = JSON.parse(texto);
-        return valor && typeof valor === 'object' ? valor : null;
-    } catch {
-        return null;
-    }
-}
-
-/** Qué se espera de un 200 en cada tipo y fase (formas tolerantes; el ADR las marca [A VALIDAR]). */
-const FORMAS = {
-    octoprint: {
-        version: j => typeof j.server === 'string',
-        estado: j => j.state != null,
-    },
-    moonraker: {
-        version: j => typeof j.result?.moonraker_version === 'string',
-        estado: j => j.result?.status != null && typeof j.result.status === 'object',
-    },
-};
-
 /** Clave de `TEXTOS` y código para un HTTP que no es éxito. */
-function claveDeEstado(estado, tieneClave) {
+function claveDeEstado(fase, estado, tieneClave) {
     if (estado === 401 || estado === 403) return [tieneClave ? 'clave-con' : 'clave-sin', 'clave'];
     if (estado === 409) return ['ocupada', 'ocupada'];
     if (estado === 404 || estado < 400) return ['respuesta', 'respuesta'];
-    return ['rechazado', 'rechazado'];
+    return [fase === 'subida' ? 'rechazado-subida' : 'rechazado', 'rechazado'];
 }
 
 /**
- * Traduce una respuesta HTTP que no es éxito. null si es éxito para esa fase.
+ * Traduce el estado HTTP de una respuesta. null si es éxito (2xx). Sólo mira el estado: que el cuerpo sea lo
+ * esperado lo decide `peticiones.js` (`leerVersion`, `estaOcupada`) y, si no, se usa `errorDeLectura`.
  * @param {TipoRed} tipo
  * @param {'version'|'estado'|'subida'} fase
  * @param {Respuesta} respuesta
@@ -106,38 +101,46 @@ function claveDeEstado(estado, tieneClave) {
  * @returns {ErrorRed|null}
  */
 export function errorDeRespuesta(tipo, fase, respuesta, contexto) {
-    const { estado, texto } = respuesta;
-    const datos = { n: NOMBRES[tipo] ?? 'OctoPrint o Moonraker', estado };
-    if (estado >= 200 && estado < 300) {
-        if (fase === 'subida') return null;
-        const json = leerJson(texto);
-        if (json && FORMAS[tipo]?.[fase]?.(json)) return null;
-        return armar('respuesta', 'respuesta', datos, estado);
-    }
-    const [clave, codigo] = claveDeEstado(estado, Boolean(contexto?.tieneClave));
-    return armar(clave, codigo, datos, estado);
+    const { estado } = respuesta;
+    if (estado >= 200 && estado < 300) return null;
+    const [clave, codigo] = claveDeEstado(fase, estado, Boolean(contexto?.tieneClave));
+    return armar(clave, codigo, { n: nombreDe(tipo), estado }, estado);
+}
+
+/**
+ * Error para un 2xx cuyo cuerpo no es lo esperado (la lectura de `peticiones.js` dio null).
+ * @param {TipoRed} tipo
+ * @returns {ErrorRed} código 'respuesta'
+ */
+export function errorDeLectura(tipo) {
+    return armar('respuesta', 'respuesta', { n: nombreDe(tipo) });
+}
+
+/** Agrega el aviso de R2 a la pista si el envío llevaba print=true (puede que el archivo haya llegado). */
+function conAviso(error, contexto) {
+    if (!contexto.imprimiendo) return error;
+    return { ...error, pista: `${error.pista} ${TEXTOS['aviso-imprimiendo'].pista}`.trim() };
 }
 
 /**
  * Traduce un fallo sin respuesta HTTP.
- * `alcanzable`: lo que dijo la sonda. `imprimiendo`: el envío llevaba print=true (agrega el aviso de R2).
+ * `alcanzable`: lo que dijo la sonda. `imprimiendo`: la subida llevaba print=true (agrega el aviso de R2 en `bloqueado` y `tiempo`).
  * @param {'red'|'tiempo'|'cancelado'} causa
  * @param {{alcanzable: boolean, tipo: TipoRed, origenApp: string, http: boolean, imprimiendo: boolean}} contexto
  * @returns {ErrorRed}
  */
 export function errorDeTransporte(causa, contexto) {
-    if (causa === 'tiempo' || causa === 'cancelado') return armar(causa, causa);
+    if (causa === 'cancelado') return armar(causa, causa);
+    if (causa === 'tiempo') return conAviso(armar(causa, causa), contexto);
     if (!contexto.alcanzable) return armar(contexto.http ? 'sin-llegada-http' : 'sin-llegada', 'sin-llegada');
-    const bloqueado = armar(`bloqueado-${contexto.tipo}`, 'bloqueado', { origen: contexto.origenApp });
-    if (!contexto.imprimiendo) return bloqueado;
-    const aviso = armar('aviso-imprimiendo', 'bloqueado');
-    return { ...bloqueado, pista: `${bloqueado.pista} ${aviso.pista}` };
+    const clave = claveDeTipo('bloqueado', contexto.tipo);
+    return conAviso(armar(clave, 'bloqueado', { origen: contexto.origenApp }), contexto);
 }
 
 /**
- * @param {string} motivo de normalizarDireccion
+ * @param {string} motivo de normalizarDireccion (oración completa, va de pista)
  * @returns {ErrorRed} código 'direccion'
  */
 export function errorDeDireccion(motivo) {
-    return armar('direccion', 'direccion', { motivo });
+    return armar('direccion', 'direccion', { motivo: typeof motivo === 'string' ? motivo : '' });
 }
