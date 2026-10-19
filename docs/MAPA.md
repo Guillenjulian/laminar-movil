@@ -147,6 +147,13 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `soportes-paso.js` · `soportes-siembra.js` | Piezas de `planificarArbol` (hojas, sin ciclos): `soportes-paso` (`holgura`, `bajar`, `fusionarTodo`, `LADOS`: mover, esquivar y fusionar nodos al bajar una capa) y `soportes-siembra` (`sembrar`: dónde nacen las puntas nuevas bajo los voladizos). Importan sólo `geometria-2d` y, la siembra, `soportes-paso` |
 | `soportes-poda.js` | `marcarViables`: marca qué nodos del árbol llegan a la cama, a la pieza o a otro tronco que llega; el resto (frenado por un bloqueo o la cama) se poda. Puro, sin imports |
 
+### Red local (`src/red/`)
+
+| Archivo | Contenido |
+|---|---|
+| `transporte.js` | `crearTransporte({ fetch })`: manda una petición con `fetch` (tope de tiempo, cancelación, sin cookies; `targetAddressSpace: 'local'` si `esDireccionLocal`) y devuelve `{ estado, texto }`; rechaza con `ErrorTransporte` (`causa`: `red`, `tiempo` o `cancelado`). Sin porcentaje de subida. `sondaSinCors(url, fetchFn)`: `fetch` `no-cors` con tope de 4 s. Importa sólo `direccion` (ADR 0007, 6.5) |
+| `config-red.js` | Configuración por impresora en la clave de ajustes `redImpresoras` (`{version:1, porImpresora}`): `validarConfig` (renormaliza la dirección), `describirConfig` (oculta la clave de API) y `crearRepositorioRed(almacen)` con `leer`, `guardar`, `borrar`. Lo corrupto se lee como sin configurar. Importa sólo `direccion` (ADR 0007, 6.6) |
+
 ### Perfiles (`src/perfiles/`): datos, no código
 
 | Archivo | Contenido |
