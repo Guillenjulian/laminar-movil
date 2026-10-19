@@ -9,21 +9,22 @@ import {
     peticionSubida,
     peticionVersion,
 } from './peticiones.js';
-import { errorDeRespuesta, errorDeTransporte } from './errores.js';
+import { errorDeLectura, errorDeRespuesta, errorDeTransporte } from './errores.js';
 
 /** @typedef {import('./errores.js').ErrorRed} ErrorRed */
+/** La dirección llega ya normalizada (`normalizarDireccion`: http/https, sin barra final ni ruta). */
 /** @typedef {{tipo: 'octoprint'|'moonraker', direccion: string, claveApi: string, imprimir: boolean}} ConfigRed */
 /** @typedef {{alProgreso?: (fraccion: number) => void, senal?: AbortSignal}} OpcionesEnvio */
 /** @typedef {{transporte: (peticion: object, opciones?: OpcionesEnvio) => Promise<{estado: number, texto: string}>,
  *   sonda: (url: string) => Promise<boolean>, origenApp: string}} DependenciasRed
  *  `sonda`: true si el host responde aunque el navegador no deje leer (ver `sondaSinCors`). */
-/** @typedef {{ok: true, resumen: {nombre: string, ocupada: boolean}} | {ok: false, error: ErrorRed}} ResultadoPrueba */
+/** @typedef {{ok: true, resumen: {nombre: string, ocupada: boolean|null}} | {ok: false, error: ErrorRed}} ResultadoPrueba */
 /** @typedef {{ok: true, imprimiendo: boolean, nombre: string} | {ok: false, error: ErrorRed}} ResultadoEnvio */
 
-/** La sonda nunca tiene que romper el flujo: si lanza, es como si el host no respondiera. */
+/** La sonda recibe el origen de la impresora, sin ruta. Si lanza, es como si el host no respondiera. */
 async function sondear(config, deps) {
     try {
-        return Boolean(await deps.sonda(config.direccion));
+        return Boolean(await deps.sonda(new URL(config.direccion).origin));
     } catch {
         return false;
     }
@@ -37,7 +38,7 @@ async function falloDeTransporte(causa, config, deps, imprimiendo) {
         alcanzable,
         tipo: config.tipo,
         origenApp: deps.origenApp,
-        http: config.direccion.startsWith('http:'),
+        http: /^http:/i.test(config.direccion),
         imprimiendo,
     });
 }
@@ -63,18 +64,25 @@ function errorInesperado(config, deps) {
         alcanzable: false,
         tipo: config?.tipo,
         origenApp: deps?.origenApp,
-        http: String(config?.direccion).startsWith('http:'),
+        http: /^http:/i.test(String(config?.direccion)),
         imprimiendo: false,
     });
 }
 
+/**
+ * Versión y luego estado. `resumen.ocupada` es null si el estado respondió algo que no se entiende: que la UI decida.
+ * @param {ConfigRed} config
+ * @param {DependenciasRed} deps
+ * @returns {Promise<ResultadoPrueba>}
+ */
 async function probar(config, deps) {
     const version = await pedir('version', peticionVersion(config), config, deps);
     if (version.error) return { ok: false, error: version.error };
     const estado = await pedir('estado', peticionEstado(config), config, deps);
     if (estado.error) return { ok: false, error: estado.error };
-    const nombre = leerVersion(config.tipo, version.respuesta.texto)?.nombre ?? config.tipo;
-    return { ok: true, resumen: { nombre, ocupada: estaOcupada(config.tipo, estado.respuesta.texto) === true } };
+    const leida = leerVersion(config.tipo, version.respuesta.texto);
+    if (!leida) return { ok: false, error: errorDeLectura(config.tipo) };
+    return { ok: true, resumen: { nombre: leida.nombre, ocupada: estaOcupada(config.tipo, estado.respuesta.texto) } };
 }
 
 /**
@@ -92,10 +100,19 @@ export async function probarConexion(config, deps) {
     }
 }
 
+/**
+ * Un solo POST de subida; `imprimiendo` sólo si se pidió imprimir y la impresora lo confirma.
+ * @param {ConfigRed} config
+ * @param {File|Blob} archivo
+ * @param {string} nombre
+ * @param {DependenciasRed} deps
+ * @param {OpcionesEnvio} [opciones]
+ * @returns {Promise<ResultadoEnvio>}
+ */
 async function enviar(config, archivo, nombre, deps, opciones) {
     const subida = await pedir('subida', peticionSubida(config, archivo, nombre), config, deps, opciones);
     if (subida.error) return { ok: false, error: subida.error };
-    const imprimiendo = config.imprimir && empezoAImprimir(config.tipo, subida.respuesta.texto);
+    const imprimiendo = empezoAImprimir(config.tipo, subida.respuesta.texto, config.imprimir);
     return { ok: true, imprimiendo, nombre };
 }
 
