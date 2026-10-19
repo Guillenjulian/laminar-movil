@@ -6,8 +6,9 @@
 
 ## Estado
 
-Propuesto. Falta la decisión del CTO sobre las dudas abiertas (al final) y la validación en hardware (T10). Nada de
-este ADR toca código de producción.
+Aceptado para implementar (CTO, 2026-10-19), con las decisiones de "Decisiones del CTO" (al final). La validación en
+hardware (T10) la hace una persona y no frena la implementación: hasta que se haga, la función sale marcada como
+"experimental" en la hoja.
 
 ## Contexto
 
@@ -628,3 +629,23 @@ miniaturas; carpetas de destino; el servidor de compañía/puente local.
    textos de la sección 4.
 10. **¿Cuándo se valida en hardware (T10)?** Recomiendo **antes de aceptar** el ADR en lo que toca contenido mixto (puntos 1 a 5
     de la lista), porque define si la función es útil en iPhone y qué dice la hoja.
+
+### Decisiones del CTO (2026-10-19)
+
+1. Bambu: **no** en v1.
+2. Configuración **por impresora**.
+3. **Sólo subir** por defecto; "Empezar a imprimir al terminar" apagado, con `confirm()` en cada envío. Con esa casilla
+   prendida, el mensaje `bloqueado` avisa "puede que haya llegado: mirá la impresora antes de reintentar" (R2) y la app
+   **nunca** reintenta sola.
+4. Clave en texto plano en IndexedDB: **aceptado**, dicho en la hoja; nunca se loguea, exporta ni vuelve al DOM.
+5. **`fetch` en v1, no XHR**: la exención documentada de Chrome es para `fetch`, y es la única forma de pasar
+   `targetAddressSpace: 'local'` (necesaria para nombres que no son IP ni `.local`). `transporte.js` usa `fetch` con
+   `targetAddressSpace: 'local'` cuando la dirección es privada o `.local` (la opción se ignora donde no existe) y
+   `AbortController`; el progreso de subida se muestra como "Enviando…" sin porcentaje. La prueba de T1 usa un `fetch`
+   falso (no XHR). El transporte sigue inyectable.
+6. Tailscale: **sí**, dos líneas genéricas ("un https con certificado válido, por ejemplo con Tailscale"), sin enlace.
+7. Dominio: la hoja muestra el origen actual (`location.origin`) para copiarlo en la config de CORS; la documentación
+   recomienda el de producción.
+8. Guarda en `sw.js`: **sí**, en T7.
+9. Textos: los revisa el CTO al revisar T6/T7.
+10. Hardware: T10 queda en la checklist del README ("Lo que NO pude validar"); la hoja dice "experimental" hasta entonces.
