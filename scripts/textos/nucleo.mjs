@@ -243,7 +243,8 @@ async function probarCarreras({ revisar, igual }) {
     vistos.length = 0;
 
     // (a) dos cambios sin await: queda el último y los suscriptos reciben un solo aviso, con el idioma activo
-    await Promise.all([cambiarIdioma('en'), cambiarIdioma('es'), cambiarIdioma('en')]);
+    const devueltos = await Promise.all([cambiarIdioma('en'), cambiarIdioma('es'), cambiarIdioma('en')]);
+    revisar('cambiarIdioma devuelve true sólo al último pedido', igual(devueltos, [false, false, true]));
     revisar('dos cambios seguidos: queda el último', idiomaActual() === 'en');
     revisar(
         'dos cambios seguidos: un solo aviso con el idioma activo',
@@ -267,7 +268,8 @@ async function probarCarreras({ revisar, igual }) {
     ponerDiccionarios('es', ES, {});
     vistos.length = 0;
     AJUSTES.clear();
-    await Promise.all([cambiarIdioma('en'), cambiarIdioma('es')]);
+    const resultados = await Promise.all([cambiarIdioma('en'), cambiarIdioma('es')]);
+    revisar('en lento y luego es: el superado devuelve false', igual(resultados, [false, true]));
     await new Promise(r => setTimeout(r, 60));
     revisar('en lento y luego es: queda es', idiomaActual() === 'es' && t('a.pieza', { n: 2 }) === '2 piezas');
     revisar(

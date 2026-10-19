@@ -715,6 +715,8 @@ format:check` y las suites que toque en verde. Roles: **DI** dev de interfaz, **
   `import()` junto con `cargarPreferencias`. Habrá un parpadeo de ~100 a 300 ms. Se acepta en v1; el remedio, si molesta,
   es un script de dos líneas en `<head>` que lea `localStorage` y oculte `#main` hasta que `iniciarIdiomaDom` termine
   (no se hace ahora para no duplicar el almacenamiento de la preferencia).
+  Medido en I3 (CPU x6 y 200 kB/s): ~590 ms en español antes de pasar a inglés. Es normal: el primer dibujo ya sale en
+  inglés, porque `main.js` espera `iniciarIdioma` antes de dibujar; lo que se ve en español es el HTML estático.
 - **R2. Mezcla de idiomas.** Un módulo sin migrar sigue en español. Mitigación: el selector nace oculto (I14 lo
   muestra) y `MIGRADOS` impide regresiones.
 - **R3. Texto envuelto en `<span>`** puede romper selectores CSS del tipo `label > input` o `label > :first-child`.

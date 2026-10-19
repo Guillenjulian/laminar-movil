@@ -1,14 +1,11 @@
 // Aplica el idioma al DOM y cablea el selector de idioma (ADR 0008, B.4 y B.6). Sólo lo importa main.js.
 // No toca el DOM al importarse. El HTML está en español: en español no se recorre el DOM al arrancar.
 import { $ } from './util-dom.js';
-// `delDiccionario` es `t` con otro nombre: este módulo traduce claves que vienen del HTML (data-t*, que test:textos
-// ya revisa) o de la tabla NOMBRE (con marcar), y el escáner de `t(variable)` no toma por dinámica a un alias.
-import { alCambiarIdioma, cambiarIdioma, existe, idiomaActual, marcar, t, t as delDiccionario } from './idioma.js';
+import { alCambiarIdioma, cambiarIdioma, existe, idiomaActual, marcar, t } from './idioma.js';
+import { ATRIBUTOS_TRADUCIBLES } from '../textos/atributos.js';
 
 /** Nombre de cada idioma, escrito en ese idioma (las claves viven en idioma.json). */
 const NOMBRE = { es: marcar('idioma.nombre.es'), en: marcar('idioma.nombre.en') };
-/** Atributos que `data-t-attr` puede traducir (los mismos que acepta el escáner de test:textos). */
-const ATRIBUTOS = ['aria-label', 'placeholder', 'alt', 'content', 'title'];
 
 /** El otro idioma. @param {import('../textos/traducir.js').Idioma} cual @returns {'es'|'en'} */
 const otroDe = cual => (cual === 'es' ? 'en' : 'es');
@@ -23,19 +20,19 @@ const otroDe = cual => (cual === 'es' ? 'en' : 'es');
 export function traducirDom(raiz) {
     for (const el of raiz.querySelectorAll('[data-t]')) {
         const clave = el.getAttribute('data-t');
-        if (existe(clave)) el.textContent = delDiccionario(clave);
+        if (existe(clave)) el.textContent = t(clave); // t-dinamica: viene de data-t
     }
     for (const el of raiz.querySelectorAll('[data-t-html]')) {
         const clave = el.getAttribute('data-t-html');
-        if (existe(clave)) el.innerHTML = delDiccionario(clave);
+        if (existe(clave)) el.innerHTML = t(clave); // t-dinamica: viene de data-t-html
     }
     for (const el of raiz.querySelectorAll('[data-t-attr]')) {
         for (const par of el.getAttribute('data-t-attr').split(';')) {
             const corte = par.indexOf(':');
             const atributo = par.slice(0, corte).trim();
             const clave = par.slice(corte + 1).trim();
-            if (corte > 0 && ATRIBUTOS.includes(atributo) && existe(clave))
-                el.setAttribute(atributo, delDiccionario(clave));
+            if (corte > 0 && ATRIBUTOS_TRADUCIBLES.includes(atributo) && existe(clave))
+                el.setAttribute(atributo, t(clave)); // t-dinamica: viene de data-t-attr;
         }
     }
 }
@@ -52,7 +49,7 @@ export function iniciarIdiomaDom() {
     /** El botón nombra el idioma de destino, en ese idioma. */
     const pintarBoton = () => {
         const destino = otroDe(idiomaActual());
-        const nombre = delDiccionario(NOMBRE[destino]);
+        const nombre = t(NOMBRE[destino]); // t-dinamica: tabla NOMBRE con marcar
         boton.textContent = nombre;
         boton.lang = destino;
         boton.setAttribute('aria-label', t('idioma.cambiarA', { idioma: nombre }));
@@ -65,12 +62,15 @@ export function iniciarIdiomaDom() {
     if (idiomaActual() === 'es') pintarBoton();
     else aplicar();
     boton.addEventListener('click', async () => {
-        const destino = otroDe(idiomaActual());
+        const antes = idiomaActual();
+        const destino = otroDe(antes);
         try {
-            await cambiarIdioma(destino);
-            estado.textContent = t('idioma.anuncio', { idioma: delDiccionario(NOMBRE[destino]) });
+            // Un doble toque: sólo el último pedido anuncia (el otro devuelve false).
+            if (await cambiarIdioma(destino)) {
+                estado.textContent = t('idioma.anuncio', { idioma: t(NOMBRE[destino]) }); // t-dinamica: tabla NOMBRE
+            }
         } catch (_error) {
-            estado.textContent = t('idioma.error');
+            if (idiomaActual() === antes) estado.textContent = t('idioma.error');
         }
     });
 }

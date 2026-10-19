@@ -30,9 +30,8 @@ async function abrir(browser, base, idiomas) {
         };
     }, idiomas);
     await pagina.goto(base);
-    await pagina.waitForFunction(
-        () => document.getElementById('sinModelo') && !document.getElementById('sinModelo').hidden,
-    );
+    // main.js marca el paso (aria-current) en el primer dibujo, después de iniciar el idioma y su DOM.
+    await pagina.waitForSelector('.pasos li[aria-current]', { state: 'attached' });
     return { contexto, pagina };
 }
 
@@ -50,6 +49,23 @@ const leerBoton = pagina =>
         const b = document.getElementById('idioma');
         return { texto: b.textContent.trim(), lang: b.lang, etiqueta: b.getAttribute('aria-label') };
     });
+
+/** Un atributo fuera de la lista (onclick) no se aplica nunca; uno de la lista (title) sí. */
+const ponerTrampa = pagina =>
+    pagina.evaluate(() =>
+        document.body.insertAdjacentHTML(
+            'beforeend',
+            '<i id="trampa" data-t-attr="onclick:app.titulo;title:app.titulo"></i>',
+        ),
+    );
+
+async function revisarTrampa(pagina, revisar) {
+    const [onclick, title] = await pagina.evaluate(() => {
+        const el = document.getElementById('trampa');
+        return [el.getAttribute('onclick'), el.title];
+    });
+    revisar('selector de idioma: data-t-attr aplica title y no onclick', onclick === null && title === 'Laminar Móvil');
+}
 
 /** Toca `#idioma` y espera a que `#estadoIdioma` anuncie `anuncio`. */
 async function tocarYEsperar(pagina, anuncio) {
@@ -76,8 +92,22 @@ async function probarPreferencia(pagina, revisar) {
         vuelta.lang === 'es-AR' && vuelta.descripcion === DESCRIPCION_ES && vuelta.titulo === 'Laminar Móvil',
     );
     await pagina.reload();
-    await pagina.waitForFunction(() => document.getElementById('sinModelo'));
+    await pagina.waitForSelector('.pasos li[aria-current]', { state: 'attached' });
     revisar('selector de idioma: la preferencia es español al recargar', (await leer(pagina)).lang === 'es-AR');
+}
+
+/** Si el diccionario inglés no baja, el botón anuncia el error y el idioma queda como estaba. */
+async function probarErrorDiccionario(browser, base, revisar) {
+    const { contexto, pagina } = await abrir(browser, base, ['es']);
+    try {
+        await pagina.route('**/assets/en-*.js', ruta => ruta.abort());
+        await pagina.evaluate(() => (document.getElementById('idioma').hidden = false));
+        await tocarYEsperar(pagina, 'No se pudo cambiar el idioma. Probá de nuevo.');
+        const v = await leer(pagina);
+        revisar('selector de idioma: sin diccionario avisa el error y sigue en es-AR', v.lang === 'es-AR');
+    } finally {
+        await contexto.close();
+    }
 }
 
 /**
@@ -127,6 +157,7 @@ export async function probarIdiomaSelector({ browser, base, ok: revisar }) {
     const { contexto, pagina } = await abrir(browser, base, ['es']);
     try {
         await pagina.evaluate(() => (document.getElementById('idioma').hidden = false));
+        await ponerTrampa(pagina);
         const caja = await pagina.locator('#idioma').boundingBox();
         revisar('selector de idioma: mide al menos 44 px', caja.width >= 44 && caja.height >= 44, JSON.stringify(caja));
         const es = await leerBoton(pagina);
@@ -142,12 +173,14 @@ export async function probarIdiomaSelector({ browser, base, ok: revisar }) {
             en.texto === 'Español' && en.lang === 'es' && en.etiqueta === 'Change the language to Español',
             JSON.stringify(en),
         );
+        await revisarTrampa(pagina, revisar);
         const v = await leer(pagina);
         revisar(
             'selector de idioma: cambia lang y descripción sin recargar',
             v.lang === 'en-US' && v.descripcion === DESCRIPCION_EN,
         );
         await probarPreferencia(pagina, revisar);
+        await probarErrorDiccionario(browser, base, revisar);
     } finally {
         await contexto.close();
     }

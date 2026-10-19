@@ -144,14 +144,14 @@ export async function cambiarIdioma(nuevo) {
     const orden = ++solicitud;
     const dic = await cargar(nuevo);
     const resp = await respaldoDe(nuevo);
-    if (orden !== solicitud) return; // otro pedido llegó después: él decide
+    if (orden !== solicitud) return false; // otro pedido llegó después: él decide
     activar(nuevo, dic, resp);
     try {
         await guardarAjuste('idioma', nuevo);
     } catch (_error) {
         // La preferencia no se pudo guardar: sigue valiendo en esta sesión.
     }
-    if (orden !== solicitud) return; // otro cambio pasó mientras se guardaba: él avisa
+    if (orden !== solicitud) return false; // otro cambio pasó mientras se guardaba: él avisa
     for (const fn of [...suscriptos]) {
         try {
             fn(nuevo);
@@ -159,6 +159,7 @@ export async function cambiarIdioma(nuevo) {
             console.error(error);
         }
     }
+    return true;
 }
 
 /**

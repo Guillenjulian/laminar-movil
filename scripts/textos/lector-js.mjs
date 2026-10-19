@@ -115,6 +115,23 @@ export function analizarJs(js) {
     return { codigo, literales };
 }
 
+/** ¿Lleva `// t-dinamica: <motivo>` la línea de la llamada o la anterior? Mira el texto original (los comentarios ya
+ *  están en blanco en `codigo`, que conserva las líneas). */
+function marcadaDinamica(js, codigo, indice) {
+    const linea = codigo.slice(0, indice).split('\n').length;
+    const lineas = js.split('\n');
+    return [lineas[linea - 1], lineas[linea - 2]].some(l => /\/\/ t-dinamica:\s*\S/.test(l ?? ''));
+}
+
+/** Importaciones con alias de t, existe o marcar (`import { t as x }`): el escáner no las reconocería.
+ *  @returns {string[]} */
+export function aliasDeT(js) {
+    const { codigo } = analizarJs(js);
+    return [...codigo.matchAll(/import\s*\{([^}]*)\}\s*from/g)].flatMap(m =>
+        [...m[1].matchAll(/\b(t|existe|marcar)\s+as\s+(\w+)/g)].map(a => `import { ${a[1]} as ${a[2]} }`),
+    );
+}
+
 /** Claves literales y llamadas dinámicas de t()/existe()/marcar() en un JavaScript (sin mirar los comentarios).
  *  Una llamada dinámica a `existe` se tolera (la usan las claves de perfiles por id); a `t` y `marcar`, no.
  *  @returns {{claves: string[], dinamicas: string[]}} */
@@ -128,7 +145,7 @@ export function usosEnJs(js) {
         literal.lastIndex = m.index + m[0].length;
         const lit = literal.exec(codigo);
         if (lit && !(lit[1] === '`' && lit[2].includes('${'))) claves.push(lit[2]);
-        else if (m[1] !== 'existe') {
+        else if (m[1] !== 'existe' && !marcadaDinamica(js, codigo, m.index)) {
             const resto = codigo
                 .slice(m.index + m[0].length)
                 .split('\n')[0]

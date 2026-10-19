@@ -11,6 +11,7 @@ export const CLAVE = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)+$/;
 const MARCADO_PERMITIDO = /<\/?(?:b|small)>|<br>/g;
 
 export * from './lector-js.mjs';
+import { ATRIBUTOS_TRADUCIBLES } from '../../src/textos/atributos.js';
 
 /** @param {string} texto @returns {string[]} variables `{x}` sin repetir, en orden de aparición */
 export function variablesDe(texto) {
@@ -27,7 +28,7 @@ export const formasDe = valor =>
     );
 
 /** Atributos que `data-t-attr` puede traducir (ADR 0008, B.4). */
-export const ATRIBUTOS_TRADUCIBLES = ['aria-label', 'placeholder', 'alt', 'content', 'title'];
+export { ATRIBUTOS_TRADUCIBLES };
 
 /** Un texto del diccionario: no vacío y sin llaves sueltas fuera de `{variable}`. @returns {string|null} el motivo */
 function textoInvalido(texto) {

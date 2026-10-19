@@ -201,6 +201,7 @@ export const CONTRATOS = {
         },
         importa: [],
     },
+    'textos/atributos': { exports: { ATRIBUTOS_TRADUCIBLES: 'valor' }, importa: [] },
     'textos/es': { exports: { default: 'valor' }, importa: [] },
     'textos/en': { exports: { default: 'valor' }, importa: [] },
     'ui/idioma': {
@@ -218,6 +219,9 @@ export const CONTRATOS = {
         importa: ['almacen', 'textos/traducir', 'textos/es', 'textos/en'],
     },
     // Sólo lo importa main.js (ADR 0008, B.7).
-    'ui/idioma-dom': { exports: { traducirDom: 1, iniciarIdiomaDom: 0 }, importa: ['ui/idioma', 'ui/util-dom'] },
+    'ui/idioma-dom': {
+        exports: { traducirDom: 1, iniciarIdiomaDom: 0 },
+        importa: ['ui/idioma', 'ui/util-dom', 'textos/atributos'],
+    },
     'ui/actualizacion': { exports: { registrarServiceWorker: 0 }, importa: ['ui/util-dom'] },
 };

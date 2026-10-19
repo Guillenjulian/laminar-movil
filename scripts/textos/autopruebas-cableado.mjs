@@ -2,7 +2,7 @@
 // `chequeos()` con datos sintéticos, una mutación por chequeo (sacar o romper una pieza tiene que dar ✘).
 // Sin `export default`; las llama autopruebas.mjs.
 import { chequeos } from './chequeos.mjs';
-import { espanolSuelto, reservasVencidas, valorValido } from './detectores.mjs';
+import { aliasDeT, espanolSuelto, reservasVencidas, usosEnJs, valorValido } from './detectores.mjs';
 
 const VALIDOS = ['Listo', { other: 'x' }, { one: '{n} a', other: '{n} b' }, 'Hola {nombre}'];
 const INVALIDOS = [
@@ -128,6 +128,16 @@ const MUTACIONES = [
     ['marcado', 'en con &', con({ en: poner(EN, 'app', 'app.titulo', 'a & b') })],
     ['dinamicas', 't(variable)', con({ js: [...BASE.js, { ruta: 'src/b.js', texto: 't(clave);' }] })],
     [
+        'dinamicas',
+        't(variable) con un // t-dinamica: sin motivo',
+        con({ js: [...BASE.js, { ruta: 'src/b.js', texto: 't(clave); // t-dinamica:' }] }),
+    ],
+    [
+        'alias',
+        'import { t as x } (alias de t)',
+        con({ js: [...BASE.js, { ruta: 'src/b.js', texto: "import { existe, t as x } from './idioma.js';" }] }),
+    ],
+    [
         'sinDefinir',
         'clave usada que no existe',
         con({ js: [...BASE.js, { ruta: 'src/b.js', texto: "t('app.nada');" }] }),
@@ -178,8 +188,27 @@ function cableado({ revisar }) {
     );
 }
 
+/** Marca `// t-dinamica:` y alias de t/existe/marcar. */
+function marcasDinamicas({ revisar }) {
+    revisar(
+        'usos: // t-dinamica: motivo (misma línea o anterior) no cuenta como dinámica; sin motivo, sí',
+        usosEnJs('t(clave); // t-dinamica: viene de data-t').dinamicas.length === 0 &&
+            usosEnJs('// t-dinamica: viene de data-t\nt(clave);').dinamicas.length === 0 &&
+            usosEnJs('t(clave); // t-dinamica:').dinamicas.length === 1 &&
+            usosEnJs('// t-dinamica: x\n\nt(clave);').dinamicas.length === 1,
+    );
+    revisar(
+        'alias: import { t as x } falla; import { t } y otros alias no',
+        aliasDeT("import { a, t as x } from './i.js';").length === 1 &&
+            aliasDeT("import {\n existe as e,\n marcar } from './i.js';").length === 1 &&
+            aliasDeT("import { t, existe } from './i.js'; import { otro as o } from 'x';").length === 0 &&
+            aliasDeT("// import { t as x } from 'y';").length === 0,
+    );
+}
+
 /** @param {{revisar: Function, igual: Function}} ctx @returns {void} */
 export function autopruebasNuevas(ctx) {
+    marcasDinamicas(ctx);
     valores(ctx);
     reservas(ctx);
     suelto(ctx);

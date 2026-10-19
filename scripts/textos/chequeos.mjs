@@ -2,6 +2,7 @@
 // pura, `chequeos`, que reciben tanto `diccionarios.mjs` (con los archivos reales) como `autopruebas.mjs` (con
 // datos sintéticos). Así las autopruebas prueban el cableado, no sólo cada detector. Sin `export default`.
 import {
+    aliasDeT,
     aplanar,
     clavesDelHtml,
     compararEstructura,
@@ -22,14 +23,16 @@ const ambos = (detector, es, en) => [...detector(es).map(m => `[es] ${m}`), ...d
 export function usosDeClaves(js, html) {
     const usadas = new Set();
     const dinamicas = [];
+    const alias = [];
     for (const { ruta, texto } of js) {
         const usos = usosEnJs(texto);
         usos.claves.forEach(k => usadas.add(k));
         dinamicas.push(...usos.dinamicas.map(d => `${ruta}: ${d}`));
+        alias.push(...aliasDeT(texto).map(a => `${ruta}: ${a}`));
     }
     const elementos = elementosConTexto(html);
     clavesDelHtml(elementos).forEach(k => usadas.add(k));
-    return { usadas, dinamicas, elementos };
+    return { usadas, dinamicas, alias, elementos };
 }
 
 /**
@@ -56,7 +59,8 @@ export function chequeos({ es, en, js, html, migrados, reservadas, lectura = [] 
         ['estructura', 'mismas áreas, claves, tipos, variables y plurales en es y en', compararEstructura(es, en)],
         ['forma', 'forma de las claves (regex, prefijo = archivo, sin repetidas)', ambos(formaDeClaves, es, en)],
         ['marcado', 'marcado permitido (sólo <b>, <small>, <br>; sin &)', ambos(marcadoNoPermitido, es, en)],
-        ['dinamicas', 'sin claves dinámicas (usá marcar())', usos.dinamicas],
+        ['dinamicas', 'sin claves dinámicas (usá marcar() o // t-dinamica: motivo)', usos.dinamicas],
+        ['alias', 'sin alias de t, existe ni marcar al importar', usos.alias],
         ['sinDefinir', 'claves usadas y definidas en es', sinDefinir.map(k => `usada pero no definida: ${k}`)],
         ['sinUso', 'claves definidas y usadas', sinUso.map(k => `definida pero sin uso: ${k}`)],
         [
