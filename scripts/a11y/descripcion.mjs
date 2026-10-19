@@ -3,6 +3,7 @@
 // formato.js). También corre solo: `node scripts/a11y/descripcion.mjs`.
 // Cubre: 0 piezas, 1 pieza con medida, 2 piezas con copias, "no entran", sin medida (visor cargando) y que el
 // texto cambie con las copias.
+import { readFileSync } from 'node:fs';
 
 const CUBO = { x: 20, y: 20, z: 20 };
 
@@ -64,6 +65,10 @@ const CASOS = [
  */
 export async function probarDescripcion(chequear, cargar) {
     console.log('Descripción del visor (ADR 0008, A4)');
+    // formato.js pide sus textos a t(): se instala el diccionario de formato en español (misma instancia de idioma.js).
+    const { ponerDiccionarios } = await cargar('/src/ui/idioma.js');
+    const es = JSON.parse(readFileSync(new URL('../../src/textos/es/formato.json', import.meta.url), 'utf8'));
+    ponerDiccionarios('es', es, es);
     const { textoDescripcionVisor } = await cargar('/src/ui/visor-descripcion.js');
     for (const [nombre, datos, esperado] of CASOS) {
         const texto = textoDescripcionVisor(datos);

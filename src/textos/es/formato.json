@@ -2,7 +2,7 @@
     "formato.milimetros": "{x} × {y} × {z} mm",
     "formato.triangulos.millones": "{n} millones de triángulos",
     "formato.triangulos.miles": "{n} mil triángulos",
-    "formato.triangulos.cantidad": { "one": "{n} triángulo", "other": "{n} triángulos" },
+    "formato.triangulos.cantidad": { "one": "{c} triángulo", "other": "{c} triángulos" },
     "formato.duracion.minutos": "{min} min",
     "formato.duracion.horas": "{h} h {min} min",
     "formato.filamento": "{m} m (≈ {g} g)",

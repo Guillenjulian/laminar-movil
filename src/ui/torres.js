@@ -14,6 +14,7 @@ import { torreAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { armarTorre, valoresSugeridos } from '../perfiles/torres.js';
 import { $, anunciar } from './util-dom.js';
+import { numeroHasta } from './formato.js';
 
 const TIPOS = {
     temperatura: { nombre: 'Torre de temperatura', unidad: '°C', paso: 5 },
@@ -27,7 +28,7 @@ const BLOQUES_MAX = 8;
 const resumenTorre = torre => {
     const { unidad } = TIPOS[torre.tipo];
     const decimales = unidad === 'mm' ? 1 : 0; // 0,5 mm de retracción no se puede redondear a 1
-    const ver = v => v.toLocaleString('es-AR', { maximumFractionDigits: decimales });
+    const ver = v => numeroHasta(v, decimales);
     return `${torre.bloques.map(b => ver(b.valor)).join(', ')} ${unidad}`;
 };
 

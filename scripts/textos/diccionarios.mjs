@@ -29,7 +29,6 @@ const TEXTOS = join(RAIZ, 'src', 'textos');
  *  ya no tiene claves sin uso, `reserva vencida` falla y hay que sacarlo. Uno por línea. */
 export const CLAVES_RESERVADAS = [
     'comun.', // sin dueño todavía: la primera hoja que use aceptar/cancelar/cerrar/reintentar lo saca
-    'formato.', // I4 (formato.js pasa a t())
 ];
 /** Archivos de src/ ya migrados a t(), con ruta desde la raíz; uno por línea. Cada tarea de migración descomenta los
  *  suyos en el mismo commit (bloques separados para que las tareas en paralelo no choquen). */

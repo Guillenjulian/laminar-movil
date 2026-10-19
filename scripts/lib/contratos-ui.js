@@ -79,7 +79,7 @@ export const CONTRATOS = {
     },
     'ui/impresoras': {
         exports: { iniciarImpresoras: 1, dibujarImpresoraElegida: 0 },
-        importa: conBase(PERFILES, 'ui/formulario-impresora'),
+        importa: conBase(PERFILES, 'ui/formulario-impresora', FORMATO),
     },
     'ui/formulario-impresora': {
         exports: { iniciarFormularioImpresora: 1 },
