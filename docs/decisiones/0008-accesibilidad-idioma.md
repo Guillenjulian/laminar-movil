@@ -44,7 +44,7 @@ npm run build
 AXE_PATH=/ruta/a/node_modules/axe-core/axe.min.js node scripts/auditar-a11y.mjs --paso4
 ```
 
-`scripts/auditar-a11y.mjs` queda en el repo como herramienta de QA (no está en `package.json`; axe-core **no** está
+`scripts/auditar-a11y.mjs` (ya borrado: lo reemplazó `scripts/probar-a11y.mjs` en A6, `npm run test:a11y`) quedaba en el repo como herramienta de QA (no está en `package.json`; axe-core **no** está
 instalado en el proyecto: se propone como devDependency en la decisión abierta 4).
 
 **Lo que dice axe** (reglas violadas por pantalla):
@@ -625,7 +625,7 @@ Siguen la convención de `scripts/app/` (cabecera con Flujo, **Precondición** y
 
 ### Auditoría repetible
 
-`scripts/auditar-a11y.mjs` queda para el QA (manual); `scripts/probar-a11y.mjs` (A6) es su versión que falla.
+`scripts/probar-a11y.mjs` (A6, `npm run test:a11y`) reemplazó a `scripts/auditar-a11y.mjs` y falla con cualquier violación.
 
 ## Plan de tareas
 

@@ -115,7 +115,12 @@ async function etapasResultado(pagina, tema) {
 }
 
 async function recorrer(navegador, base, tema) {
-    const contexto = await navegador.newContext({ ...devices['Pixel 7'], serviceWorkers: 'block', colorScheme: tema });
+    const contexto = await navegador.newContext({
+        ...devices['Pixel 7'],
+        locale: 'es-AR', // la app se audita en el idioma de v1, no en el del Chromium de la CI
+        serviceWorkers: 'block',
+        colorScheme: tema,
+    });
     const pagina = await contexto.newPage();
     pagina.on('pageerror', e => console.log('[error]', e.message));
     try {
