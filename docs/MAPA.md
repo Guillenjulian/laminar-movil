@@ -113,7 +113,7 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `decimar.js` | Simplificación por agrupamiento en grilla |
 | `pausas.js` | Inserta las pausas (M600/PAUSE) en el G-code al descargar |
 | `espiral.js` | Modo jarrón: `espiralar` convierte cada vuelta en rampa de Z (Kiri lo hace en capas planas); `vueltaDesde` decide si una capa es una sola vuelta; exporta `MARCA` |
-| `minions-locales.js` | Reemplaza el pool de sub-workers de Kiri (soportes) por cálculo local |
+| `minions-locales.js` | Reemplaza el pool de sub-workers de Kiri (soportes) por cálculo local, de a un trabajo por vez para que el progreso avance |
 | `tipos-linea.js` | Tipos de línea de Kiri, sus colores, paleta de filamentos, cuantizado |
 
 ### Perfiles (`src/perfiles/`): datos, no código
@@ -202,7 +202,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 
 | Síntoma | Mirar primero |
 |---|---|
-| El laminado se cuelga | `laminador.worker.js`: ¿se usa algo del pool de minions? (`minions-locales.js`) |
+| El laminado se cuelga | `laminador.worker.js`: ¿se usa algo del pool de minions? (`minions-locales.js`). Si la barra queda quieta en ~45 % con soportes, mirar que los trabajos sigan encadenados |
 | G-code con temperatura, ventilador o velocidad mal | `perfiles.js` → `armarConfiguracion` y el orden de combinación; `materiales.json` |
 | Macros `{...}` sin reemplazar | `dispositivo.gcodePre/Post` del perfil y el shim de QuickJS en `vendor-kiri.mjs` |
 | No abre offline | `src/sw.js` (lista de archivos, `ignoreVary`), `vite.config.js` |

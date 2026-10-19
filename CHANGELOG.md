@@ -7,6 +7,11 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Sin publicar]
 
+### Corregido
+
+- Con soportes, la barra de laminado quedaba clavada cerca del 45 % mientras se calculaban las sombras de los
+  soportes (en el celu, varios minutos sin moverse). Ahora el avance se actualiza capa por capa.
+
 ## [0.3.0] - 2026-10-18
 
 Sprint de deuda técnica.

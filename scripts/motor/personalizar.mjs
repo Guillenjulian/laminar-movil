@@ -3,9 +3,10 @@
 // Devuelve `base` (cubo con el perfil por defecto) y `nada` (adhesión nada): las pruebas de avanzado los comparan.
 
 import { probarPausa, filamento } from './ayudas.mjs';
+import { esfera } from '../../src/prueba/mallas.js';
 
 // 3. Soportes automáticos (con los minions locales).
-async function probarSoportes({ laminar, revisar }) {
+async function probarSoportes({ laminar, revisar, pagina }) {
     const sinSop = await laminar({ caso: 'te' });
     const conSop = await laminar({ caso: 'te', soportes: true });
     const pSop = probarPausa(conSop.gcode, 50);
@@ -15,6 +16,18 @@ async function probarSoportes({ laminar, revisar }) {
         conSop.info.filamento > sinSop.info.filamento * 1.1,
         `(${(sinSop.info.filamento / 1000).toFixed(2)} m → ${(conSop.info.filamento / 1000).toFixed(2)} m)`,
     );
+    await probarAvisosDeSombras({ laminar, revisar, pagina });
+}
+
+// Las sombras de los soportes ocupan 0,716..0,738 del avance de "laminando" (una pieza; Kiri lo escala a 0,05 + 0,95·x
+// y descarta avisos a menos de 10 ms del anterior). Si los minions locales calculan todo de una, los avisos llegan
+// juntos al final y la barra queda clavada (en el celu, minutos). Esfera de 20 mm: sin el arreglo da 0 avisos.
+async function probarAvisosDeSombras({ laminar, revisar, pagina }) {
+    const stlBase64 = Buffer.from(esfera(20, 60)).toString('base64');
+    await laminar({ stlBase64, soportes: true });
+    const avisos = await pagina.evaluate(() => window.progreso);
+    const sombras = avisos.filter(([e, v]) => e === 'laminando' && v > 0.716 && v < 0.738);
+    revisar('soportes: las sombras avisan el progreso de a poco', sombras.length >= 3, `(${sombras.length} avisos)`);
 }
 
 // Patrones, densidad y paredes. Devuelve el cubo base para comparar.
@@ -81,8 +94,8 @@ async function probarAdhesion({ laminar, revisar }) {
     return nada;
 }
 
-export async function probarPersonalizar({ laminar, revisar }) {
-    await probarSoportes({ laminar, revisar });
+export async function probarPersonalizar({ laminar, revisar, pagina }) {
+    await probarSoportes({ laminar, revisar, pagina });
     // 4. Personalizar: patrones, densidad, paredes y adhesión.
     const base = await probarRelleno({ laminar, revisar });
     const nada = await probarAdhesion({ laminar, revisar });
