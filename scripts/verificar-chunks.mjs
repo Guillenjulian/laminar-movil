@@ -7,15 +7,22 @@
 // estáticos, sin los import() dinámicos). Falla si el principal o esa clausura pesan
 // demasiado, si three.js (WebGLRenderer) o jszip (generateAsync) están en la clausura, o si hay un
 // chunk dinámico del visor o de jszip que el service worker no guarda para usar sin conexión.
+// Textos (ADR 0008, I2): un chunk "de textos" es el que trae objetos con las claves de src/textos/<idioma>/*.json
+// (`"area.clave":`, al menos 3 distintas; las llamadas t('area.clave') no cuentan). Falla si alguno está en la carga
+// inicial (los diccionarios van en import() dinámico) o si el service worker no lo guarda. Si todavía no hay
+// src/textos/ con claves, las reglas de textos no se aplican (se avisa).
 
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { fileURLToPath } from 'node:url';
 
 const TOPE_PRINCIPAL = 100000;
 const TOPE_CLAUSURA = 400000;
 const MARCA_VISOR = 'WebGLRenderer';
 const MARCA_JSZIP = 'generateAsync'; // API de jszip; no aparece en el código propio de la app
+const MIN_CLAVES_TEXTOS = 3;
+const CARPETA_TEXTOS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'textos');
 
 const carpeta = path.resolve(process.argv[2] ?? 'dist');
 const relativa = ruta => path.relative(carpeta, ruta).split(path.sep).join('/');
@@ -79,7 +86,26 @@ const leerArchivosSw = () => {
     return JSON.parse(m[1]);
 };
 
-const medir = (ruta, enClausura) => {
+// Claves de todos los .json de src/textos (recursivo). [] si la carpeta no existe o no tiene ninguno.
+const clavesDeTextos = (carpeta = CARPETA_TEXTOS) => {
+    if (!fs.existsSync(carpeta)) return [];
+    return fs.readdirSync(carpeta, { withFileTypes: true }).flatMap(e => {
+        const ruta = path.join(carpeta, e.name);
+        if (e.isDirectory()) return clavesDeTextos(ruta);
+        return e.name.endsWith('.json') ? Object.keys(JSON.parse(fs.readFileSync(ruta, 'utf8'))) : [];
+    });
+};
+
+// ¿El chunk trae los diccionarios? Vite los deja como objeto literal o como JSON.parse("…") con las comillas escapadas.
+const trae = (texto, claves) => {
+    const plano = texto.replaceAll('\\"', '"');
+    const minimo = Math.min(MIN_CLAVES_TEXTOS, claves.length);
+    let halladas = 0;
+    for (const clave of claves) if (plano.includes(`"${clave}":`) && ++halladas >= minimo) return true;
+    return false;
+};
+
+const medir = (ruta, enClausura, claves) => {
     const buf = fs.readFileSync(ruta);
     const nombre = relativa(ruta);
     return {
@@ -91,6 +117,7 @@ const medir = (ruta, enClausura) => {
         visor: buf.includes(MARCA_VISOR),
         jszip: buf.includes(MARCA_JSZIP),
         diagnostico: esDeDiagnostico(nombre),
+        textos: trae(buf.toString('utf8'), claves),
     };
 };
 
@@ -124,12 +151,20 @@ const evaluar = (principal, filas, archivos) => {
             `[jszip-en-clausura] ${f.nombre} se carga con la app y contiene ${MARCA_JSZIP}; jszip debe ir en import() dinámico`,
         );
     }
+    for (const f of enClausura.filter(f => f.textos)) {
+        fallas.push(
+            `[textos-en-clausura] ${f.nombre} se carga con la app y trae los diccionarios de src/textos; deben ir en import() dinámico`,
+        );
+    }
     // Todo chunk con visor o jszip se pide recién cuando hace falta (import() dinámico), así que sin conexión
     // sólo anda si el service worker lo guardó. Los workers se cachean aparte y no entran en esta regla.
     for (const f of filas.filter(f => (f.visor || f.jszip) && !f.diagnostico && !esWorker(f.nombre))) {
         if (archivos.includes(f.nombre)) continue;
         const que = f.visor ? MARCA_VISOR : MARCA_JSZIP;
         fallas.push(`[dinamico-fuera-sw] ${f.nombre} contiene ${que} y no está en ARCHIVOS de sw.js`);
+    }
+    for (const f of filas.filter(f => f.textos && !archivos.includes(f.nombre))) {
+        fallas.push(`[textos-fuera-sw] ${f.nombre} trae los diccionarios y no está en ARCHIVOS de sw.js`);
     }
     return fallas;
 };
@@ -142,14 +177,18 @@ const main = () => {
     const enClausura = clausura(raiz);
     const dirAssets = path.join(carpeta, 'assets');
     const archivos = leerArchivosSw();
+    const claves = clavesDeTextos();
     const filas = fs
         .readdirSync(dirAssets)
         .filter(n => n.endsWith('.js'))
-        .map(n => medir(path.join(dirAssets, n), enClausura))
+        .map(n => medir(path.join(dirAssets, n), enClausura, claves))
         .sort((a, b) => b.bytes - a.bytes);
     const principal = filas.find(f => f.ruta === raiz);
     if (!principal) throw new Error(`el principal ${src} no está en assets/`);
     imprimirTabla(filas);
+    const deTextos = filas.filter(f => f.textos).map(f => f.nombre);
+    if (claves.length === 0) console.log('· sin diccionarios en src/textos: no se aplican las reglas de textos');
+    else console.log(`· diccionarios (${claves.length} claves) en: ${deTextos.join(', ') || 'ningún chunk'}`);
     const fallas = evaluar(principal, filas, archivos);
     if (fallas.length === 0) {
         console.log(`OK: principal ${principal.bytes} bytes, carga inicial de ${enClausura.size} chunks`);

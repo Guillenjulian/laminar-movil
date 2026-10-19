@@ -48,6 +48,9 @@ jobs:
             - name: Build
               run: npm run build
 
+            - name: Test textos
+              run: npm run test:textos
+
             - name: Test visor-carga
               run: npm run test:visor-carga
 

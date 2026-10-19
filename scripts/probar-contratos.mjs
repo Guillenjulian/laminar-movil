@@ -3,7 +3,7 @@
 // Flujo: autoprueba del detector de ciclos; levanta Vite en middleware (sólo ssrLoadModule, sin puertos);
 // por módulo del contrato: si no existe se saltea (CONTRATOS_ESTRICTO=1 lo hace error), si existe se
 // importa con document/window "trampa" y se chequea que no los toque y que exports y aridades coincidan;
-// luego el grafo real de imports de src/ui/ y src/main.js (aristas permitidas, sin ciclos); exit 0 o 1.
+// luego el grafo real de imports de src/ui/ y src/main.js (aristas permitidas más LIBRES, sin ciclos); exit 0 o 1.
 // Trampas: document, window, navigator, location, localStorage, history. Sólo cuentan los accesos cuyo frame
 // llamador está en src/ (los de node_modules, como `window.__THREE__` de three, se ignoran). Se invalida el grafo de Vite entre
 // módulos para atribuir bien cada acceso. Límites: no ve `typeof document`, ni el uso suelto del global sin tocar
@@ -18,6 +18,9 @@ import { probarEstado } from './probar-estado.mjs';
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(RAIZ, 'src');
 const ESTRICTO = process.env.CONTRATOS_ESTRICTO === '1';
+// Destinos que cualquier módulo de src/ui/ puede importar sin declararlo en su contrato (ADR 0008, B.7).
+// Los ciclos se siguen detectando: ui/idioma no puede importar nada de src/ui/.
+const LIBRES = ['ui/idioma'];
 const GLOBALES = ['document', 'window', 'navigator', 'location', 'localStorage', 'history'];
 const ORIGINALES = new Map();
 let fallos = 0;
@@ -131,6 +134,19 @@ function extraerRutas(texto) {
     return [...limpio.matchAll(regex)].map(m => m[1] ?? m[2]);
 }
 
+/** Destinos de `destinos` que el contrato no permite ni son LIBRES. @param {string[]} destinos @param {string[]} permitidos
+ *  @returns {string[]} */
+function aristasSobrantes(destinos, permitidos) {
+    return destinos.filter(d => !permitidos.includes(d) && !LIBRES.includes(d));
+}
+
+/** Autoprueba de aristasSobrantes: un destino libre no sobra y uno ajeno sí. @returns {void} */
+function autopruebaLibres() {
+    console.log('Destinos libres (LIBRES)');
+    chequear(String(aristasSobrantes(['ui/idioma', 'ui/x'], ['ui/y'])) === 'ui/x', 'ui/idioma no sobra; ui/x sí');
+    chequear(aristasSobrantes(['ui/y', 'ui/idioma'], ['ui/y']).length === 0, 'lo permitido y lo libre no sobran');
+}
+
 /** Autoprueba de extraerRutas: cada forma de import y comentarios que no deben contarse. @returns {void} */
 function autopruebaImports() {
     console.log('Lector de imports');
@@ -160,7 +176,7 @@ function chequearGrafo() {
     console.log('Grafo de imports (src/ui y src/main.js)');
     const grafo = armarGrafo();
     for (const [nodo, destinos] of Object.entries(grafo).filter(([nodo]) => CONTRATOS[nodo])) {
-        const sobran = destinos.filter(d => !CONTRATOS[nodo].importa.includes(d));
+        const sobran = aristasSobrantes(destinos, CONTRATOS[nodo].importa);
         chequear(!sobran.length, `${nodo}: sólo importa lo permitido${sobran.length ? ` (sobran: ${sobran})` : ''}`);
     }
     const ciclo = buscarCiclo(grafo);
@@ -169,6 +185,7 @@ function chequearGrafo() {
 
 autopruebaCiclos();
 autopruebaImports();
+autopruebaLibres();
 const vite = await createServer({
     root: RAIZ,
     logLevel: 'error',

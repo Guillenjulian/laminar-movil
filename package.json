@@ -22,6 +22,7 @@
         "test:visor": "node scripts/probar-visor.mjs",
         "test:recorridos": "node scripts/probar-recorridos.mjs",
         "test:visor-carga": "node scripts/probar-visor-carga.mjs",
+        "test:textos": "node scripts/probar-textos.mjs",
         "test:chunks": "node scripts/verificar-chunks.mjs",
         "test:contratos": "CONTRATOS_ESTRICTO=1 node scripts/probar-contratos.mjs",
         "iconos": "python3 scripts/generar-iconos.py",
