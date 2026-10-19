@@ -21,6 +21,7 @@ import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
 import { crearAjuste } from './ajuste-modelo.js';
 import { crearPiezas } from './piezas-ui.js';
 import { crearBloqueosUI } from './bloqueos-ui.js';
+import { textoDescripcionVisor } from './visor-descripcion.js';
 
 export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
@@ -44,7 +45,10 @@ const piezas = crearPiezas({
     leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
     elegirOtro: elegirOtroModelo,
     guardar: almacen.guardarModelo, // las piezas agregadas también van a recientes
-    alReacomodar: () => bloqueos.dibujar(), // cambió la pieza activa, las copias o sus posiciones: las marcas siguen
+    alReacomodar: () => {
+        bloqueos.dibujar(); // cambió la pieza activa, las copias o sus posiciones: las marcas siguen
+        describirVisor();
+    },
 });
 // Panel "Zona sin soporte" (ADR 0004): sólo modelos; el aviso va a la región viva del panel.
 const bloqueos = crearBloqueosUI({
@@ -55,6 +59,14 @@ const bloqueos = crearBloqueosUI({
     nuevoId: () => ++estado.ultimoIdBloqueo,
     cancelarCara: () => ajuste.cancelarCara(),
 });
+
+/** Escribe en #descripcionVisor qué hay en la cama (A4 del ADR 0008); no es región viva: se lee al recorrer. */
+function describirVisor() {
+    $('descripcionVisor').textContent = textoDescripcionVisor({
+        piezas: estado.piezas.map(({ nombre, tamano, copias }) => ({ nombre, tamano: tamano ?? null, copias })),
+        entra: estado.entra,
+    });
+}
 
 /**
  * Cablea #archivo, #foto, #otroModelo, #ejemplo, #siguiente, la lista de recientes, escala,
@@ -109,6 +121,7 @@ export function elegirOtroModelo() {
     estado.torre = null;
     visor?.quitarModelo();
     bloqueos.dibujar(); // sin pieza: esconde el panel y saca las marcas
+    describirVisor();
     $('conModelo').hidden = true;
     $('sinModelo').hidden = false;
     $('siguiente').disabled = true;
@@ -229,5 +242,6 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     ajuste.aplicar();
     piezas.dibujar();
     bloqueos.dibujar(); // el panel sólo se ve con un modelo (no con torre ni litofanía)
+    describirVisor();
     $('siguiente').disabled = false;
 }

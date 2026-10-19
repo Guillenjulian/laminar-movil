@@ -230,11 +230,111 @@ export { probarAccesibilidadPasos } from './accesibilidad-pasos.mjs';
 export async function probarAccesibilidadRegiones(_ctx) {}
 
 /**
- * Visor y deslizador de capas (A4). Esqueleto: lo llena la tarea A4.
+ * Visor y deslizador de capas (ADR 0008, A4; H8 y H9).
  *
- * Precondición: paso 4 con resultado.
- * Deja: igual.
+ * Flujo: lee `#descripcionVisor` (en el paso 1, oculto pero en el DOM) y comprueba que hable de 20 mm; revisa que
+ * `#visor` y `#visorCapas` sean `role="group"` con un nombre y una descripción vinculada que existe, y que los
+ * canvas de los dos visores tengan `aria-hidden="true"`; mueve `#capa` con el teclado (ArrowLeft) y compara
+ * `aria-valuetext` con el texto de la capa ("Capa N de M, Z mm") antes y después; vuelve a la capa de partida.
  *
- * @param {import('../lib/app.mjs').Ctx} _ctx
+ * Precondición: paso 4 con resultado (cubo de 20 mm, vista de capas armada).
+ * Deja: igual (mismo paso y misma capa; el foco queda en `#capa`).
+ *
+ * @param {import('../lib/app.mjs').Ctx} ctx
  */
-export async function probarAccesibilidadVisor(_ctx) {}
+export async function probarAccesibilidadVisor(ctx) {
+    const { page, ok } = ctx;
+    await page.waitForSelector('#controlCapas:not([hidden])', { timeout: 30000 });
+    const descripcion = await page.evaluate(() => document.getElementById('descripcionVisor')?.textContent ?? '');
+    ok(
+        'descripción del visor: nombra la pieza y su medida en mm',
+        /cubo-20mm\.stl/.test(descripcion) && /\b20,0\b/.test(descripcion) && /mm/.test(descripcion),
+        descripcion,
+    );
+    const grupos = await page.evaluate(() =>
+        ['visor', 'visorCapas'].map(id => {
+            const el = document.getElementById(id);
+            const ids = (el.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
+            return {
+                id,
+                rol: el.getAttribute('role'),
+                nombre: el.getAttribute('aria-label'),
+                existen: ids.length > 0 && ids.every(i => document.getElementById(i)),
+                canvas: [...el.querySelectorAll('canvas')].map(c => c.getAttribute('aria-hidden')),
+            };
+        }),
+    );
+    for (const g of grupos) {
+        ok(`#${g.id}: role="group" con nombre`, g.rol === 'group' && !!g.nombre, `${g.rol} / ${g.nombre}`);
+        ok(`#${g.id}: aria-describedby apunta a nodos que existen`, g.existen);
+        ok(
+            `#${g.id}: el canvas tiene aria-hidden="true"`,
+            g.canvas.length > 0 && g.canvas.every(v => v === 'true'),
+            g.canvas.join(','),
+        );
+    }
+    await probarDeslizador(ctx);
+    await probarGlifos(ctx);
+}
+
+// aria-valuetext de #capa contra el texto visible de #textoCapa, antes y después de moverse con el teclado.
+async function probarDeslizador({ page, ok }) {
+    const valuetext = () => page.getAttribute('#capa', 'aria-valuetext');
+    // "Capa 71/72 · Z 19,88 mm" -> "Capa 71 de 72, 19,88 mm"
+    const esperado = async () => {
+        const m = (await page.textContent('#textoCapa')).match(/Capa (\d+)\/(\d+) · Z ([\d.,]+) mm/);
+        return m && `Capa ${m[1]} de ${m[2]}, ${m[3]} mm`;
+    };
+    const antes = await esperado();
+    ok('#capa: aria-valuetext "Capa N de M, Z mm"', !!antes && (await valuetext()) === antes, await valuetext());
+    await page.focus('#capa');
+    await page.keyboard.press('ArrowLeft');
+    const despues = await esperado();
+    ok(
+        '#capa: al moverse con el teclado cambia aria-valuetext',
+        despues !== antes && (await valuetext()) === despues,
+        `${await valuetext()} (esperado ${despues})`,
+    );
+    await page.keyboard.press('ArrowRight');
+    ok('#capa: al volver recupera el aria-valuetext', (await valuetext()) === antes, await valuetext());
+}
+
+// Los glifos (▶ ❚❚ ⏸ ✕) van en `<span aria-hidden="true">`: el nombre accesible no los lleva, aunque el JS cambie el texto.
+async function probarGlifos({ page, ok }) {
+    const sinGlifos = sel =>
+        page.evaluate(s => {
+            const texto = n =>
+                n.nodeType === 3
+                    ? n.textContent
+                    : n.getAttribute?.('aria-hidden') === 'true'
+                      ? ''
+                      : [...n.childNodes].map(texto).join('');
+            const el = document.querySelector(s);
+            return { visible: el.textContent, nombre: (el.getAttribute('aria-label') ?? texto(el)).trim() };
+        }, sel);
+    const GLIFO = /[▶❚⏸✕]/u;
+    const capa = await page.inputValue('#capa');
+    const pausar = await sinGlifos('#pausarCapa');
+    ok(
+        '#pausarCapa: el nombre no lleva el glifo',
+        GLIFO.test(pausar.visible) && !GLIFO.test(pausar.nombre),
+        pausar.nombre,
+    );
+    await page.tap('#reproducir');
+    const tocando = await sinGlifos('#reproducir');
+    ok(
+        '#reproducir: tocando, el nombre es "Pausar" sin glifo',
+        /^Pausar$/.test(tocando.nombre) && GLIFO.test(tocando.visible),
+        tocando.nombre,
+    );
+    // La reproducción puede haber terminado sola (unos 2 s): sólo se toca para parar si sigue sonando.
+    await page.evaluate(() => {
+        const b = document.getElementById('reproducir');
+        if (b.getAttribute('aria-label') === 'Pausar') b.click();
+    });
+    const parado = await sinGlifos('#reproducir');
+    ok('#reproducir: parado, el nombre es "Reproducir" sin glifo', /^Reproducir$/.test(parado.nombre), parado.nombre);
+    await page.locator('#capa').fill(capa);
+    const otra = await sinGlifos('#pausarCapa');
+    ok('#pausarCapa: tras volver a la capa sigue sin glifo en el nombre', !GLIFO.test(otra.nombre), otra.nombre);
+}

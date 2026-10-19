@@ -113,7 +113,7 @@ export function dibujarPausas() {
         <input type="color" value="${escapar(colorFilamento(i))}" data-filamento="${i}" aria-label="Color del filamento ${i + 1}">
         <button type="button" class="ir" data-capa="${t.desde}">
             <b>Filamento ${i + 1}</b> · capas ${t.desde + 1}–${t.hasta + 1}
-            ${t.pausa ? `<small>⏸ pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}
+            ${t.pausa ? `<small><span aria-hidden="true">⏸</span> pausa en Z ${formato.numero(t.pausa.z, 2)} mm</small>` : ''}
         </button>
         ${t.pausa ? `<button type="button" class="quitar" data-capa="${t.desde}" aria-label="Quitar la pausa de la capa ${t.desde + 1}">×</button>` : ''}
     </li>`,

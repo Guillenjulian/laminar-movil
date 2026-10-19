@@ -50,6 +50,7 @@ export const CONTRATOS = {
             'ui/ajuste-modelo',
             'ui/piezas-ui',
             'ui/bloqueos-ui',
+            'ui/visor-descripcion',
         ),
     },
     'ui/acomodo': {
@@ -117,6 +118,7 @@ export const CONTRATOS = {
             'ui/aviso-vista',
         ),
     },
+    'ui/visor-descripcion': { exports: { textoDescripcionVisor: 1 }, importa: [FORMATO] },
     'ui/aviso-vista': { exports: { textoAvisoVista: 2 }, importa: [] },
     'ui/pausas-ui': {
         exports: { conectarPausas: 1, dibujarPausas: 0 },

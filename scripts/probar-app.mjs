@@ -14,7 +14,7 @@ import { probarFormatos } from './app/paso1-formatos.mjs';
 import { probarPiezas } from './app/piezas.mjs';
 import { probarCopias } from './app/copias.mjs';
 import { probarConfig } from './app/paso2-config.mjs';
-import { probarContraste, probarAccesibilidadPasos } from './app/accesibilidad.mjs';
+import { probarContraste, probarAccesibilidadPasos, probarAccesibilidadVisor } from './app/accesibilidad.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
 import { probarAvanzado } from './app/avanzado.mjs';
@@ -66,6 +66,7 @@ const AREAS = [
     probarAvanzado,
     probarCambios,
     probarVistaCapas,
+    probarAccesibilidadVisor, // ADR 0008, A4: descripción del visor y aria-valuetext de #capa; no cambia el estado
     probarPausas,
     probarDescarga,
     probarDescargaBambu,

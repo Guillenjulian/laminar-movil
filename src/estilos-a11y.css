@@ -104,6 +104,7 @@
 /* A3 */
 
 /* A4 */
+/* Sin reglas: la descripción del visor usa .solo-lectores (estilos.css) y el resto es semántica (ADR 0008, A4). */
 
 /* I3 */
 .barra h1 {

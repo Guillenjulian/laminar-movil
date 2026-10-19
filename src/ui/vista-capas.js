@@ -108,18 +108,34 @@ function irACapa(n) {
     $('capa').value = n;
     visorCapas.mostrarCapa(n, $('soloCapa').checked);
     const z = formato.numero(capas.zCapa[n], 2);
-    $('textoCapa').textContent = `Capa ${n + 1}/${capas.total} · Z ${z} mm${estado.pausas.has(n) ? ' · ⏸' : ''}`;
+    $('capa').setAttribute('aria-valuetext', `Capa ${n + 1} de ${capas.total}, ${z} mm`);
+    const pausada = estado.pausas.has(n);
+    ponerTexto($('textoCapa'), `Capa ${n + 1}/${capas.total} · Z ${z} mm${pausada ? ' · ' : ''}`, pausada ? '⏸' : '');
     // botón de pausa según la capa
     const b = $('pausarCapa');
     b.disabled = n === 0;
-    b.textContent =
-        n === 0
-            ? '⏸ No se puede pausar en la primera capa'
-            : estado.pausas.has(n)
-              ? '✕ Quitar la pausa de esta capa'
-              : '⏸ Pausar acá para cambiar filamento';
+    if (n === 0) ponerTexto(b, '', '⏸', ' No se puede pausar en la primera capa');
+    else if (estado.pausas.has(n)) ponerTexto(b, '', '✕', ' Quitar la pausa de esta capa');
+    else ponerTexto(b, '', '⏸', ' Pausar acá para cambiar filamento');
 }
 
+/**
+ * Deja en `el`: `antes`, el glifo en un `<span aria-hidden="true">` (decoración: no entra en el nombre accesible,
+ * ADR 0008) y `despues`. Sin glifo, sólo el texto.
+ * @param {HTMLElement} el
+ * @param {string} antes
+ * @param {string} glifo
+ * @param {string} [despues]
+ * @returns {void}
+ */
+function ponerTexto(el, antes, glifo, despues = '') {
+    el.replaceChildren(antes);
+    if (!glifo) return void el.append(despues);
+    const s = el.ownerDocument.createElement('span');
+    s.setAttribute('aria-hidden', 'true');
+    s.textContent = glifo;
+    el.append(s, despues);
+}
 /**
  * Cablea el deslizador, los botones de capa, "solo esta capa" y la reproducción.
  * @returns {void}
@@ -151,7 +167,7 @@ function alternarReproduccion() {
     let n = Number($('capa').value);
     if (n >= capas.total - 1) n = 0;
     const paso = Math.max(1, Math.round(capas.total / 240));
-    $('reproducir').textContent = '❚❚';
+    ponerTexto($('reproducir'), '', '❚❚');
     $('reproducir').setAttribute('aria-label', 'Pausar');
     reproduccion = setInterval(() => {
         irACapa(n);
@@ -171,6 +187,6 @@ function pararReproduccion() {
     if (!reproduccion) return;
     clearInterval(reproduccion);
     reproduccion = null;
-    $('reproducir').textContent = '▶';
+    ponerTexto($('reproducir'), '', '▶');
     $('reproducir').setAttribute('aria-label', 'Reproducir');
 }

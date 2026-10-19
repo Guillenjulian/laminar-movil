@@ -187,6 +187,7 @@ Las funciones nuevas son privadas; el contrato de `navegacion.js` no cambia (sie
   export function textoDescripcionVisor(datos) {}
   ```
 
+  Con 0 piezas devuelve "La cama está vacía." y no '' (el nodo de descripción nunca queda sin texto; aceptado por el CTO).
   Lo llama `paso1-modelo.js` (en cada `reacomodar` y `aplicar`) y escribe en `#descripcionVisor`. Para el visor del
   paso 4: `aria-describedby="textoCapa resumen"` (ya existen).
 - Deslizador: `vista-capas.js` pone `aria-valuetext="Capa 12 de 40"` en cada cambio y `aria-describedby="textoCapa"`.

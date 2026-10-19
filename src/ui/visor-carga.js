@@ -103,6 +103,11 @@ function crearAviso(contenedor, reintentar) {
     };
 }
 
+// El canvas es sólo dibujo: el contenido lo dice el texto asociado al contenedor (ADR 0008, A4).
+function ocultarCanvas(contenedor) {
+    contenedor.querySelectorAll('canvas').forEach(c => c.setAttribute('aria-hidden', 'true'));
+}
+
 // El módulo del visor, pedido una sola vez: la promesa se descarta si falla, para poder reintentar.
 function crearPedido(cargar) {
     const estado = { modulo: null, promesa: null };
@@ -153,6 +158,7 @@ function crearInstancia({ estado, pedir }, contenedor, opciones) {
     const quedarListo = modulo => {
         try {
             creado ??= modulo.crearVisor(contenedor);
+            ocultarCanvas(contenedor);
             cola.reproducir(creado);
             visorReal = creado;
             aviso.listo();
@@ -170,6 +176,7 @@ function crearInstancia({ estado, pedir }, contenedor, opciones) {
         // Ya estaba cargado: visor real en el mismo turno, sin cola. alListo va en un microtask
         // para que el llamador alcance a guardar el visor antes de que se lo avisemos.
         visorReal = estado.modulo.crearVisor(contenedor);
+        ocultarCanvas(contenedor);
         aviso.listo();
         queueMicrotask(() => avisarListo(opciones.alListo));
     } else empezar();
