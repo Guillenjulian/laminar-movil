@@ -2,11 +2,24 @@
 // cierra al terminar: así se libera toda la memoria (importante en celus
 // de gama baja).
 
+// Si el laminador pasa tanto tiempo sin avisar nada (ni progreso, ni listo, ni error), se lo da por trabado.
+const PLAZO_SIN_NOTICIAS_MS = 120_000;
+
+const AVISO_TRABADO = 'El laminado se trabó y lo cancelamos. Probá de nuevo; si vuelve a pasar, mandanos el archivo.';
+
 // Abre un worker, le manda un mensaje y espera 'listo' o 'error'.
 // Con `signal` (AbortController) se puede cancelar: se mata el worker.
-function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } = {}) {
+// Con `plazoSinNoticiasMs` (> 0), si el worker no manda ningún mensaje en ese lapso se lo mata y se rechaza.
+function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal, plazoSinNoticiasMs = 0 } = {}) {
     return new Promise((resolver, rechazar) => {
+        let guardia;
+        const trabado = () => (terminar(), rechazar(new Error(AVISO_TRABADO)));
+        const armarGuardia = () => {
+            clearTimeout(guardia);
+            if (plazoSinNoticiasMs > 0) guardia = setTimeout(trabado, plazoSinNoticiasMs);
+        };
         const terminar = () => {
+            clearTimeout(guardia);
             worker.terminate();
             signal?.removeEventListener('abort', alCancelar);
         };
@@ -15,9 +28,9 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
             rechazar(new DOMException('Cancelado', 'AbortError'));
         };
         signal?.addEventListener('abort', alCancelar);
-
         worker.onmessage = e => {
             const msg = e.data;
+            armarGuardia();
             if (msg.tipo === 'progreso') {
                 alProgresar(msg.etapa, msg.valor);
             } else if (msg.tipo === 'listo') {
@@ -33,7 +46,7 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
             // Si el worker muere sin mensaje, lo más probable es falta de memoria.
             rechazar(new Error(e.message || 'El laminador se cerró de golpe (¿se quedó sin memoria?)'));
         };
-
+        armarGuardia();
         worker.postMessage(mensaje, transferir);
     });
 }
@@ -51,6 +64,7 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
  * @param {number} [opciones.maxTriangulos] tope de triángulos del conjunto, copias incluidas
  * @param {(etapa:string, valor:number)=>void} [opciones.alProgresar] avance
  * @param {AbortSignal} [opciones.signal] para cancelar
+ * @param {number} [opciones.plazoSinNoticiasMs] si el worker no avisa nada en este lapso se lo cancela con un error (120 s)
  * @returns {Promise<{gcode:string, info:object}>}
  */
 export async function laminar({
@@ -62,6 +76,7 @@ export async function laminar({
     piezas,
     alProgresar,
     signal,
+    plazoSinNoticiasMs = PLAZO_SIN_NOTICIAS_MS,
 }) {
     const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
     const lista = piezas || [{ stl, transformacion, posiciones: [{ x: 0, y: 0 }] }];
@@ -69,7 +84,7 @@ export async function laminar({
         worker,
         { tipo: 'laminar', piezas: lista, dispositivo, proceso, maxTriangulos },
         [...new Set(lista.map(p => p.stl))], // piezas que comparten el buffer: se transfiere una sola vez
-        { alProgresar, signal },
+        { alProgresar, signal, plazoSinNoticiasMs },
     );
     return { gcode: r.gcode, info: r.info };
 }
