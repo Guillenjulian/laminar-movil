@@ -259,7 +259,11 @@ function direccion(m, revisar) {
         forma(e) && e.codigo === 'direccion' && /La dirección no es válida/.test(e.mensaje),
         JSON.stringify(e),
     );
-    revisar('el mensaje da un ejemplo http://192.168.1.50', `${e.mensaje} ${e.pista}`.includes('http://192.168.1.50'));
+    revisar(
+        'el mensaje es sólo "La dirección no es válida." y la pista es el motivo',
+        e.mensaje === 'La dirección no es válida.' && e.pista === 'tiene usuario y contraseña',
+        JSON.stringify(e),
+    );
     const real = m.errorDeDireccion('Escribí la dirección de la impresora.');
     revisar(
         'sin doble punto ni oración entre paréntesis',

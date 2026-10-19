@@ -13,7 +13,7 @@
  */
 const TEXTOS = {
     direccion: {
-        mensaje: 'La dirección no es válida. Probá con algo como http://192.168.1.50',
+        mensaje: 'La dirección no es válida.',
         pista: '{motivo}',
     },
     'sin-llegada': {
