@@ -102,6 +102,12 @@
 }
 
 /* A3 */
+/* Títulos de grupo de la hoja de impresoras: eran h3 (ADR 0008, H12); mismo aspecto. */
+.contenido-hoja h2 {
+    margin: 14px 0 2px;
+    font-size: 0.9rem;
+    color: var(--suave);
+}
 
 /* A4 */
 /* Sin reglas: la descripción del visor usa .solo-lectores (estilos.css) y el resto es semántica (ADR 0008, A4). */

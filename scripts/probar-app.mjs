@@ -17,6 +17,7 @@ import { probarConfig } from './app/paso2-config.mjs';
 import {
     probarContraste,
     probarAccesibilidadPasos,
+    probarAccesibilidadRegiones,
     probarAccesibilidadVisor,
     probarAccesibilidadDescripcion,
 } from './app/accesibilidad.mjs';
@@ -66,6 +67,7 @@ const AREAS = [
     volverAlPaso1,
     probarSoportesTipo, // ADR 0004: selector de tipo (parte del paso 1 con el cubo y soportes 'no'); deja el paso 2
     probarCancelar,
+    probarAccesibilidadRegiones, // ADR 0008, A3: progreso, alertas, grupos y encabezados; deja el paso 2
     probarPersonalizar,
     probarLaminarCubo,
     probarMateriales,

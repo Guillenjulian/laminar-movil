@@ -41,6 +41,7 @@ function ponerProgreso(etapa, valor) {
     const pct = Math.round(e.desde + (e.hasta - e.desde) * Math.min(1, valor));
     $('relleno').style.width = pct + '%';
     $('progreso').setAttribute('aria-valuenow', pct);
+    $('progreso').setAttribute('aria-valuetext', `${pct} %, ${e.texto.replace(/…$/, '')}`);
     $('porcentaje').textContent = pct + ' %';
     $('etapa').textContent = e.texto;
 }

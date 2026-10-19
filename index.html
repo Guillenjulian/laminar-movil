@@ -122,9 +122,9 @@
                         <p class="solo-lectores" id="avisoPiezas" aria-live="polite"></p>
                         <p class="nombre" id="nombreModelo"></p>
                         <p id="datosModelo"></p>
-                        <div class="aviso" id="avisoModelo" hidden></div>
+                        <div class="aviso" role="status" id="avisoModelo" hidden></div>
                         <div class="aviso" id="avisoEntran" role="alert" hidden></div>
-                        <div class="aviso" id="avisoTorre" hidden></div>
+                        <div class="aviso" role="status" id="avisoTorre" hidden></div>
 
                         <!-- Copias de la pieza activa (sólo modelos) -->
                         <div class="copias-pieza" id="copiasPieza" hidden>
@@ -197,7 +197,7 @@
                         <button class="boton chico" id="otroModelo">Elegir otro modelo</button>
                     </div>
                 </div>
-                <p class="cargando" id="cargando" hidden>Leyendo el modelo…</p>
+                <p class="cargando" role="status" id="cargando" hidden>Leyendo el modelo…</p>
             </section>
 
             <!-- Paso 2: impresora y calidad -->
@@ -235,20 +235,41 @@
 
                     <h3>Paredes</h3>
                     <div class="contadores">
-                        <div class="contador" data-clave="paredes" data-min="1" data-max="8">
-                            <span>Paredes</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaParedes"
+                            data-clave="paredes"
+                            data-min="1"
+                            data-max="8"
+                        >
+                            <span id="etiquetaParedes">Paredes</span>
                             <button type="button" data-delta="-1" aria-label="Menos paredes">−</button>
                             <output></output>
                             <button type="button" data-delta="1" aria-label="Más paredes">+</button>
                         </div>
-                        <div class="contador" data-clave="arriba" data-min="0" data-max="15">
-                            <span>Capas sólidas arriba</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaArriba"
+                            data-clave="arriba"
+                            data-min="0"
+                            data-max="15"
+                        >
+                            <span id="etiquetaArriba">Capas sólidas arriba</span>
                             <button type="button" data-delta="-1" aria-label="Menos capas arriba">−</button>
                             <output></output>
                             <button type="button" data-delta="1" aria-label="Más capas arriba">+</button>
                         </div>
-                        <div class="contador" data-clave="abajo" data-min="0" data-max="15">
-                            <span>Capas sólidas abajo</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaAbajo"
+                            data-clave="abajo"
+                            data-min="0"
+                            data-max="15"
+                        >
+                            <span id="etiquetaAbajo">Capas sólidas abajo</span>
                             <button type="button" data-delta="-1" aria-label="Menos capas abajo">−</button>
                             <output></output>
                             <button type="button" data-delta="1" aria-label="Más capas abajo">+</button>
@@ -294,26 +315,26 @@
 
                     <h3>Retracción y viajes</h3>
                     <div class="contadores">
-                        <div class="contador" data-av="retraccion">
-                            <span>Retracción</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaRetraccion" data-av="retraccion">
+                            <span id="etiquetaRetraccion">Retracción</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos retracción">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más retracción">+</button>
                         </div>
-                        <div class="contador" data-av="zHop">
-                            <span>Z-hop (subir al viajar)</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaZHop" data-av="zHop">
+                            <span id="etiquetaZHop">Z-hop (subir al viajar)</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos z-hop">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más z-hop">+</button>
                         </div>
-                        <div class="contador" data-av="coasting">
-                            <span>Coasting (cortar antes)</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaCoasting" data-av="coasting">
+                            <span id="etiquetaCoasting">Coasting (cortar antes)</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos coasting">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más coasting">+</button>
                         </div>
-                        <div class="contador" data-av="wipe">
-                            <span>Wipe (limpiar al retraer)</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaWipe" data-av="wipe">
+                            <span id="etiquetaWipe">Wipe (limpiar al retraer)</span>
                             <button type="button" data-paso-av="-1" aria-label="Menos wipe">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Más wipe">+</button>
@@ -325,14 +346,24 @@
                         En mm, en total (no por lado). +0,1 agranda el agujero o la pieza 0,1 mm; − los achica.
                     </p>
                     <div class="contadores">
-                        <div class="contador" data-av="compAgujeros">
-                            <span>Agujeros</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaCompAgujeros"
+                            data-av="compAgujeros"
+                        >
+                            <span id="etiquetaCompAgujeros">Agujeros</span>
                             <button type="button" data-paso-av="-1" aria-label="Achicar agujeros">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Agrandar agujeros">+</button>
                         </div>
-                        <div class="contador" data-av="compExterior">
-                            <span>Contorno exterior</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaCompExterior"
+                            data-av="compExterior"
+                        >
+                            <span id="etiquetaCompExterior">Contorno exterior</span>
                             <button type="button" data-paso-av="-1" aria-label="Achicar contorno">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Agrandar contorno">+</button>
@@ -348,14 +379,19 @@
 
                     <h3>Temperatura y ventilador</h3>
                     <div class="contadores">
-                        <div class="contador" data-av="tempBoquilla">
-                            <span>Boquilla</span>
+                        <div
+                            class="contador"
+                            role="group"
+                            aria-labelledby="etiquetaTempBoquilla"
+                            data-av="tempBoquilla"
+                        >
+                            <span id="etiquetaTempBoquilla">Boquilla</span>
                             <button type="button" data-paso-av="-1" aria-label="Bajar boquilla">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Subir boquilla">+</button>
                         </div>
-                        <div class="contador" data-av="tempCama">
-                            <span>Cama</span>
+                        <div class="contador" role="group" aria-labelledby="etiquetaTempCama" data-av="tempCama">
+                            <span id="etiquetaTempCama">Cama</span>
                             <button type="button" data-paso-av="-1" aria-label="Bajar cama">−</button>
                             <output></output>
                             <button type="button" data-paso-av="1" aria-label="Subir cama">+</button>
@@ -394,7 +430,15 @@
             <!-- Paso 3: laminando -->
             <section class="pantalla centrada" data-paso="3" hidden>
                 <h2 id="tituloLaminando">Laminando…</h2>
-                <div class="progreso" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progreso">
+                <div
+                    class="progreso"
+                    role="progressbar"
+                    aria-labelledby="tituloLaminando"
+                    aria-valuetext="0 %, Preparando…"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    id="progreso"
+                >
                     <div class="relleno" id="relleno"></div>
                 </div>
                 <p class="porcentaje" id="porcentaje">0 %</p>
@@ -402,12 +446,12 @@
                 <p class="nota">
                     Podés dejar el celu quieto: el laminado sigue aunque la pantalla no cambie por un rato.
                 </p>
-                <div class="aviso error" id="errorLaminado" hidden></div>
+                <div class="aviso error" role="alert" id="errorLaminado" hidden></div>
             </section>
 
             <!-- Paso 4: listo -->
             <section class="pantalla" data-paso="4" hidden>
-                <h2>¡Listo! 🎉</h2>
+                <h2>¡Listo! <span aria-hidden="true">🎉</span></h2>
 
                 <!-- Vista previa capa por capa -->
                 <div
@@ -429,11 +473,15 @@
                         <button type="button" class="boton-capa" id="capaMas" aria-label="Capa siguiente">+</button>
                     </div>
                     <div class="fila-capa">
-                        <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">▶</button>
+                        <button type="button" class="boton-capa" id="reproducir" aria-label="Reproducir">
+                            <span aria-hidden="true">▶</span>
+                        </button>
                         <span class="texto-capa" id="textoCapa"></span>
                         <label class="tilde-capa"><input type="checkbox" id="soloCapa" /> Sólo esta</label>
                     </div>
-                    <button type="button" class="boton" id="pausarCapa">⏸ Pausar acá para cambiar filamento</button>
+                    <button type="button" class="boton" id="pausarCapa">
+                        <span aria-hidden="true">⏸</span> Pausar acá para cambiar filamento
+                    </button>
                     <div class="modo-color" id="modoColor" role="group" aria-label="Colores de la vista previa" hidden>
                         <span>Colores:</span>
                         <button type="button" data-modo="tipo">Tipo de línea</button>
@@ -594,7 +642,7 @@
                     <p class="nota">Variables: {temp}, {bed_temp}, {layer}, {layers}, {top} (fondo de la cama).</p>
                 </fieldset>
 
-                <p class="aviso error" id="errorImpresora" hidden></p>
+                <p class="aviso error" role="alert" id="errorImpresora" hidden></p>
                 <button type="submit" class="boton grande primario">Guardar impresora</button>
                 <button type="button" class="boton enlace" id="borrarImpresora" hidden>Borrar esta impresora</button>
             </form>
@@ -676,7 +724,7 @@
                     </p>
                 </fieldset>
 
-                <p class="aviso error" id="errorLitofania" hidden></p>
+                <p class="aviso error" role="alert" id="errorLitofania" hidden></p>
                 <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
             </form>
         </section>
@@ -721,7 +769,7 @@
                     </p>
                 </fieldset>
                 <p class="aviso" id="avisoTorreHoja" hidden></p>
-                <p class="aviso error" id="errorTorre" hidden></p>
+                <p class="aviso error" role="alert" id="errorTorre" hidden></p>
                 <button type="submit" class="boton grande primario">Crear torre</button>
             </form>
         </section>

@@ -62,7 +62,7 @@ function dibujarListaImpresoras() {
         grupos
             .map(
                 g =>
-                    `<h3>${escapar(g.titulo)}</h3>` +
+                    `<h2>${escapar(g.titulo)}</h2>` +
                     g.items
                         .map(
                             i =>
