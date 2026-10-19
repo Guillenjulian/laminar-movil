@@ -24,6 +24,7 @@ import { probarVistaCapas } from './app/vista-capas.mjs';
 import { probarPausas } from './app/pausas.mjs';
 import { probarDescarga } from './app/descarga.mjs';
 import { probarDescargaBambu } from './app/descarga-bambu.mjs';
+import { probarRed } from './app/red.mjs';
 import { probarImpresoras } from './app/impresoras.mjs';
 import { probarRecientes } from './app/recientes.mjs';
 import { probarTransformar } from './app/transformar.mjs';
@@ -66,6 +67,9 @@ const AREAS = [
     probarPausas,
     probarDescarga,
     probarDescargaBambu,
+    // ADR 0007: envío por red local. Va acá porque parte del paso 2 con el cubo y la Ender 3 V3 SE (lo que deja
+    // descarga-bambu), relamina para tener el paso 4 y vuelve al paso 2 sin config: cambios-gcode espera ese estado.
+    probarRed,
     probarCambiosGcode,
     probarImpresoras,
     probarRecientes,

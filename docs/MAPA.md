@@ -249,6 +249,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Pausas / filamentos | `scripts/app/pausas.mjs` |
 | Descarga del G-code | `scripts/app/descarga.mjs` |
 | Descarga del .gcode.3mf de la Bambu A1 (entradas, M400 U1, MD5, cache de pausas) y vuelta al .gcode de la Ender | `scripts/app/descarga-bambu.mjs` |
+| Envío por red local (ADR 0007): OctoPrint y Moonraker simulados con `page.route`; hoja, clave, envío igual al G-code descargado, confirm, cancelar, errores, Bambu sin envío, quitar (partido en `red.mjs`, `red-envio.mjs`, `red-impresoras.mjs`; helpers en `scripts/lib/red-simulada.mjs` y `red-pagina.mjs`) | `scripts/app/red.mjs` |
 | Cambios por altura en el G-code (M104 a 10 mm) | `scripts/app/cambios-gcode.mjs` |
 | Impresoras (buscar, propia, copiar) | `scripts/app/impresoras.mjs` |
 | Recientes y ajustes guardados | `scripts/app/recientes.mjs` |
