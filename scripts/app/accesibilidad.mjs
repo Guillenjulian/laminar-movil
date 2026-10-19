@@ -132,6 +132,11 @@ async function probarPaso(ctx, paso, esquema) {
         const dentro = ratio(m.borde, fondoEfectivo(m.fondos));
         ok(`${nombre} ≥ 3:1 (${en})`, Math.min(fuera, dentro) >= 3, `fuera ${fmt(fuera)}:1, dentro ${fmt(dentro)}:1`);
     }
+    await probarFoco(ctx, paso, en);
+}
+
+async function probarFoco(ctx, paso, en) {
+    const { page, ok } = ctx;
     // El anillo: se enfoca con una tecla previa para que el navegador lo trate como foco de teclado.
     for (const [nombre, selAnillo, selFoco, sonda] of FOCO[paso]) {
         await page.keyboard.press('Shift');
