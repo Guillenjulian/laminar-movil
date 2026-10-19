@@ -14,13 +14,12 @@ import {
     cambiarIdioma,
     existe,
     idiomaActual,
+    iniciarIdioma,
     localeActual,
     marcar,
     ponerDiccionarios,
     t,
 } from '../../src/ui/idioma.js';
-
-const igual0 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 const ES = {
     'a.saludo': 'Hola {nombre}, tenés {n} mensajes',
@@ -36,10 +35,10 @@ const EN = {
 };
 
 /** Un indexedDB mínimo: guarda los `put` de ajustes en `datos`. */
-function indexedDBFalso(datos) {
+function indexedDBFalso(datos, demora = 0) {
     const pedido = valor => {
         const req = { result: valor };
-        queueMicrotask(() => req.onsuccess?.());
+        setTimeout(() => req.onsuccess?.(), demora);
         return req;
     };
     const db = {
@@ -71,6 +70,7 @@ function probarInterpolar({ revisar }) {
     revisar('interpolar: sin valores', interpolar('{a}', undefined) === '{a}');
     revisar('interpolar: 0 es un valor', interpolar('{n}', { n: 0 }) === '0');
     revisar('interpolar: no usa el prototipo', interpolar('{constructor}', {}) === '{constructor}');
+    revisar('interpolar: un valor con {b} no se reinterpola', interpolar('{a} {b}', { a: '{b}', b: 'B' }) === '{b} B');
     revisar('interpolar: texto sin variables', interpolar('hola', { a: 1 }) === 'hola');
     revisar('variablesDe: orden y sin repetir', variablesDe('{b} {a} {b}').join() === 'b,a');
     revisar('variablesDe: ninguna', variablesDe('nada').length === 0);
@@ -84,6 +84,11 @@ function probarPlural({ revisar }) {
         revisar(`elegirForma ${idioma}: 2 → other`, elegirForma(p, 2, idioma) === p.other);
         revisar(`elegirForma ${idioma}: sin n → other`, elegirForma(p, undefined, idioma) === p.other);
     }
+    revisar('elegirForma: n como texto numérico', elegirForma(p, '1', 'es') === p.one);
+    revisar(
+        'elegirForma: n no numérico → other',
+        elegirForma(p, 'x', 'es') === p.other && elegirForma(p, '', 'es') === p.other,
+    );
     revisar('elegirForma: texto se devuelve tal cual', elegirForma('hola', 1, 'es') === 'hola');
     revisar('elegirForma: sin `one` cae en other', elegirForma({ other: 'x' }, 1, 'es') === 'x');
     revisar('traducir: plural 1', traducir(ES, {}, 'a.pieza', { n: 1 }, 'es') === '1 pieza');
@@ -91,7 +96,7 @@ function probarPlural({ revisar }) {
     revisar('traducir: plural 2 en', traducir(EN, {}, 'a.pieza', { n: 2 }, 'en') === '2 parts');
 }
 
-function probarTraducir({ revisar }) {
+function probarTraducir({ revisar, igual }) {
     revisar(
         'traducir: interpolación múltiple',
         traducir(ES, {}, 'a.saludo', { nombre: 'Ana', n: 3 }, 'es') === 'Hola Ana, tenés 3 mensajes',
@@ -111,7 +116,7 @@ function probarTraducir({ revisar }) {
         'traducir: clave del prototipo no cuenta',
         traducir({}, {}, 'constructor', undefined, 'es') === 'constructor',
     );
-    revisar('LOCALES', igual0(LOCALES, { es: 'es-AR', en: 'en-US' }));
+    revisar('LOCALES', igual(LOCALES, { es: 'es-AR', en: 'en-US' }));
 }
 
 function probarElegirIdioma({ revisar }) {
@@ -132,20 +137,19 @@ function probarElegirIdioma({ revisar }) {
     }
 }
 
-async function probarUI({ revisar }) {
+async function probarUI({ revisar, igual }) {
+    const avisos = [];
+    const warn = console.warn;
+    console.warn = (...a) => avisos.push(a.join(' '));
     revisar('t antes de instalar devuelve la clave marcada', t('a.saludo') === '⟦a.saludo⟧');
     ponerDiccionarios('es', ES, {});
     revisar('t interpola', t('a.saludo', { nombre: 'Luz', n: 2 }) === 'Hola Luz, tenés 2 mensajes');
     revisar('t plural 1', t('a.pieza', { n: 1 }) === '1 pieza');
     revisar('t plural 0', t('a.pieza', { n: 0 }) === '0 piezas');
     revisar('t plural 2', t('a.pieza', { n: 2 }) === '2 piezas');
-    const avisos = [];
-    const warn = console.warn;
-    console.warn = (...a) => avisos.push(a.join(' '));
     revisar('t clave inexistente: marcada y no tira', t('a.nada') === '⟦a.nada⟧');
     t('a.nada');
-    console.warn = warn;
-    revisar('t clave inexistente: avisa una sola vez', avisos.length === 1);
+    revisar('t clave inexistente: avisa una sola vez', avisos.filter(a => a.includes('a.nada')).length === 1);
     revisar('marcar devuelve la clave', marcar('a.dinamica') === 'a.dinamica');
     revisar('existe', existe('a.saludo') && !existe('a.nada') && !existe('toString'));
 
@@ -153,11 +157,22 @@ async function probarUI({ revisar }) {
     revisar('idiomaActual / localeActual en', idiomaActual() === 'en' && localeActual() === 'en-US');
     revisar('t en usa el diccionario', t('a.pieza', { n: 2 }) === '2 parts');
     revisar('t en cae al español', t('a.soloEs') === 'Sólo en español');
+    t('a.soloEs');
+    revisar(
+        't en desarrollo avisa una vez que cae al respaldo',
+        igual(
+            avisos.filter(a => a.includes('a.soloEs')),
+            ['[idioma] falta en en: a.soloEs'],
+        ),
+    );
     revisar('existe no mira el respaldo', !existe('a.soloEs'));
-    await probarCambio({ revisar });
+    console.warn = warn;
+    await probarCambio({ revisar, igual });
+    await probarCarreras({ revisar, igual });
+    await probarProduccion({ revisar, igual });
 }
 
-async function probarCambio({ revisar }) {
+async function probarCambio({ revisar, igual }) {
     const datos = new Map();
     globalThis.indexedDB = indexedDBFalso(datos);
     const vistos = [];
@@ -168,25 +183,28 @@ async function probarCambio({ revisar }) {
     await cambiarIdioma('es');
     revisar('cambiarIdioma: activa es', idiomaActual() === 'es' && localeActual() === 'es-AR');
     revisar('cambiarIdioma: guarda la preferencia', datos.get('idioma') === 'es');
-    revisar('cambiarIdioma: avisa ya con el idioma cambiado', igual0(vistos, ['es:1 pieza']));
+    revisar('cambiarIdioma: avisa ya con el idioma cambiado', igual(vistos, ['es:1 pieza']));
 
     await cambiarIdioma('en');
     revisar('cambiarIdioma: vuelve a en y guarda', idiomaActual() === 'en' && datos.get('idioma') === 'en');
-    revisar('cambiarIdioma: segundo aviso', igual0(vistos, ['es:1 pieza', 'en:1 part']));
+    revisar('cambiarIdioma: segundo aviso', igual(vistos, ['es:1 pieza', 'en:1 part']));
 
     baja();
     await cambiarIdioma('es');
     revisar('desuscribir: no vuelve a avisar', vistos.length === 2 && idiomaActual() === 'es');
 
-    let tiro = false;
+    let mensaje = null;
     try {
         await cambiarIdioma('fr');
-    } catch (_e) {
-        tiro = true;
+    } catch (e) {
+        mensaje = e.message;
     }
-    revisar('cambiarIdioma inválido tira y no cambia nada', tiro && idiomaActual() === 'es');
+    revisar(
+        'cambiarIdioma inválido: mensaje exacto y no cambia nada',
+        mensaje === 'Idioma desconocido: fr' && idiomaActual() === 'es',
+    );
 
-    alCambiarIdioma(() => {
+    const bajaRoto = alCambiarIdioma(() => {
         throw new Error('suscripto roto');
     });
     const error = console.error;
@@ -195,8 +213,79 @@ async function probarCambio({ revisar }) {
     alCambiarIdioma(i => otros.push(i));
     await cambiarIdioma('en');
     console.error = error;
-    revisar('un suscripto que tira no frena a los demás', igual0(otros, ['en']));
+    bajaRoto();
+    revisar('un suscripto que tira no frena a los demás', igual(otros, ['en']));
+
+    await probarLang({ revisar });
+}
+
+async function probarLang({ revisar }) {
+    // <html lang> con un document falso
+    globalThis.document = { documentElement: { lang: '' } };
+    await cambiarIdioma('es');
+    const langEs = globalThis.document.documentElement.lang;
+    await cambiarIdioma('en');
+    const langEn = globalThis.document.documentElement.lang;
+    delete globalThis.document;
+    revisar('cambiarIdioma pone <html lang>', langEs === 'es-AR' && langEn === 'en-US');
     delete globalThis.indexedDB;
+}
+
+async function probarCarreras({ revisar, igual }) {
+    globalThis.indexedDB = indexedDBFalso(new Map());
+    const vistos = [];
+    alCambiarIdioma(i => vistos.push(`${i}:${idiomaActual()}`));
+    ponerDiccionarios('en', EN, ES);
+    ponerDiccionarios('es', ES, {});
+    vistos.length = 0;
+
+    // (a) dos cambios sin await: queda el último y los suscriptos reciben un solo aviso, con el idioma activo
+    await Promise.all([cambiarIdioma('en'), cambiarIdioma('es'), cambiarIdioma('en')]);
+    revisar('dos cambios seguidos: queda el último', idiomaActual() === 'en');
+    revisar(
+        'dos cambios seguidos: un solo aviso con el idioma activo',
+        igual(vistos.slice(-1), ['en:en']) && vistos.filter(v => v !== 'en:en').length === 0,
+    );
+    revisar('dos cambios seguidos: un solo aviso', vistos.length === 1);
+
+    // (b) iniciarIdioma con la lectura lenta y un cambio en el medio: gana el cambio
+    ponerDiccionarios('en', EN, ES);
+    ponerDiccionarios('es', ES, {});
+    globalThis.indexedDB = indexedDBFalso(new Map(), 30);
+    const inicio = iniciarIdioma({ navegador: ['es'] });
+    await cambiarIdioma('en');
+    const inicial = await inicio;
+    revisar('iniciarIdioma lento + cambio en el medio: gana el cambio', idiomaActual() === 'en' && inicial === 'en');
+    delete globalThis.indexedDB;
+}
+
+async function probarProduccion({ revisar, igual }) {
+    // Instancia nueva del módulo, sin nada cargado: el import() de en.js falla en Node (no hay import.meta.glob).
+    const fresco = await import('../../src/ui/idioma.js?carrera');
+    const vistos = [];
+    fresco.alCambiarIdioma(i => vistos.push(i));
+    globalThis.indexedDB = indexedDBFalso(new Map());
+    fresco.ponerDiccionarios('es', ES, {});
+    const valido = fresco.cambiarIdioma('es');
+    const fallo = fresco.cambiarIdioma('en').then(
+        () => 'ok',
+        () => 'error',
+    );
+    await Promise.all([valido, fallo]);
+    revisar(
+        'una carga fallida no cancela a un cambio válido',
+        (await fallo) === 'error' && igual(vistos, ['es']) && fresco.idiomaActual() === 'es',
+    );
+    delete globalThis.indexedDB;
+
+    // Producción: sin respaldo español y sin marca, siempre determinista.
+    globalThis.IDIOMA_DESARROLLO = false;
+    const prod = await import('../../src/ui/idioma.js?produccion');
+    delete globalThis.IDIOMA_DESARROLLO;
+    prod.ponerDiccionarios('en', EN, ES);
+    revisar('producción: clave sin traducir sale cruda, sin respaldo', prod.t('a.soloEs') === 'a.soloEs');
+    revisar('producción: clave inexistente sale cruda', prod.t('a.nada') === 'a.nada');
+    revisar('producción: lo traducido sigue andando', prod.t('a.pieza', { n: 1 }) === '1 part');
 }
 
 export default async function (ctx) {

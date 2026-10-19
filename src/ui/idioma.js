@@ -7,8 +7,10 @@ import { IDIOMA_BASE, IDIOMAS, LOCALES, elegirIdioma, traducir } from '../textos
 /** @typedef {import('../textos/traducir.js').Diccionario} Diccionario */
 /** @typedef {import('../textos/traducir.js').Valores} Valores */
 
-// En desarrollo (y en Node, sin Vite) una clave inexistente se marca "⟦clave⟧" y se avisa una vez.
-const DESARROLLO = import.meta.env ? import.meta.env.DEV : true;
+// En desarrollo (y en Node, sin Vite) una clave inexistente se marca "⟦clave⟧" y se avisa una vez, y hay respaldo
+// español (para ver qué falta). En producción no hay respaldo: la clave inexistente sale cruda, siempre igual.
+// `globalThis.IDIOMA_DESARROLLO = false` simula producción en las pruebas de Node (Vite define import.meta.env).
+const DESARROLLO = import.meta.env ? import.meta.env.DEV : globalThis.IDIOMA_DESARROLLO !== false;
 
 /** @type {Idioma} */
 let idioma = IDIOMA_BASE;
@@ -21,24 +23,34 @@ const cargados = new Map();
 /** @type {Set<(idioma: Idioma) => void>} */
 const suscriptos = new Set();
 const avisadas = new Set();
+// Cuenta las veces que un pedido llegó a tener su diccionario (o, en `iniciarIdioma`, empezó): el que ve que otro
+// pasó después no activa ni avisa. Un pedido que falla al cargar no lo avanza, así que no cancela a uno válido.
 let pedido = 0;
+
+/** Avisa una vez por mensaje (sólo desarrollo). @param {string} mensaje @returns {void} */
+function avisar(mensaje) {
+    if (avisadas.has(mensaje)) return;
+    avisadas.add(mensaje);
+    console.warn(`[idioma] ${mensaje}`);
+}
 
 /**
  * Traduce una clave con el idioma actual. Si la clave no existe devuelve la clave (en desarrollo, marcada
- * "⟦clave⟧", y avisa en la consola). Antes de `iniciarIdioma` devuelve siempre la clave. No escapa HTML.
+ * "⟦clave⟧", y avisa en la consola; si cae al respaldo español, avisa "falta en en: clave"). Antes de
+ * `iniciarIdioma` devuelve siempre la clave. No escapa HTML: si el resultado va a innerHTML con valores del
+ * usuario, pasalos por `escapar` de util-dom.
  * @param {string} clave  literal ('area.concepto'); para claves dinámicas ver `marcar`
  * @param {Valores} [valores]  `n` elige el plural
  * @returns {string}
  */
 export function t(clave, valores) {
-    if (existe(clave) || Object.prototype.hasOwnProperty.call(respaldo, clave)) {
+    if (existe(clave)) return traducir(diccionario, respaldo, clave, valores, idioma);
+    if (!DESARROLLO) return clave;
+    if (Object.prototype.hasOwnProperty.call(respaldo, clave)) {
+        avisar(`falta en ${idioma}: ${clave}`);
         return traducir(diccionario, respaldo, clave, valores, idioma);
     }
-    if (!DESARROLLO) return clave;
-    if (!avisadas.has(clave)) {
-        avisadas.add(clave);
-        console.warn(`[idioma] falta la clave: ${clave}`);
-    }
+    avisar(`falta la clave: ${clave}`);
     return `⟦${clave}⟧`;
 }
 
@@ -79,10 +91,9 @@ async function cargar(cual) {
     return cargados.get(cual);
 }
 
-/** Respaldo del idioma: sólo el español, y sólo si ya está cargado (en desarrollo se pide aparte). */
+/** Respaldo del idioma: el español, sólo en desarrollo (en producción nunca hay). */
 async function respaldoDe(cual) {
-    if (cual === IDIOMA_BASE) return {};
-    return DESARROLLO ? cargar(IDIOMA_BASE) : (cargados.get(IDIOMA_BASE) ?? {});
+    return DESARROLLO && cual !== IDIOMA_BASE ? cargar(IDIOMA_BASE) : {};
 }
 
 /** Deja activo un idioma ya cargado y pone <html lang>. */
@@ -101,6 +112,7 @@ function activar(cual, dic, resp) {
  * @returns {Promise<Idioma>}
  */
 export async function iniciarIdioma(opciones) {
+    const mio = ++pedido;
     try {
         let guardado = null;
         try {
@@ -110,9 +122,11 @@ export async function iniciarIdioma(opciones) {
         }
         const navegador = opciones?.navegador ?? (typeof navigator === 'undefined' ? [] : navigator.languages);
         const elegido = elegirIdioma(guardado, navegador);
-        activar(elegido, await cargar(elegido), await respaldoDe(elegido));
+        const dic = await cargar(elegido);
+        const resp = await respaldoDe(elegido);
+        if (mio === pedido) activar(elegido, dic, resp); // si no, un cambiarIdioma del usuario ya ganó
     } catch (_error) {
-        activar(IDIOMA_BASE, {}, {});
+        if (mio === pedido) activar(IDIOMA_BASE, {}, {});
     }
     return idioma;
 }
@@ -120,22 +134,23 @@ export async function iniciarIdioma(opciones) {
 /**
  * Cambia el idioma: carga el diccionario, guarda la preferencia, pone <html lang> y avisa a los suscriptores
  * (después de haber cambiado todo). Si la carga falla no cambia nada y lanza. Lo llama el usuario: es el único
- * lugar donde se guarda la preferencia (si guardarla falla, el cambio igual vale).
+ * lugar donde se guarda la preferencia (si guardarla falla, el cambio igual vale). Con varios pedidos a la vez
+ * gana el último que tuvo su diccionario; los demás no avisan, así los suscriptos sólo reciben el idioma activo.
  * @param {Idioma} nuevo
  * @returns {Promise<void>}
  */
 export async function cambiarIdioma(nuevo) {
     if (!IDIOMAS.includes(nuevo)) throw new Error(`Idioma desconocido: ${nuevo}`);
-    const mio = ++pedido;
     const dic = await cargar(nuevo);
     const resp = await respaldoDe(nuevo);
-    if (mio !== pedido) return; // otro cambio más nuevo ganó mientras se cargaba
+    const mio = ++pedido;
     activar(nuevo, dic, resp);
     try {
         await guardarAjuste('idioma', nuevo);
     } catch (_error) {
         // La preferencia no se pudo guardar: sigue valiendo en esta sesión.
     }
+    if (mio !== pedido) return; // otro cambio pasó mientras se guardaba: él avisa
     for (const fn of [...suscriptos]) {
         try {
             fn(nuevo);
@@ -168,8 +183,8 @@ export function alCambiarIdioma(fn) {
  */
 export function ponerDiccionarios(cual, dic, resp) {
     cargados.set(cual, dic);
-    if (cual !== IDIOMA_BASE && Object.keys(resp).length) cargados.set(IDIOMA_BASE, resp);
+    if (DESARROLLO && cual !== IDIOMA_BASE && Object.keys(resp).length) cargados.set(IDIOMA_BASE, resp);
     idioma = cual;
     diccionario = dic;
-    respaldo = resp;
+    respaldo = DESARROLLO ? resp : {};
 }

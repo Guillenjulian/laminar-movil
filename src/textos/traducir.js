@@ -11,6 +11,8 @@ export const IDIOMA_BASE = 'es';
 /** Locale de Intl y del atributo `lang` de <html>. @type {Record<Idioma, string>} */
 export const LOCALES = { es: 'es-AR', en: 'en-US' };
 
+/** Intl.PluralRules por locale (crearlo cuesta). @type {Map<string, Intl.PluralRules>} */
+const reglas = new Map();
 const tiene = (objeto, clave) => Object.prototype.hasOwnProperty.call(objeto, clave);
 
 /**
@@ -29,14 +31,18 @@ export function interpolar(plantilla, valores) {
  * Elige la forma de plural con Intl.PluralRules; si la entrada es un texto, la devuelve tal cual.
  * Categorías que no existen en la entrada caen en `other`.
  * @param {string | { one?: string, other: string }} entrada
- * @param {number | undefined} n  `valores.n`; sin número se usa `other`
+ * @param {number | string | undefined} n  `valores.n`: debe ser un número; un texto numérico ("3") se convierte con
+ *   Number(); cualquier otra cosa (o sin valor) usa `other`
  * @param {Idioma} idioma
  * @returns {string}
  */
 export function elegirForma(entrada, n, idioma) {
     if (typeof entrada === 'string') return entrada;
-    if (typeof n !== 'number' || Number.isNaN(n)) return entrada.other;
-    const categoria = new Intl.PluralRules(LOCALES[idioma] ?? LOCALES[IDIOMA_BASE]).select(n);
+    const cantidad = typeof n === 'string' && n.trim() !== '' ? Number(n) : n;
+    if (typeof cantidad !== 'number' || !Number.isFinite(cantidad)) return entrada.other;
+    const locale = LOCALES[idioma] ?? LOCALES[IDIOMA_BASE];
+    if (!reglas.has(locale)) reglas.set(locale, new Intl.PluralRules(locale));
+    const categoria = reglas.get(locale).select(cantidad);
     return tiene(entrada, categoria) && typeof entrada[categoria] === 'string' ? entrada[categoria] : entrada.other;
 }
 
