@@ -14,7 +14,7 @@ import { probarFormatos } from './app/paso1-formatos.mjs';
 import { probarPiezas } from './app/piezas.mjs';
 import { probarCopias } from './app/copias.mjs';
 import { probarConfig } from './app/paso2-config.mjs';
-import { probarContraste } from './app/accesibilidad.mjs';
+import { probarContraste, probarAccesibilidadPasos } from './app/accesibilidad.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
 import { probarAvanzado } from './app/avanzado.mjs';
@@ -55,6 +55,7 @@ const AREAS = [
     probarBloqueosModos, // ADR 0004: modos excluyentes y pieza no activa (mismo estado de entrada y de salida)
     probarConfig,
     probarContraste, // ADR 0008, A1: mide colores en el paso 2 (y el 1 con atrás/adelante); no cambia el estado
+    probarAccesibilidadPasos, // ADR 0008, A2: aria-current, foco y hojas modales (deja el paso 2, sin hojas)
     volverAlPaso1,
     probarSoportesTipo, // ADR 0004: selector de tipo (parte del paso 1 con el cubo y soportes 'no'); deja el paso 2
     probarCancelar,

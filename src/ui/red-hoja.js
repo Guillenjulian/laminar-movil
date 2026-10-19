@@ -8,7 +8,7 @@
 // cambiaron). Mensajes con textContent. Nada toca el DOM al importarse.
 
 import { estado } from './estado.js';
-import { abrirHoja, cerrarHojas, devolverFocoAlCerrar } from './navegacion.js';
+import { abrirHoja, cerrarHojas } from './navegacion.js';
 import { $ } from './util-dom.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 
@@ -27,10 +27,8 @@ let ctx = null;
 let form = null;
 let idActual = ''; // impresora cuya config se está editando
 let guardada = null; // config guardada (conserva la clave si el campo queda vacío y nada cambió)
-let abridor = null; // elemento que abrió la hoja, para devolverle el foco
 let prueba = 0; // número de la última prueba (descarta respuestas viejas)
 let abriendo = false; // hay una apertura en curso (doble toque)
-let marcarAbierta = null;
 
 function direccionValida() {
     const r = ctx.normalizarDireccion(form.elements.direccion.value);
@@ -146,12 +144,6 @@ export function iniciarRedHoja(contexto) {
         persistir(() => ctx.repositorio.borrar(idActual), 'No se pudo quitar. Probá de nuevo.');
     $('abrirImpresoraRed').onclick = abrirImpresora;
     $('verClaveRed').onclick = alternarClave;
-    marcarAbierta = devolverFocoAlCerrar(
-        'hojaRed',
-        () => abridor,
-        () => $('configurarRed'),
-        alCerrar,
-    );
 }
 
 function rellenar(config) {
@@ -180,7 +172,6 @@ function rellenar(config) {
 export async function abrirRedHoja(impresoraId = estado.impresoraId) {
     if (abriendo) return;
     abriendo = true;
-    abridor = document.activeElement;
     prueba++;
     $('probarRed').disabled = false;
     try {
@@ -195,8 +186,7 @@ export async function abrirRedHoja(impresoraId = estado.impresoraId) {
         guardada = leida;
         rellenar(guardada);
         $('impresoraRed').textContent = `Impresora: ${buscarImpresora(id).nombre}`;
-        abrirHoja('red');
-        marcarAbierta();
+        abrirHoja('red', { respaldo: () => $('configurarRed'), alCerrar });
         form.elements.tipo.focus();
     } finally {
         abriendo = false;

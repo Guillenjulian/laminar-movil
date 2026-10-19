@@ -20,10 +20,10 @@
             <button class="atras" id="atras" aria-label="Volver" hidden>‹</button>
             <h1>Laminar Móvil</h1>
             <ol class="pasos" aria-label="Pasos">
-                <li data-paso="1">1</li>
-                <li data-paso="2">2</li>
-                <li data-paso="3">3</li>
-                <li data-paso="4">4</li>
+                <li data-paso="1"><span class="solo-lectores">Paso </span>1<span class="solo-lectores"> de 4</span></li>
+                <li data-paso="2"><span class="solo-lectores">Paso </span>2<span class="solo-lectores"> de 4</span></li>
+                <li data-paso="3"><span class="solo-lectores">Paso </span>3<span class="solo-lectores"> de 4</span></li>
+                <li data-paso="4"><span class="solo-lectores">Paso </span>4<span class="solo-lectores"> de 4</span></li>
             </ol>
         </header>
 
@@ -429,10 +429,17 @@
         </main>
 
         <!-- Pantallas que se abren encima (el botón "atrás" del celu las cierra) -->
-        <section class="hoja" id="hojaImpresoras" hidden aria-label="Elegir impresora">
+        <section
+            class="hoja"
+            id="hojaImpresoras"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloImpresoras"
+        >
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Elegí tu impresora</h1>
+                <h1 id="tituloImpresoras">Elegí tu impresora</h1>
             </header>
             <div class="contenido-hoja">
                 <input
@@ -447,7 +454,14 @@
             </div>
         </section>
 
-        <section class="hoja" id="hojaMiImpresora" hidden aria-label="Mi impresora">
+        <section
+            class="hoja"
+            id="hojaMiImpresora"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloMiImpresora"
+        >
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
                 <h1 id="tituloMiImpresora">Mi impresora</h1>
@@ -560,10 +574,17 @@
             </form>
         </section>
 
-        <section class="hoja" id="hojaLitofania" hidden aria-label="Litofanía desde una foto">
+        <section
+            class="hoja"
+            id="hojaLitofania"
+            hidden
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloLitofania"
+        >
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Litofanía desde una foto</h1>
+                <h1 id="tituloLitofania">Litofanía desde una foto</h1>
             </header>
             <form class="contenido-hoja formulario" id="formLitofania" novalidate>
                 <figure class="foto-litofania">
@@ -634,10 +655,10 @@
             </form>
         </section>
 
-        <section class="hoja" id="hojaTorre" hidden aria-label="Torre de calibración">
+        <section class="hoja" id="hojaTorre" hidden role="dialog" aria-modal="true" aria-labelledby="tituloTorre">
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Torre de calibración</h1>
+                <h1 id="tituloTorre">Torre de calibración</h1>
             </header>
             <form class="contenido-hoja formulario" id="formTorre" novalidate>
                 <p class="nota">
@@ -679,10 +700,10 @@
             </form>
         </section>
 
-        <section class="hoja" id="hojaRed" hidden aria-label="Enviar por red local (experimental)">
+        <section class="hoja" id="hojaRed" hidden role="dialog" aria-modal="true" aria-labelledby="tituloRed">
             <header class="barra">
                 <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
-                <h1>Enviar por red local <small>experimental</small></h1>
+                <h1 id="tituloRed">Enviar por red local <small>experimental</small></h1>
             </header>
             <form class="contenido-hoja formulario" id="formRed" novalidate>
                 <p class="nota" id="notaRed">

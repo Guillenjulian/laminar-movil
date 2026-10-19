@@ -13,7 +13,6 @@
 import { torreAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { armarTorre, valoresSugeridos } from '../perfiles/torres.js';
-import { devolverFocoAlCerrar } from './navegacion.js';
 import { $ } from './util-dom.js';
 
 const TIPOS = {
@@ -127,8 +126,6 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
         ajustarCantidad(tipo(), Number(e.target.value));
     });
 
-    const marcarAbierta = devolverFocoAlCerrar('hojaTorre', () => $('botonTorre'));
-
     form.addEventListener('submit', e => {
         e.preventDefault();
         let torre;
@@ -150,7 +147,6 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
         abrir() {
             aviso = sugerir(form, contexto());
             abrir();
-            marcarAbierta();
             form.parentElement.scrollTo?.(0, 0);
             form.querySelector('input:checked').focus();
         },
