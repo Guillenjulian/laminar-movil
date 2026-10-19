@@ -34,6 +34,9 @@ const EN = {
     'a.pieza': { one: '{n} part', other: '{n} parts' },
 };
 
+/** Los ajustes del primer indexedDB falso: `almacen` guarda la conexión de la primera apertura y no abre otra. */
+const AJUSTES = new Map();
+
 /** Un indexedDB mínimo: guarda los `put` de ajustes en `datos`. */
 function indexedDBFalso(datos, demora = 0) {
     const pedido = valor => {
@@ -173,7 +176,7 @@ async function probarUI({ revisar, igual }) {
 }
 
 async function probarCambio({ revisar, igual }) {
-    const datos = new Map();
+    const datos = AJUSTES;
     globalThis.indexedDB = indexedDBFalso(datos);
     const vistos = [];
     const baja = alCambiarIdioma(i => vistos.push(`${i}:${t('a.pieza', { n: 1 })}`));
@@ -256,6 +259,21 @@ async function probarCarreras({ revisar, igual }) {
     await cambiarIdioma('en');
     const inicial = await inicio;
     revisar('iniciarIdioma lento + cambio en el medio: gana el cambio', idiomaActual() === 'en' && inicial === 'en');
+
+    // (c) M-A: el último pedido gana aunque otro cargue después. 'en' tarda (un diccionario "thenable" se resuelve a
+    // los 30 ms) y 'es' es inmediato: queda 'es', se guarda 'es' y se avisa una sola vez.
+    const lento = Object.assign(Object.create(null), { then: resolver => setTimeout(() => resolver(EN), 30) });
+    ponerDiccionarios('en', lento, ES);
+    ponerDiccionarios('es', ES, {});
+    vistos.length = 0;
+    AJUSTES.clear();
+    await Promise.all([cambiarIdioma('en'), cambiarIdioma('es')]);
+    await new Promise(r => setTimeout(r, 60));
+    revisar('en lento y luego es: queda es', idiomaActual() === 'es' && t('a.pieza', { n: 2 }) === '2 piezas');
+    revisar(
+        'en lento y luego es: se guarda es y se avisa una vez',
+        AJUSTES.get('idioma') === 'es' && igual(vistos, ['es:es']),
+    );
     delete globalThis.indexedDB;
 }
 
@@ -273,8 +291,8 @@ async function probarProduccion({ revisar, igual }) {
     );
     await Promise.all([valido, fallo]);
     revisar(
-        'una carga fallida no cancela a un cambio válido',
-        (await fallo) === 'error' && igual(vistos, ['es']) && fresco.idiomaActual() === 'es',
+        'si falla la carga del último queda el idioma que estaba',
+        (await fallo) === 'error' && igual(vistos, []) && fresco.idiomaActual() === 'es',
     );
     delete globalThis.indexedDB;
 

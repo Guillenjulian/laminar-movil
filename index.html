@@ -7,8 +7,12 @@
         <link rel="manifest" href="./manifest.webmanifest" />
         <link rel="icon" href="./favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="./iconos/apple-touch-icon.png" />
-        <meta name="description" content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión." />
-        <title>Laminar Móvil</title>
+        <meta
+            name="description"
+            content="Laminá tus STL a G-code desde el celu, sin instalar nada y sin conexión."
+            data-t-attr="content:app.descripcion"
+        />
+        <title data-t="app.titulo">Laminar Móvil</title>
         <link rel="stylesheet" href="./src/estilos.css" />
         <link rel="stylesheet" href="./src/estilos-formatos.css" />
         <link rel="stylesheet" href="./src/estilos-materiales.css" />
@@ -19,6 +23,11 @@
         <header class="barra">
             <button class="atras" id="atras" aria-label="Volver" hidden>‹</button>
             <h1>Laminar Móvil</h1>
+            <!-- Selector de idioma (ADR 0008): oculto hasta que estén migradas todas las áreas (I14). -->
+            <button class="boton-idioma" id="idioma" lang="en" aria-label="Cambiar el idioma a English" hidden>
+                English
+            </button>
+            <p class="solo-lectores" id="estadoIdioma" role="status"></p>
             <ol class="pasos" aria-label="Pasos">
                 <li data-paso="1"><span class="solo-lectores">Paso </span>1<span class="solo-lectores"> de 4</span></li>
                 <li data-paso="2"><span class="solo-lectores">Paso </span>2<span class="solo-lectores"> de 4</span></li>

@@ -106,3 +106,17 @@
 /* A4 */
 
 /* I3 */
+.barra h1 {
+    min-width: 0;
+}
+.boton-idioma {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--borde-control);
+    border-radius: 8px;
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+}

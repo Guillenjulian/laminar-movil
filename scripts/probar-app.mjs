@@ -31,6 +31,7 @@ import { probarTransformar } from './app/transformar.mjs';
 import { probarTorres } from './app/torres.mjs';
 import { probarVisorDiferido } from './app/visor-diferido.mjs';
 import { probarVistaLiviana } from './app/vista-liviana.mjs';
+import { probarIdiomaArranque, probarIdiomaSelector } from './app/idioma.mjs';
 import { probarOffline } from './app/offline.mjs';
 import { probarAcomodoConGiros, probarPrecioTrasRecargar } from './app/piezas-extra.mjs';
 import { probarBloqueos } from './app/bloqueos.mjs';
@@ -81,6 +82,8 @@ const AREAS = [
     probarVisorBloqueos, // ADR 0004: toque con punto y marcas en un visor de prueba (no usa el estado de la app)
     probarVisorDiferido,
     probarVistaLiviana,
+    probarIdiomaArranque, // ADR 0008, I3: contextos propios con otro navigator.languages (no toca la página del recorrido)
+    probarIdiomaSelector, // ADR 0008, I3: contexto propio; destapa #idioma con evaluate
     probarOffline,
 ];
 

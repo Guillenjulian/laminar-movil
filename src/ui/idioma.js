@@ -23,9 +23,9 @@ const cargados = new Map();
 /** @type {Set<(idioma: Idioma) => void>} */
 const suscriptos = new Set();
 const avisadas = new Set();
-// Cuenta las veces que un pedido llegó a tener su diccionario (o, en `iniciarIdioma`, empezó): el que ve que otro
-// pasó después no activa ni avisa. Un pedido que falla al cargar no lo avanza, así que no cancela a uno válido.
-let pedido = 0;
+// Cuenta los pedidos (`iniciarIdioma` y `cambiarIdioma`) en el orden en que se piden, no en el que terminan de
+// cargar: sólo el último activa y avisa. Si la carga del último falla queda el idioma que estaba.
+let solicitud = 0;
 
 /** Avisa una vez por mensaje (sólo desarrollo). @param {string} mensaje @returns {void} */
 function avisar(mensaje) {
@@ -112,7 +112,7 @@ function activar(cual, dic, resp) {
  * @returns {Promise<Idioma>}
  */
 export async function iniciarIdioma(opciones) {
-    const mio = ++pedido;
+    const orden = ++solicitud;
     try {
         let guardado = null;
         try {
@@ -124,9 +124,9 @@ export async function iniciarIdioma(opciones) {
         const elegido = elegirIdioma(guardado, navegador);
         const dic = await cargar(elegido);
         const resp = await respaldoDe(elegido);
-        if (mio === pedido) activar(elegido, dic, resp); // si no, un cambiarIdioma del usuario ya ganó
+        if (orden === solicitud) activar(elegido, dic, resp); // si no, un cambiarIdioma del usuario ya ganó
     } catch (_error) {
-        if (mio === pedido) activar(IDIOMA_BASE, {}, {});
+        if (orden === solicitud) activar(IDIOMA_BASE, {}, {});
     }
     return idioma;
 }
@@ -141,16 +141,17 @@ export async function iniciarIdioma(opciones) {
  */
 export async function cambiarIdioma(nuevo) {
     if (!IDIOMAS.includes(nuevo)) throw new Error(`Idioma desconocido: ${nuevo}`);
+    const orden = ++solicitud;
     const dic = await cargar(nuevo);
     const resp = await respaldoDe(nuevo);
-    const mio = ++pedido;
+    if (orden !== solicitud) return; // otro pedido llegó después: él decide
     activar(nuevo, dic, resp);
     try {
         await guardarAjuste('idioma', nuevo);
     } catch (_error) {
         // La preferencia no se pudo guardar: sigue valiendo en esta sesión.
     }
-    if (mio !== pedido) return; // otro cambio pasó mientras se guardaba: él avisa
+    if (orden !== solicitud) return; // otro cambio pasó mientras se guardaba: él avisa
     for (const fn of [...suscriptos]) {
         try {
             fn(nuevo);

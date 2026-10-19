@@ -11,6 +11,8 @@
 import * as almacen from './almacen.js';
 import * as materialesUI from './ui/materiales.js';
 import { cargarPreferencias } from './ui/estado.js';
+import { iniciarIdioma } from './ui/idioma.js';
+import { iniciarIdiomaDom } from './ui/idioma-dom.js';
 import { iniciarNavegacion, mostrar, alMostrarPaso, irAPaso1 } from './ui/navegacion.js';
 import { iniciarImpresoras } from './ui/impresoras.js';
 import { iniciarPaso2, dibujarOpciones } from './ui/paso2-config.js';
@@ -73,8 +75,9 @@ iniciarEnvio({
     abrirConfiguracion: abrirRedHoja,
 });
 
-// 2. Preferencias.
-await Promise.all([cargarPreferencias(), preciosListos]);
+// 2. Preferencias e idioma (en español el HTML ya está traducido: no se recorre el DOM).
+await Promise.all([cargarPreferencias(), preciosListos, iniciarIdioma()]);
+iniciarIdiomaDom();
 
 // 3. Primer dibujo.
 dibujarOpciones();

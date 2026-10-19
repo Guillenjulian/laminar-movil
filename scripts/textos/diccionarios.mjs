@@ -28,10 +28,8 @@ const TEXTOS = join(RAIZ, 'src', 'textos');
 /** Prefijos de claves definidas que todavía no se usan o se usan sin literal. Cada reserva vence: cuando el prefijo
  *  ya no tiene claves sin uso, `reserva vencida` falla y hay que sacarlo. Uno por línea. */
 export const CLAVES_RESERVADAS = [
-    'app.', // I3 (cableado en main.js y title/meta del index.html)
-    'comun.', // I3 (los usa idioma-dom.js y el selector)
+    'comun.', // sin dueño todavía: la primera hoja que use aceptar/cancelar/cerrar/reintentar lo saca
     'formato.', // I4 (formato.js pasa a t())
-    'idioma.', // I3 (selector y estadoIdioma)
 ];
 /** Archivos de src/ ya migrados a t(), con ruta desde la raíz; uno por línea. Cada tarea de migración descomenta los
  *  suyos en el mismo commit (bloques separados para que las tareas en paralelo no choquen). */
