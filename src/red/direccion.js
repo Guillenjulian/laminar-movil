@@ -7,10 +7,18 @@ const SUFIJOS_LOCALES = ['.local', '.lan', '.home.arpa'];
 /** Host sin corchetes (IPv6) y en minúsculas, o null si no se puede leer la URL. */
 function hostDe(url) {
     try {
-        return new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+        return new URL(url).hostname
+            .toLowerCase()
+            .replace(/^\[|\]$/g, '')
+            .replace(/\.$/, '');
     } catch {
         return null;
     }
+}
+
+/** `localhost` y `*.localhost`. */
+function esLoopback(host) {
+    return host === 'localhost' || host.endsWith('.localhost');
 }
 
 /** IPv4 privada: 10/8, 172.16/12 o 192.168/16. */
@@ -37,9 +45,14 @@ export function esDireccionLocal(url) {
     if (!host) return false;
     if (esIpv4Privada(host) || esIpv6Local(host)) return true;
     if (IPV4.test(host) || host.includes(':')) return false; // IP pública o loopback
-    if (host === 'localhost' || host.endsWith('.localhost')) return false; // loopback, no es la red local
+    if (esLoopback(host)) return false; // loopback, no es la red local
     if (SUFIJOS_LOCALES.some(s => host.endsWith(s))) return true;
     return !host.includes('.'); // "octopi" a secas
+}
+
+/** Es un nombre de host (no una IP literal, ni loopback) y tiene al menos un punto. */
+function esNombreConPunto(host) {
+    return host.includes('.') && !IPV4.test(host) && !host.includes(':') && !esLoopback(host);
 }
 
 /** Agrega `http://` si el usuario no escribió esquema. "octopi:5000" no es un esquema: es host y puerto. */
@@ -71,8 +84,10 @@ export function normalizarDireccion(texto) {
     if (url.username || url.password) {
         return { ok: false, motivo: 'La dirección no puede llevar usuario ni contraseña; la clave va aparte.' };
     }
-    const direccion = `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}`;
+    const host = url.hostname.replace(/\.$/, ''); // "x.local." es lo mismo que "x.local"
+    const puerto = url.port ? `:${url.port}` : '';
+    const direccion = `${url.protocol}//${host}${puerto}${url.pathname.replace(/\/+$/, '')}`;
     const http = url.protocol === 'http:';
-    const nombreSinLocal = http && url.hostname.includes('.') && !esDireccionLocal(direccion);
+    const nombreSinLocal = http && esNombreConPunto(host.replace(/^\[|\]$/g, '')) && !esDireccionLocal(direccion);
     return { ok: true, direccion, http, nombreSinLocal };
 }

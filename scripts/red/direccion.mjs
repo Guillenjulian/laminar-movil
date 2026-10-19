@@ -40,13 +40,39 @@ function nombres(n, revisar) {
         revisar(`${url}: nombreSinLocal true (nombre con punto fuera de la lista)`, sinLocal(url) === true);
     }
     revisar('http://octopi.local: nombreSinLocal false', sinLocal('http://octopi.local') === false);
-    revisar('http://192.168.0.2: nombreSinLocal false', sinLocal('http://192.168.0.2') === false);
-    revisar('http://10.0.0.7:5000: nombreSinLocal false', sinLocal('http://10.0.0.7:5000') === false);
     revisar('https://x.ts.net: nombreSinLocal false', sinLocal('https://x.ts.net') === false);
     revisar('https://octopi: nombreSinLocal false (no es http)', sinLocal('https://octopi') === false);
     revisar(
         'http: true para http y false para https',
         n('x.local').http === true && n('https://x.local').http === false,
+    );
+}
+
+function ipYPuntoFinal(n, revisar) {
+    console.log('\nnormalizarDireccion: IP literales y punto final');
+    const sinLocal = texto => n(texto).nombreSinLocal;
+    for (const url of [
+        'http://192.168.0.2',
+        'http://10.0.0.7:5000',
+        'http://8.8.8.8',
+        'http://127.0.0.1:5000',
+        'http://169.254.1.1',
+        'http://100.64.0.5',
+        'http://[::1]',
+    ]) {
+        revisar(`${url}: nombreSinLocal false (IP literal, no es un nombre)`, sinLocal(url) === false);
+    }
+    const punto = n('http://x.local.:7125/');
+    revisar(
+        'host con punto final: sin el punto, local y puerto conservado',
+        punto.ok && punto.direccion === 'http://x.local:7125' && punto.nombreSinLocal === false,
+        JSON.stringify(punto),
+    );
+    const publico = n('http://x.ejemplo.com.');
+    revisar(
+        'x.ejemplo.com. sin punto final y nombreSinLocal true',
+        publico.direccion === 'http://x.ejemplo.com' && publico.nombreSinLocal === true,
+        JSON.stringify(publico),
     );
 }
 
@@ -107,6 +133,7 @@ export default async function ({ revisar, igual, cargar }) {
     };
     aceptadas(n, revisar, igual);
     nombres(n, revisar);
+    ipYPuntoFinal(n, revisar);
     rechazadas(n, revisar);
     locales(modulo, revisar);
 }

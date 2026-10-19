@@ -133,6 +133,8 @@ function ocupacion(p, revisar) {
     for (const [e, esperado] of [
         ['Printing', true],
         ['Paused', true],
+        ['Starting', true],
+        ['Transferring file to SD', true],
         ['Operational', false],
     ]) {
         revisar(`estaOcupada OctoPrint ${e} → ${esperado}`, p.estaOcupada('octoprint', octoE(e)) === esperado);
@@ -156,7 +158,12 @@ function ocupacion(p, revisar) {
 }
 
 function imprimiendo(p, revisar) {
-    const emp = (tipo, t) => p.empezoAImprimir(tipo, t);
+    const emp = (tipo, t, imprimir = true) => p.empezoAImprimir(tipo, t, imprimir);
+    revisar(
+        'empezoAImprimir: con imprimir=false da false aunque la respuesta diga done / print_started',
+        emp('octoprint', '{"done":true}', false) === false &&
+            emp('moonraker', '{"print_started":true}', false) === false,
+    );
     revisar(
         'empezoAImprimir Moonraker: print_started true',
         emp('moonraker', '{"item":{"path":"a.gcode"},"print_started":true}') === true,
@@ -178,22 +185,30 @@ function imprimiendo(p, revisar) {
     }
 }
 
-function cors(p, revisar) {
-    console.log('\nayudaCors');
-    const origen = 'https://laminar.ejemplo.app';
-    const octo = p.ayudaCors('octoprint', origen);
-    const moon = p.ayudaCors('moonraker', origen);
+function nombresBorde(p, revisar) {
+    console.log('\npeticionSubida: nombres raros');
+    const nombre = texto => p.peticionSubida(cfg('octoprint'), new Blob(['x']), texto).cuerpo.get('file').name;
+    const porDefecto = 'laminar-movil.gcode';
+    for (const t of ['', '   ', '.', '..', '///', '\\/ \\', '\u0000\n']) {
+        revisar(`${JSON.stringify(t)} → ${porDefecto}`, nombre(t) === porDefecto, nombre(t));
+    }
     revisar(
-        'OctoPrint: incluye el origen exacto y nombra Cross Origin',
-        octo.includes(origen) && /Cross Origin/i.test(octo),
-        octo,
+        'saca los caracteres de control',
+        nombre('cu\u0000b\no\u007f.gcode') === 'cubo.gcode',
+        nombre('cu\u0000b\no.gcode'),
     );
+    revisar('agrega .gcode si falta', nombre('cubo') === 'cubo.gcode' && nombre('cubo.stl') === 'cubo.stl.gcode');
+    revisar('acepta .GCODE sin duplicarlo', nombre('CUBO.GCODE') === 'CUBO.GCODE', nombre('CUBO.GCODE'));
+    const sinExt = nombre('x'.repeat(150));
+    revisar('largo sin extensión: 100 caracteres con .gcode', sinExt === `${'x'.repeat(94)}.gcode`, sinExt);
+    const emojis = nombre(`${'😀'.repeat(80)}.gcode`);
+    const puntos = Array.from(emojis);
+    revisar('tope de 200 bytes UTF-8', new TextEncoder().encode(emojis).length <= 200, emojis);
     revisar(
-        'Moonraker: incluye el origen exacto y nombra cors_domains',
-        moon.includes(origen) && moon.includes('cors_domains'),
-        moon,
+        'no parte un par sustituto',
+        !/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(emojis),
     );
-    revisar('cada tipo muestra su propio fragmento', !octo.includes('cors_domains') && !/Cross Origin/i.test(moon));
+    revisar('cuenta puntos de código, no unidades UTF-16', puntos.length <= 100 && emojis.endsWith('.gcode'));
 }
 
 export default async function ({ revisar, igual, cargar }) {
@@ -204,5 +219,5 @@ export default async function ({ revisar, igual, cargar }) {
     imprimir(p, revisar, igual);
     nombres(p, revisar);
     lectura(p, revisar);
-    cors(p, revisar);
+    nombresBorde(p, revisar);
 }
