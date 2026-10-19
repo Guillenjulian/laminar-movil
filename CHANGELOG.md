@@ -15,7 +15,8 @@ Sprint 5: envío por red local a OctoPrint y Moonraker (experimental), accesibil
 
 - Envío del G-code por red local a OctoPrint o Moonraker (experimental, ADR 0007): hoja de configuración por impresora, botón "Enviar a la impresora" en el paso 4, plan B si el navegador lo bloquea y `npm run test:red`.
 - Accesibilidad (ADR 0008): contraste AA, anillo de foco, movimiento reducido, paso actual anunciado, hojas modales con Escape y retorno de foco, errores y avisos que se anuncian, contadores con nombre, descripción textual del visor y deslizador de capas con "Capa N de M, Z mm, con pausa".
-- Base del inglés, oculta hasta el sprint 6 (ADR 0008): diccionarios que se cargan bajo demanda y `npm run test:textos`.
+- Base del inglés, oculta hasta el sprint 6 (ADR 0008): diccionarios que se cargan bajo demanda, números y medidas según el idioma (`formato.js`) y `npm run test:textos`. Hasta que el inglés esté completo, la app arranca siempre en español.
+- Prueba automática de accesibilidad con axe (WCAG 2.2 AA) en la CI: `npm run test:a11y`.
 
 ### Cambiado
 
@@ -26,6 +27,7 @@ Sprint 5: envío por red local a OctoPrint y Moonraker (experimental), accesibil
 
 - El nombre de una impresora propia se escapa en el aviso "No entra".
 - Un doble Escape ya no saca de la app.
+- "1 triángulo" en singular (antes decía "1 triángulos").
 
 ## [0.4.0] - 2026-10-19
 

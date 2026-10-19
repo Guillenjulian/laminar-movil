@@ -6,7 +6,7 @@
 
 ## Estado
 
-Parcialmente implementado: A1–A4, I1–I3 (sprint 5). Pendiente del sprint 5: A6 (axe en la CI) e I4 (`formato.js` todavía usa `toLocaleString`). Pendiente: I5–I14 y D1 (sprint 6). Aceptado por el CTO el 2026-10-19.
+Parcialmente implementado: A1–A4, A6, I1–I4 (sprint 5; el selector de idioma sigue oculto y el arranque es en español salvo preferencia guardada, decisión 15). Pendiente: I5–I14 y D1 (sprint 6) y A5 (v1.1). Aceptado por el CTO el 2026-10-19.
 
 ## Contexto
 
