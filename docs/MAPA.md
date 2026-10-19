@@ -147,10 +147,15 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `soportes-paso.js` · `soportes-siembra.js` | Piezas de `planificarArbol` (hojas, sin ciclos): `soportes-paso` (`holgura`, `bajar`, `fusionarTodo`, `LADOS`: mover, esquivar y fusionar nodos al bajar una capa) y `soportes-siembra` (`sembrar`: dónde nacen las puntas nuevas bajo los voladizos). Importan sólo `geometria-2d` y, la siembra, `soportes-paso` |
 | `soportes-poda.js` | `marcarViables`: marca qué nodos del árbol llegan a la cama, a la pieza o a otro tronco que llega; el resto (frenado por un bloqueo o la cama) se poda. Puro, sin imports |
 
-### Red local (`src/red/`)
+### Red local (`src/red/`, ADR 0007)
 
-| Archivo | Contenido |
+Envío opcional del G-code a OctoPrint o Moonraker. Puro o con efectos inyectados: sin DOM, sin `console`; `fetch` sólo en `transporte.js` (inyectado).
+
+| Archivo | Responsabilidad |
 |---|---|
+| `direccion.js` | `normalizarDireccion` (acepta sólo http/https, sin usuario, query ni fragmento; devuelve `direccion`, `http`, `nombreSinLocal`) y `esDireccionLocal(url)` (IPv4 privada, `.local`, `.lan`, `.home.arpa`, una etiqueta, IPv6 fc00::/7 y fe80::/10; `localhost` no) que reusa el transporte. Sin imports |
+| `peticiones.js` | Pedidos exactos de cada tipo (`peticionVersion`, `peticionEstado`, `peticionSubida` con multipart y nombre saneado) y lectura de respuestas (`leerVersion`, `estaOcupada`, `empezoAImprimir`, `ayudaCors`). La clave va sólo en `X-Api-Key`. Sin imports |
+| `errores.js` | `errorDeRespuesta` (HTTP → `{codigo, mensaje, pista, estadoHttp?}` o `null` si es éxito), `errorDeTransporte` (`red`/`tiempo`/`cancelado`, con el aviso de R2 si se envió con imprimir) y `errorDeDireccion`. Los textos están en la tabla `TEXTOS`. No muestra el cuerpo de la respuesta ni la clave. Puro, sin imports |
 | `transporte.js` | `crearTransporte({ fetch })`: manda una petición con `fetch` (tope de tiempo, cancelación, sin cookies; `targetAddressSpace: 'local'` si `esDireccionLocal`) y devuelve `{ estado, texto }`; rechaza con `ErrorTransporte` (`causa`: `red`, `tiempo` o `cancelado`). Sin porcentaje de subida. `sondaSinCors(url, fetchFn)`: `fetch` `no-cors` con tope de 4 s. Importa sólo `direccion` (ADR 0007, 6.5) |
 | `config-red.js` | Configuración por impresora en la clave de ajustes `redImpresoras` (`{version:1, porImpresora}`): `validarConfig` (renormaliza la dirección), `describirConfig` (oculta la clave de API) y `crearRepositorioRed(almacen)` con `leer`, `guardar`, `borrar`. Lo corrupto se lee como sin configurar. Importa sólo `direccion` (ADR 0007, 6.6) |
 
@@ -169,14 +174,6 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 | `soportes.js` | Tipo de soporte (ADR 0004): `normalizarSoportes` (boolean viejo → `'no'`, `'normal'` o `'arbol'`), `procesoDeSoportes` (claves de proceso de Kiri) y `etiquetaSoportes`. Puro, sin imports |
 | `generico.js` | Calidades a partir de boquilla y velocidad, plantillas Marlin/Klipper, perfil de "Mi impresora" |
 | `LEEME.md` | Referencia de todas las claves |
-
-### Red local (`src/red/`)
-Envío opcional del G-code a OctoPrint o Moonraker (ADR 0007). Puro o con efectos inyectados: sin DOM, sin `console`, sin `fetch` propio.
-
-| Archivo | Responsabilidad | Depende de |
-|---|---|---|
-| `direccion.js` | `normalizarDireccion` (acepta sólo http/https, sin usuario, query ni fragmento; devuelve `direccion`, `http`, `nombreSinLocal`) y `esDireccionLocal(url)` (IPv4 privada, `.local`, `.lan`, `.home.arpa`, una etiqueta, IPv6 fc00::/7 y fe80::/10; `localhost` no) que reusa el transporte. Sin imports | — |
-| `peticiones.js` | Pedidos exactos de cada tipo (`peticionVersion`, `peticionEstado`, `peticionSubida` con multipart y nombre saneado) y lectura de respuestas (`leerVersion`, `estaOcupada`, `empezoAImprimir`, `ayudaCors`). La clave va sólo en `X-Api-Key`. Sin imports | — |
 
 ### Motor externo: `vendor/kiri/`
 Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano.** Los parches están en el script y marcados `PARCHE laminar-movil`. Detalle en `vendor/kiri/ORIGEN.md`.
