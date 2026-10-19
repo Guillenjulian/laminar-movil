@@ -19,6 +19,12 @@ import { iniciarPaso3 } from './ui/paso3-laminar.js';
 import { iniciarPaso4, mostrarResultado } from './ui/paso4-resultado.js';
 import { iniciarVistaCapas } from './ui/vista-capas.js';
 import { programarPrecarga } from './ui/entrega-ui.js';
+import { iniciarRedHoja, abrirRedHoja } from './ui/red-hoja.js';
+import { iniciarEnvio, actualizarEnvio } from './ui/envio-ui.js';
+import { normalizarDireccion } from './red/direccion.js';
+import { probarConexion, enviarGcode } from './red/cliente.js';
+import { crearTransporte, sondaSinCors } from './red/transporte.js';
+import { crearRepositorioRed } from './red/config-red.js';
 import { registrarServiceWorker } from './ui/actualizacion.js';
 import { precargarVisor } from './ui/visor-carga.js';
 
@@ -38,6 +44,22 @@ alMostrarPaso(paso => paso === 2 && dibujarOpciones());
 iniciarPaso3({ alTerminar: mostrarResultado });
 iniciarPaso4({ alOtroModelo: elegirOtroModelo });
 iniciarVistaCapas({ alCambiarPausas: programarPrecarga });
+// Envío por red local (ADR 0007): los módulos de src/red/ entran por acá con sus dependencias ya puestas.
+const usarFetch = (...a) => fetch(...a);
+const red = { transporte: crearTransporte({ fetch: usarFetch }), sonda: u => sondaSinCors(u, usarFetch) };
+red.origenApp = location.origin;
+const repositorio = crearRepositorioRed(almacen);
+iniciarRedHoja({
+    repositorio,
+    probarConexion: config => probarConexion(config, red),
+    normalizarDireccion,
+    alGuardar: actualizarEnvio,
+});
+iniciarEnvio({
+    repositorio,
+    enviarGcode: (config, archivo, nombre, opciones) => enviarGcode(config, archivo, nombre, red, opciones),
+    abrirConfiguracion: abrirRedHoja,
+});
 
 // 2. Preferencias.
 await Promise.all([cargarPreferencias(), preciosListos]);

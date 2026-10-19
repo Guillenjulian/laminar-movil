@@ -1082,3 +1082,13 @@ input[type='range'] {
 .zonas-sin-soporte .piezas {
     margin: 8px 0;
 }
+
+/* --- Envío por red local en el pie del paso 4 (ADR 0007, T7) --- */
+.envio-red {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.envio-red .nota:empty {
+    display: none;
+}

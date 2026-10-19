@@ -35,6 +35,7 @@ const BUSQUEDA = { ignoreSearch: true, ignoreVary: true };
 self.addEventListener('fetch', e => {
     const { request } = e;
     if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
+    if (/^\/(api|server|printer|access)\//.test(new URL(request.url).pathname)) return; // red local (ADR 0007)
     e.respondWith(
         (async () => {
             const cache = await caches.open(CACHE);

@@ -14,8 +14,9 @@ import { resumenPersonal } from './paso2-config.js';
 import * as formato from './formato.js';
 import * as materialesUI from './materiales.js';
 import { nombreEntrega } from './entrega.js';
+import { actualizarEnvio, cancelarEnvio } from './envio-ui.js';
 import { entregaDe, esperarArchivo, paraCompartir, precargar, puedeCompartir, soltarEntrega } from './entrega-ui.js';
-import { buscarImpresora, materiales } from '../perfiles/perfiles.js';
+import { materiales } from '../perfiles/perfiles.js';
 import { avisosPostLaminado } from '../perfiles/cambios.js';
 import { etiquetaSoportes } from '../perfiles/soportes.js';
 import { textoZonasSinSoporte, zonasVigentes } from './soportes-tipo-ui.js';
@@ -74,6 +75,7 @@ export function iniciarPaso4({ alOtroModelo }) {
 
     $('otro').onclick = () => {
         soltarEntrega();
+        cancelarEnvio();
         estado.resultado = null;
         alOtroModelo();
         irA(1);
@@ -85,8 +87,7 @@ export function iniciarPaso4({ alOtroModelo }) {
 export function mostrarResultado() {
     soltarEntrega(); // el archivo del resultado anterior ya no sirve
     const { info, gcode, avisos, archivo } = estado.resultado;
-    const { formato: salida } = entregaDe();
-    const imp = buscarImpresora(estado.impresoraId);
+    const { imp, formato: salida } = entregaDe();
     const cal = imp.calidades[estado.calidad];
     const filas = [
         ['Tiempo estimado', formato.duracion(info.tiempo)],
@@ -117,11 +118,11 @@ export function mostrarResultado() {
     $('avisoResultado').innerHTML = notas.join('<br><br>');
     $('avisoResultado').hidden = notas.length === 0;
 
-    // "Compartir" sólo si el navegador puede compartir archivos (Android/iOS sí; la mayoría de las PCs no).
-    $('compartir').hidden = !puedeCompartir(archivo);
+    $('compartir').hidden = !puedeCompartir(archivo); // sólo si el navegador comparte archivos (celus sí, PCs casi no)
     $('compartir').textContent = salida === 'gcode.3mf' ? 'Compartir archivo' : 'Compartir G-code';
     $('estadoEntrega').textContent = '';
     $('descargar').classList.toggle('primario', $('compartir').hidden);
     armarVistaPrevia(); // reinicia las pausas: la precarga va después, con las pausas de ahora
     precargar();
+    actualizarEnvio();
 }

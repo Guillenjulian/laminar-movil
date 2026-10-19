@@ -761,6 +761,15 @@
             <div data-paso="4" hidden>
                 <button class="boton grande primario" id="compartir">Compartir G-code</button>
                 <button class="boton grande" id="descargar">Descargar</button>
+                <button class="boton grande" id="enviarRed" hidden>Enviar a la impresora</button>
+                <div class="envio-red" id="envioRed">
+                    <p class="nota" id="progresoEnvioRed" role="status"></p>
+                    <button class="boton" id="cancelarEnvio" aria-label="Cancelar el envío a la impresora" hidden>
+                        Cancelar
+                    </button>
+                    <button class="boton" id="ayudaEnvioRed" hidden>Ver qué hacer</button>
+                </div>
+                <button class="boton enlace" id="configurarRed" hidden>Enviar por red…</button>
                 <button class="boton enlace" id="otro">Laminar otro modelo</button>
             </div>
         </footer>

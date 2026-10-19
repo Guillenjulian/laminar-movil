@@ -136,6 +136,7 @@ export const CONTRATOS = {
             'ui/materiales',
             'ui/entrega',
             'ui/entrega-ui',
+            'ui/envio-ui',
             'ui/soportes-tipo-ui',
             PERFILES,
             'perfiles/cambios',
@@ -158,6 +159,15 @@ export const CONTRATOS = {
             paraCompartir: 1,
         },
         importa: ['ui/estado', 'ui/util-dom', 'ui/materiales', 'ui/entrega', PERFILES],
+    },
+    // Envío por red local (ADR 0007). Lo de src/red/ llega por `ctx` desde main.js, así que no se importa acá.
+    'ui/red-hoja': {
+        exports: { iniciarRedHoja: 1, abrirRedHoja: 0 },
+        importa: ['ui/estado', 'ui/navegacion', 'ui/util-dom', PERFILES],
+    },
+    'ui/envio-ui': {
+        exports: { iniciarEnvio: 1, actualizarEnvio: 0, cancelarEnvio: 0 },
+        importa: ['ui/estado', 'ui/util-dom', 'ui/entrega-ui', 'ui/entrega'],
     },
     'ui/visor-cara': { exports: { crearSelectorCara: 1 }, importa: [] },
     'ui/visor-recorridos': { exports: { crearRecorridos: 1 }, importa: ['motor/tipos-linea'] },

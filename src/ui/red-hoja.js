@@ -122,6 +122,7 @@ function alternarClave() {
 function alCerrar() {
     prueba++;
     guardada = null;
+    form.elements.claveApi.value = ''; // la clave tipeada no queda en el campo
     habilitarBotones(true);
 }
 
@@ -148,7 +149,7 @@ export function iniciarRedHoja(contexto) {
     marcarAbierta = devolverFocoAlCerrar(
         'hojaRed',
         () => abridor,
-        () => $('siguiente'),
+        () => $('configurarRed'),
         alCerrar,
     );
 }
