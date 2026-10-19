@@ -678,6 +678,71 @@
             </form>
         </section>
 
+        <section class="hoja" id="hojaRed" hidden aria-label="Enviar por red local (experimental)">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1>Enviar por red local <small>experimental</small></h1>
+            </header>
+            <form class="contenido-hoja formulario" id="formRed" novalidate>
+                <p class="nota" id="notaRed">
+                    Para mandar el G-code directo a tu impresora con OctoPrint o Moonraker, sin pasar por el archivo. El
+                    celu y la impresora tienen que estar en la misma red. Es experimental: puede no andar en todos los
+                    navegadores.
+                </p>
+                <p class="nota" id="impresoraRed"></p>
+                <label
+                    >Tipo
+                    <select name="tipo">
+                        <option value="octoprint">OctoPrint</option>
+                        <option value="moonraker">Moonraker (Klipper)</option>
+                    </select>
+                </label>
+                <label
+                    >Dirección
+                    <input
+                        name="direccion"
+                        inputmode="url"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        placeholder="http://192.168.1.50"
+                        aria-describedby="ayudaDireccionRed"
+                    />
+                </label>
+                <p class="nota" id="ayudaDireccionRed">La IP o el nombre de la impresora, con el puerto si lo usa.</p>
+                <label
+                    >Clave de API
+                    <input name="claveApi" type="password" autocomplete="off" aria-describedby="ayudaClaveRed" />
+                </label>
+                <p class="nota" id="ayudaClaveRed">
+                    Se guarda en este celu, sin cifrar, y sólo se manda a la dirección de arriba. Si ya hay una
+                    guardada, dejalo vacío para no cambiarla.
+                </p>
+                <label class="tilde"
+                    ><input type="checkbox" name="imprimir" aria-describedby="ayudaImprimirRed" /> Empezar a imprimir al
+                    terminar</label
+                >
+                <p class="nota" id="ayudaImprimirRed">Apagado, sólo sube el archivo. Prendido, te pide confirmar.</p>
+                <button type="button" class="boton" id="probarRed">Probar conexión</button>
+                <p class="aviso" id="estadoRed" role="status"></p>
+                <div id="ayudaRed" hidden>
+                    <p class="nota">Si no anda, probá una de estas salidas:</p>
+                    <ul class="nota">
+                        <li>Abrí la impresora y subí ahí el archivo que descargaste.</li>
+                        <li>
+                            Usá una dirección https con certificado válido, por ejemplo con Tailscale. Uno autofirmado
+                            no sirve.
+                        </li>
+                        <li>En Chrome: candado de la barra de direcciones, Permisos, Red local, Permitir.</li>
+                    </ul>
+                </div>
+                <p class="nota">Origen de esta app, para habilitarlo en CORS de la impresora: <b id="origenRed"></b></p>
+                <button type="button" class="boton" id="abrirImpresoraRed" disabled>Abrir la impresora</button>
+                <button type="submit" class="boton grande primario">Guardar</button>
+                <button type="button" class="boton" id="quitarRed" hidden>Quitar</button>
+            </form>
+        </section>
+
         <!-- Botones principales siempre abajo, donde llega el pulgar -->
         <footer class="acciones">
             <div data-paso="1"><button class="boton grande primario" id="siguiente" disabled>Siguiente</button></div>
