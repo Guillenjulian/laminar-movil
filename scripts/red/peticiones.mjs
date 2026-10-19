@@ -197,6 +197,19 @@ function nombresBorde(p, revisar) {
         nombre('cu\u0000b\no\u007f.gcode') === 'cubo.gcode',
         nombre('cu\u0000b\no.gcode'),
     );
+    for (const t of ['.gcode', '..gcode', '   .gcode', '. .gcode']) {
+        revisar(`raíz vacía ${JSON.stringify(t)} → ${porDefecto}`, nombre(t) === porDefecto, nombre(t));
+    }
+    revisar(
+        'quita puntos y espacios finales de la raíz',
+        nombre('a. ') === 'a.gcode' && nombre('a.. .gcode') === 'a.gcode',
+    );
+    revisar('filtra las marcas bidi', nombre('a\u202eb\u2066c\u2069.gcode') === 'abc.gcode', nombre('a\u202eb.gcode'));
+    revisar(
+        'filtra tabulaciones y controles C1 sin dejar rastro',
+        nombre('a\tb\u0085c\u009f.gcode') === 'abc.gcode',
+        nombre('a\tb\u0085c.gcode'),
+    );
     revisar('agrega .gcode si falta', nombre('cubo') === 'cubo.gcode' && nombre('cubo.stl') === 'cubo.stl.gcode');
     revisar('acepta .GCODE sin duplicarlo', nombre('CUBO.GCODE') === 'CUBO.GCODE', nombre('CUBO.GCODE'));
     const sinExt = nombre('x'.repeat(150));

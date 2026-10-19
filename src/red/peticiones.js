@@ -14,6 +14,9 @@ const SUBIDA_MS = 600000; // 10 minutos: un G-code grande por wifi tarda
 const PROHIBIDOS = /[/\\:*?"<>|]/g;
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;
+// Marcas bidi (U+202A-202E, U+2066-2069): cambiarían cómo se ve el nombre en la pantalla de la impresora.
+const BIDI = /[\u202a-\u202e\u2066-\u2069]/g;
+const COLA = /[. ]+$/;
 const SOLO_SEPARADORES = /^[./\\\s]*$/;
 const MAX_PUNTOS = 100; // puntos de código del nombre
 const MAX_BYTES = 200; // bytes UTF-8 del nombre
@@ -87,13 +90,16 @@ function cortar(texto, maxPuntos, maxBytes) {
 function sanearNombre(nombre) {
     const base = String(nombre ?? '')
         .replace(CONTROL, '')
+        .replace(BIDI, '')
         .trim();
     if (SOLO_SEPARADORES.test(base)) return NOMBRE_POR_DEFECTO;
     const limpio = base.replace(PROHIBIDOS, '_');
     const conExt = limpio.toLowerCase().endsWith(EXT) ? limpio : limpio + EXT;
     const ext = conExt.slice(-EXT.length);
-    const raiz = conExt.slice(0, -EXT.length);
-    return cortar(raiz, MAX_PUNTOS - EXT.length, MAX_BYTES - EXT.length) + ext;
+    // Sin puntos ni espacios al final de la raíz ("a. " → "a"): algunos sistemas de archivos los descartan.
+    const raiz = cortar(conExt.slice(0, -EXT.length), MAX_PUNTOS - EXT.length, MAX_BYTES - EXT.length);
+    const limpiaRaiz = raiz.replace(COLA, '');
+    return limpiaRaiz ? limpiaRaiz + ext : NOMBRE_POR_DEFECTO;
 }
 
 /**
