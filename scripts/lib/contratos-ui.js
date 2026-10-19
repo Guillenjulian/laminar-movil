@@ -34,6 +34,7 @@ export const CONTRATOS = {
             cerrarHojas: 0,
             alMostrarPaso: 1,
             irAPaso1: 0,
+            devolverFocoAlCerrar: 4,
         },
         importa: ['ui/estado', 'ui/util-dom'],
     },
@@ -70,7 +71,7 @@ export const CONTRATOS = {
     },
     'ui/torres': {
         exports: { prepararTorre: 1 },
-        importa: ['perfiles/torres', PERFILES, MOTOR, 'ui/util-dom', FORMATO],
+        importa: ['perfiles/torres', PERFILES, MOTOR, 'ui/navegacion', 'ui/util-dom', FORMATO],
     },
     'ui/recientes': {
         exports: { iniciarRecientes: 1, mostrarRecientes: 0, programarGuardado: 0, guardarPendiente: 0 },

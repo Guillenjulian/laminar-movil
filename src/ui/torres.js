@@ -13,6 +13,7 @@
 import { torreAStl } from '../motor/motor.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { armarTorre, valoresSugeridos } from '../perfiles/torres.js';
+import { devolverFocoAlCerrar } from './navegacion.js';
 import { $ } from './util-dom.js';
 
 const TIPOS = {
@@ -104,21 +105,6 @@ function avisarTorre(torre, impresoraId) {
     mensaje('avisoTorre', textos.join(' '));
 }
 
-/** Al cerrar la hoja (con "Crear torre" o con la flecha) el foco vuelve al botón que la abrió. Sólo si la
- *  hoja estaba abierta: `mostrar()` reasigna `hidden` también al abrir otras hojas.
- *  @returns {() => void} función que hay que llamar al abrir la hoja */
-function devolverFocoAlCerrar() {
-    let abierta = false;
-    new MutationObserver(() => {
-        if (!abierta || !$('hojaTorre').hidden) return;
-        abierta = false;
-        $('botonTorre').focus();
-    }).observe($('hojaTorre'), { attributeFilter: ['hidden'] });
-    return () => {
-        abierta = true;
-    };
-}
-
 /**
  * Arma la hoja y la conecta. `abrir` y `cerrar` son abrirHoja/cerrarHojas de navegacion.js;
  * `cargar(nombre, generar, torre)` carga el modelo (`generar()` devuelve una promesa con el STL);
@@ -141,7 +127,7 @@ export function prepararTorre({ abrir, cerrar, cargar, contexto }) {
         ajustarCantidad(tipo(), Number(e.target.value));
     });
 
-    const marcarAbierta = devolverFocoAlCerrar();
+    const marcarAbierta = devolverFocoAlCerrar('hojaTorre', () => $('botonTorre'));
 
     form.addEventListener('submit', e => {
         e.preventDefault();

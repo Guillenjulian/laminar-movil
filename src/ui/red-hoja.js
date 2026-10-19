@@ -4,11 +4,11 @@
 // Flujo: iniciarRedHoja cablea #hojaRed una vez; abrirRedHoja carga la config de la impresora elegida
 // (`estado.impresoraId`, leído en el momento) y abre la hoja. Los módulos de src/red/ llegan inyectados
 // por `ctx` (main.js los cablea), así que acá no se importa nada de ellos. La clave de API nunca vuelve
-// al DOM: al reabrir el campo queda vacío (vacío = no cambiar). Mensajes con textContent.
-// Nada toca el DOM al importarse.
+// al DOM: al reabrir el campo queda vacío (vacío = no cambiar, y sólo si la dirección y el tipo no
+// cambiaron). Mensajes con textContent. Nada toca el DOM al importarse.
 
 import { estado } from './estado.js';
-import { abrirHoja, cerrarHojas } from './navegacion.js';
+import { abrirHoja, cerrarHojas, devolverFocoAlCerrar } from './navegacion.js';
 import { $ } from './util-dom.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 
@@ -21,13 +21,16 @@ import { buscarImpresora } from '../perfiles/perfiles.js';
  */
 
 const ERROR_DIRECCION = 'La dirección no es válida. Probá con algo como http://192.168.1.50';
+const ERROR_CLAVE = 'Cambió la dirección o el tipo: escribí la clave de nuevo.';
 
 let ctx = null;
 let form = null;
 let idActual = ''; // impresora cuya config se está editando
-let guardada = null; // config guardada (conserva la clave si el campo queda vacío)
+let guardada = null; // config guardada (conserva la clave si el campo queda vacío y nada cambió)
 let abridor = null; // elemento que abrió la hoja, para devolverle el foco
 let prueba = 0; // número de la última prueba (descarta respuestas viejas)
+let abriendo = false; // hay una apertura en curso (doble toque)
+let marcarAbierta = null;
 
 function direccionValida() {
     const r = ctx.normalizarDireccion(form.elements.direccion.value);
@@ -35,49 +38,71 @@ function direccionValida() {
 }
 
 function mostrarEstado(texto, esError = false) {
-    const el = $('estadoRed');
-    el.textContent = texto;
-    el.classList.toggle('error', esError);
+    $('estadoRed').textContent = texto;
+    $('estadoRed').classList.toggle('error', esError);
 }
 
-function configActual(direccion) {
+// Marca o limpia el campo con error, lo enfoca y muestra el mensaje.
+function fallo(campo, texto) {
+    campo.setAttribute('aria-invalid', 'true');
+    mostrarEstado(texto, true);
+    campo.focus();
+}
+
+// Config del formulario, o null (con aviso) si la dirección no sirve o falta reescribir la clave.
+function leerConfig() {
     const e = form.elements;
-    return {
-        tipo: e.tipo.value,
-        direccion,
-        claveApi: e.claveApi.value || guardada?.claveApi || '',
-        imprimir: e.imprimir.checked,
-    };
+    const direccion = direccionValida();
+    if (!direccion) return fallo(e.direccion, ERROR_DIRECCION);
+    const igual = guardada?.direccion === direccion && guardada?.tipo === e.tipo.value;
+    if (!e.claveApi.value && guardada?.claveApi && !igual) return fallo(e.claveApi, ERROR_CLAVE);
+    const claveApi = e.claveApi.value || (igual ? guardada.claveApi : '');
+    return { tipo: e.tipo.value, direccion, claveApi, imprimir: e.imprimir.checked };
+}
+
+function habilitarBotones(si) {
+    for (const id of ['probarRed', 'quitarRed']) $(id).disabled = !si;
+    form.querySelector('[type=submit]').disabled = !si;
 }
 
 async function probar() {
-    const direccion = direccionValida();
     $('ayudaRed').hidden = true;
-    if (!direccion) return mostrarEstado(ERROR_DIRECCION, true);
+    const config = leerConfig();
+    if (!config) return;
     const mia = ++prueba;
     $('probarRed').disabled = true;
     mostrarEstado('Probando…');
-    const r = await ctx.probarConexion(configActual(direccion));
-    if (mia !== prueba) return;
-    $('probarRed').disabled = false;
-    if (r.ok) return mostrarEstado(`Conectó con ${r.resumen.nombre}.`);
-    mostrarEstado([r.error.mensaje, r.error.pista].filter(Boolean).join(' '), true);
-    $('ayudaRed').hidden = !['bloqueado', 'sin-llegada'].includes(r.error.codigo);
+    try {
+        const r = await ctx.probarConexion(config);
+        if (mia !== prueba) return;
+        if (r.ok) return mostrarEstado(`Conectó con ${r.resumen.nombre}.`);
+        mostrarEstado([r.error.mensaje, r.error.pista].filter(Boolean).join(' '), true);
+        $('ayudaRed').hidden = !['bloqueado', 'sin-llegada'].includes(r.error.codigo);
+    } catch {
+        if (mia === prueba) mostrarEstado('No se pudo probar la conexión. Probá de nuevo.', true);
+    } finally {
+        if (mia === prueba) $('probarRed').disabled = false;
+    }
 }
 
-async function guardar(e) {
+// Guarda o quita (según `accion`) sin doble toque; si falla avisa y deja todo como estaba.
+async function persistir(accion, fallido) {
+    habilitarBotones(false);
+    try {
+        await accion();
+        ctx.alGuardar();
+        cerrarHojas();
+    } catch {
+        mostrarEstado(fallido, true);
+    } finally {
+        habilitarBotones(true);
+    }
+}
+
+function guardar(e) {
     e.preventDefault();
-    const direccion = direccionValida();
-    if (!direccion) return mostrarEstado(ERROR_DIRECCION, true);
-    await ctx.repositorio.guardar(idActual, configActual(direccion));
-    ctx.alGuardar();
-    cerrarHojas();
-}
-
-async function quitar() {
-    await ctx.repositorio.borrar(idActual);
-    ctx.alGuardar();
-    cerrarHojas();
+    const config = leerConfig();
+    if (config) persistir(() => ctx.repositorio.guardar(idActual, config), 'No se pudo guardar. Probá de nuevo.');
 }
 
 function abrirImpresora() {
@@ -85,14 +110,19 @@ function abrirImpresora() {
     if (direccion) window.open(direccion, '_blank', 'noopener');
 }
 
-// Al cerrarse la hoja (botón o atrás del celu) el foco vuelve a quien la abrió.
-function devolverFoco() {
-    let abierta = false;
-    new MutationObserver(() => {
-        const ahora = !$('hojaRed').hidden;
-        if (abierta && !ahora) abridor?.focus?.();
-        abierta = ahora;
-    }).observe($('hojaRed'), { attributes: true, attributeFilter: ['hidden'] });
+function alternarClave() {
+    const ver = $('verClaveRed').getAttribute('aria-pressed') !== 'true';
+    $('verClaveRed').setAttribute('aria-pressed', String(ver));
+    $('verClaveRed').setAttribute('aria-label', ver ? 'Ocultar la clave' : 'Mostrar la clave');
+    $('verClaveRed').textContent = ver ? 'Ocultar' : 'Mostrar';
+    form.elements.claveApi.type = ver ? 'text' : 'password';
+}
+
+// Al cerrar la hoja: se descarta la prueba en vuelo y la clave guardada sale de memoria.
+function alCerrar() {
+    prueba++;
+    guardada = null;
+    habilitarBotones(true);
 }
 
 /**
@@ -105,13 +135,40 @@ export function iniciarRedHoja(contexto) {
     form = $('formRed');
     $('origenRed').textContent = location.origin;
     form.elements.direccion.addEventListener('input', () => {
+        form.elements.direccion.removeAttribute('aria-invalid');
         $('abrirImpresoraRed').disabled = !direccionValida();
     });
+    form.elements.claveApi.addEventListener('input', () => form.elements.claveApi.removeAttribute('aria-invalid'));
     form.addEventListener('submit', guardar);
     $('probarRed').onclick = probar;
-    $('quitarRed').onclick = quitar;
+    $('quitarRed').onclick = () =>
+        persistir(() => ctx.repositorio.borrar(idActual), 'No se pudo quitar. Probá de nuevo.');
     $('abrirImpresoraRed').onclick = abrirImpresora;
-    devolverFoco();
+    $('verClaveRed').onclick = alternarClave;
+    marcarAbierta = devolverFocoAlCerrar(
+        'hojaRed',
+        () => abridor,
+        () => $('siguiente'),
+        alCerrar,
+    );
+}
+
+function rellenar(config) {
+    const e = form.elements;
+    e.tipo.value = config?.tipo || 'octoprint';
+    e.direccion.value = config?.direccion || '';
+    e.claveApi.value = '';
+    e.claveApi.placeholder = config?.claveApi ? 'guardada' : '';
+    e.claveApi.type = 'password';
+    e.imprimir.checked = !!config?.imprimir;
+    for (const c of [e.direccion, e.claveApi]) c.removeAttribute('aria-invalid');
+    $('verClaveRed').setAttribute('aria-pressed', 'false');
+    $('verClaveRed').setAttribute('aria-label', 'Mostrar la clave');
+    $('verClaveRed').textContent = 'Mostrar';
+    $('quitarRed').hidden = !config;
+    $('ayudaRed').hidden = true;
+    mostrarEstado('');
+    $('abrirImpresoraRed').disabled = !direccionValida();
 }
 
 /**
@@ -119,20 +176,27 @@ export function iniciarRedHoja(contexto) {
  * @returns {Promise<void>}
  */
 export async function abrirRedHoja() {
+    if (abriendo) return;
+    abriendo = true;
     abridor = document.activeElement;
-    idActual = estado.impresoraId;
-    guardada = await ctx.repositorio.leer(idActual);
-    const e = form.elements;
-    e.tipo.value = guardada?.tipo || 'octoprint';
-    e.direccion.value = guardada?.direccion || '';
-    e.claveApi.value = '';
-    e.claveApi.placeholder = guardada?.claveApi ? 'guardada' : '';
-    e.imprimir.checked = !!guardada?.imprimir;
-    $('impresoraRed').textContent = `Impresora: ${buscarImpresora(idActual).nombre}`;
-    $('quitarRed').hidden = !guardada;
-    $('ayudaRed').hidden = true;
-    mostrarEstado('');
-    $('abrirImpresoraRed').disabled = !direccionValida();
-    abrirHoja('red');
-    e.tipo.focus();
+    prueba++;
+    $('probarRed').disabled = false;
+    try {
+        const id = estado.impresoraId;
+        let leida = null;
+        try {
+            leida = await ctx.repositorio.leer(id);
+        } catch {
+            leida = null; // sin config legible: se abre vacía
+        }
+        idActual = id;
+        guardada = leida;
+        rellenar(guardada);
+        $('impresoraRed').textContent = `Impresora: ${buscarImpresora(id).nombre}`;
+        abrirHoja('red');
+        marcarAbierta();
+        form.elements.tipo.focus();
+    } finally {
+        abriendo = false;
+    }
 }

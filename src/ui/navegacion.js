@@ -137,3 +137,28 @@ function enfocarPaso1() {
 export function alMostrarPaso(fn) {
     suscriptores.push(fn);
 }
+
+/**
+ * Al cerrarse una hoja (botón, "atrás" o acción) el foco vuelve al botón que la abrió; si ese quedó oculto,
+ * deshabilitado o es body, va al respaldo. Sólo actúa si la hoja estaba marcada como abierta (`mostrar()`
+ * reasigna `hidden` también al abrir otras hojas). No toca el DOM al importarse: observa al llamarla.
+ * @param {string} hojaId id de la hoja
+ * @param {HTMLElement|(() => HTMLElement|null)} abridor elemento (o función que lo da en el momento)
+ * @param {HTMLElement|(() => HTMLElement|null)} [respaldo] a quién enfocar si el abridor no sirve
+ * @param {() => void} [alCerrar] se llama al cerrarse, antes de devolver el foco
+ * @returns {() => void} función que hay que llamar al abrir la hoja
+ */
+export function devolverFocoAlCerrar(hojaId, abridor, respaldo, alCerrar) {
+    let abierta = false;
+    const dar = x => (typeof x === 'function' ? x() : x);
+    const sirve = el => el && el !== document.body && !el.disabled && el.offsetParent !== null;
+    new MutationObserver(() => {
+        if (!abierta || !$(hojaId).hidden) return;
+        abierta = false;
+        alCerrar?.();
+        [dar(abridor), dar(respaldo)].find(sirve)?.focus();
+    }).observe($(hojaId), { attributeFilter: ['hidden'] });
+    return () => {
+        abierta = true;
+    };
+}
