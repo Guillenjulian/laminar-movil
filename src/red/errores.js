@@ -22,14 +22,14 @@ const TEXTOS = {
     },
     'sin-llegada-http': {
         mensaje: 'No se pudo llegar a la impresora.',
-        pista: 'Puede estar apagada o en otra red, o el navegador puede estar bloqueando el pedido (la app es https y la impresora http). Revisá el Wi-Fi, la IP y que esté prendida; en Chrome fijate el permiso de Red local del sitio, o usá un https con certificado válido, por ejemplo con Tailscale. Siempre podés descargar el archivo y subirlo a mano.',
+        pista: 'Puede estar apagada o en otra red, o el navegador puede estar bloqueando el pedido. Revisá el Wi-Fi y la IP; en Chrome, fijate el permiso de Red local del sitio.',
     },
     'bloqueado-octoprint': {
-        mensaje: 'La impresora está, pero el navegador no deja que esta página lea la respuesta (CORS).',
+        mensaje: 'La impresora respondió, pero no deja que esta página lea la respuesta (falta habilitar CORS).',
         pista: 'Habilitá este origen en la impresora: {origen}. En OctoPrint: Ajustes → API → activá "Allow Cross Origin Resource Sharing (CORS)".',
     },
     'bloqueado-moonraker': {
-        mensaje: 'La impresora está, pero el navegador no deja que esta página lea la respuesta (CORS).',
+        mensaje: 'La impresora respondió, pero no deja que esta página lea la respuesta (falta habilitar CORS).',
         pista: 'Habilitá este origen en la impresora: {origen}. En moonraker.conf, sección [authorization], sumalo a cors_domains y reiniciá Moonraker.',
     },
     'aviso-imprimiendo': {
