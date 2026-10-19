@@ -82,7 +82,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/almacen.js` | IndexedDB: ajustes (`preferencias`, `impresorasPropias`, `precios`), modelos y archivos recientes | — |
 | `src/config.js` | Límites que dependen de la memoria del equipo (`maxTriangulos`, `maxSegmentosVista`, `maxCopias`) y de piezas (`MAX_PIEZAS`, `SEPARACION_PIEZAS_MM`, ADR 0003) | — |
 | `src/sw.js` | Service worker (offline). `vite.config.js` le inyecta la lista de archivos | — |
-| `src/estilos*.css` | Estilos: base + uno por área (formatos, materiales, avanzado) | — |
+| `src/estilos*.css` | Estilos: base + uno por área (formatos, materiales, avanzado) + `estilos-a11y.css` (ADR 0008, A1: tokens `--acento-enlace`, `--borde-control`, `--foco`, anillo de foco, `prefers-reduced-motion`, alto de toque; se carga último y sobrescribe por orden; secciones reservadas `/* A3 */ /* A4 */ /* I3 */`) | — |
 
 Grafo de dependencias de `src/ui/` (ADR 0001, sección 2; `A → B` = A importa B):
 
@@ -233,6 +233,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Marcas de zonas y toque con punto en un visor de prueba (esbuild, sin usar el estado de la app) | `scripts/app/visor-bloqueos.mjs` |
 | Paso 1: dos piezas con giro de 45° (apoyar cara) acomodadas con la huella real | `scripts/app/piezas-extra.mjs` |
 | Paso 2: calidad, atrás/adelante | `scripts/app/paso2-config.mjs` |
+| Accesibilidad (ADR 0008): `probarContraste` (A1: ratios WCAG de texto naranja, números de pasos, bordes y anillo de foco en claro y oscuro, movimiento reducido y alto de toque; no cambia el estado; ratio puro en `scripts/lib/contraste.mjs`) y esqueletos de A2, A3 y A4 | `scripts/app/accesibilidad.mjs` |
 | Paso 3: cancelar, personalizar, laminar el cubo | `scripts/app/paso3-laminar.mjs` |
 | Materiales y costo | `scripts/app/materiales.mjs` |
 | Avanzado (jarrón, costura, velocidad) | `scripts/app/avanzado.mjs` |
