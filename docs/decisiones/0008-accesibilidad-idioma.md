@@ -6,7 +6,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado para implementar (CTO, 2026-10-19), con las decisiones de "Decisiones del CTO" (al final).
 
 ## Contexto
 
@@ -761,3 +761,25 @@ format:check` y las suites que toque en verde. Roles: **DI** dev de interfaz, **
     invertir el orden y aceptar que A2 a A4 re-toquen líneas con `data-t`.
 12. **Nombre de las tareas.** Este ADR usa `A1…A6`, `I1…I14` y `D1` (en lugar de una sola serie T1…Tn) para poder
     priorizar las dos pistas por separado; las dependencias entre pistas están marcadas en la tabla.
+
+### Decisiones del CTO (2026-10-19)
+
+1. Cambio de idioma **en caliente**.
+2. Selector en la barra, sin "automático": **sí**.
+3. Los dos diccionarios **diferidos**, cargados en paralelo con `cargarPreferencias` y esperados antes del primer
+   dibujo (como `iniciarMateriales`).
+4. `axe-core` **4.14.0 fijado** como devDependency, con `test:a11y` en la CI (A6).
+5. Teclado en el visor: **no en v1** (A5 queda en el backlog).
+6. Errores del motor: v1 en español con `lang="es-AR"`.
+7. Inglés `en-US`, moneda `ARS 1,234`: **sí**.
+8. Arranque según `navigator.languages`: **sí**.
+9. Objetivo WCAG 2.2 AA, con la excepción 2.5.1 declarada para los gestos del visor: **sí**.
+10. `inert` + `role=dialog`: **sí** (no `<dialog>`).
+11. Orden de `index.html`: A2, A3 y A4 antes que I5, I6 e I7: **sí**.
+12. Nombres A/I/D: **sí**.
+13. **Alcance por sprint.** Sprint 5: A1, A2, A3, A4, A6, I1, I2, I3 e I4 (el selector sigue `hidden`). Sprint 6: I5 a
+    I14 y D1.
+14. **Retorno del foco.** El ADR 0007 (T6) agrega `devolverFocoAlCerrar` en `navegacion.js` y lo usan `red-hoja.js` y
+    `torres.js`. A2 arranca **después** de integrar T6, hace genérico el retorno del foco al cerrar cualquier hoja y
+    **reemplaza** ese helper (lo saca de los dos módulos y del contrato si deja de hacer falta), sin dos mecanismos a la
+    vez.
