@@ -24,6 +24,7 @@ export async function probarTorres(ctx) {
     await pagina.waitForSelector('#botonTorre', { state: 'visible' });
     await pagina.tap('#botonTorre');
     revisar('torre: se abre la hoja desde el paso 1', await visible('#hojaTorre'));
+    await probarEscapeTorre(ctx);
     const valores = await crearTorre(ctx);
     revisar(
         'torre: se carga y oculta escala y rotación',
@@ -115,4 +116,16 @@ async function revisarRecientes({ page: pagina, ok: revisar, visible }) {
         (await visible('#sinModelo')) && nombres.length > 0 && !nombres.some(n => /torre/i.test(n)),
         JSON.stringify(nombres),
     );
+}
+
+// Escape cierra la hoja sin crear nada y el foco vuelve a #botonTorre; después la deja abierta otra vez.
+async function probarEscapeTorre({ page: pagina, ok: revisar }) {
+    await pagina.keyboard.press('Escape');
+    await pagina.waitForSelector('#hojaTorre', { state: 'hidden' });
+    revisar(
+        'torre: Escape cierra la hoja y el foco vuelve a #botonTorre',
+        (await pagina.evaluate(() => document.activeElement?.id)) === 'botonTorre',
+    );
+    await pagina.tap('#botonTorre');
+    await pagina.waitForSelector('#hojaTorre:not([hidden])');
 }

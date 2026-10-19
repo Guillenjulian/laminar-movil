@@ -148,6 +148,7 @@ Vamos a modificar `navegacion.js` (hoy 138 líneas; queda por debajo de 220) y l
   reescribir `mostrar`, los estilos de `.hoja` y su relación con `hidden` y el historial; se puede revisar en un ADR
   futuro.
 - **Anuncio del paso.** El foco en el encabezado ya lo anuncia; no se agrega una región viva extra.
+- **Fondo inert con la hoja de red.** Con la hoja de red abierta `footer.acciones` también queda `inert`: no se puede cancelar un envío en curso con la hoja encima (se cierra la hoja primero). Aceptado en la revisión de A2.
 
 Las funciones nuevas son privadas; el contrato de `navegacion.js` no cambia (siete exports, mismas aridades).
 

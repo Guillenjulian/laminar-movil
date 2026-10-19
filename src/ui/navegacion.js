@@ -27,6 +27,7 @@ let nivelAbierto = 0; // nivel de hoja que muestra el DOM (0 = ninguna)
 let yaMostrado = false; // false hasta que se muestra el primer paso
 let recorridoPendiente = false; // hay un history.go() sin su popstate todavía
 let irAlTerminar = false; // se pidió "Ir al paso 1" mientras se cerraba una hoja
+let atrasPedido = false; // hay un history.back() sin su popstate todavía (doble toque, Escape repetido)
 
 /**
  * Registra popstate, Escape, [data-cerrar], #atras y deja el historial en {paso:1}. Llamar una vez.
@@ -36,6 +37,7 @@ export function iniciarNavegacion() {
     window.addEventListener('popstate', e => {
         if (estado.paso === 3) estado.cancelar?.abort();
         recorridoPendiente = false;
+        atrasPedido = false;
         mostrar(e.state?.paso || 1, e.state?.hoja);
         if (irAlTerminar) {
             irAlTerminar = false;
@@ -43,13 +45,25 @@ export function iniciarNavegacion() {
         }
     });
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && nivelAbierto > 0 && !e.isComposing) history.back();
+        const buscando = e.target.matches?.('input[type="search"]') && e.target.value;
+        if (e.key === 'Escape' && nivelAbierto > 0 && !e.repeat && !e.isComposing && !buscando) pedirAtras();
     });
     document.querySelectorAll('[data-cerrar]').forEach(b => {
-        b.onclick = () => history.back();
+        b.onclick = pedirAtras;
     });
-    $('atras').onclick = () => history.back();
+    $('atras').onclick = pedirAtras;
     history.replaceState({ paso: 1 }, '');
+}
+
+/**
+ * Hace history.back() una sola vez por popstate: ignora un segundo pedido (doble toque, Escape repetido) mientras
+ * el primero no terminó y los que llegan durante un recorrido de `cerrarHojas`/`irAPaso1`, que ya van a retroceder.
+ * @returns {void}
+ */
+function pedirAtras() {
+    if (atrasPedido || recorridoPendiente) return;
+    atrasPedido = true;
+    history.back();
 }
 
 /**
@@ -147,11 +161,27 @@ export function alMostrarPaso(fn) {
     suscriptores.push(fn);
 }
 
-const visible = el => !!el && el.isConnected && el.offsetParent !== null;
+/**
+ * ¿El elemento está en el documento y se dibuja (aunque sea sólo para lectores)?
+ * @param {Element|null|undefined} el
+ * @returns {boolean}
+ */
+const visible = el => !!el && el.isConnected && el.getClientRects().length > 0;
+
+/**
+ * ¿Se le puede devolver el foco? Visible, habilitado y no el body.
+ * @param {HTMLElement|null|undefined} el
+ * @returns {boolean}
+ */
 const enfocable = el => visible(el) && el !== document.body && !el.disabled;
 
-// Modal: con una hoja abierta el fondo (barra, #main y acciones) queda inert; al cerrar la última se saca.
-// Al abrir, el foco entra en la hoja; al cerrar vuelve al disparador, al respaldo o al encabezado.
+/**
+ * Modal: con una hoja abierta el fondo (barra, #main y acciones) queda inert; al cerrar la última se saca.
+ * Al abrir, el foco entra en la hoja; al cerrar vuelve al disparador, al respaldo o al encabezado.
+ * @param {number} nivel nivel de hoja que queda abierto (0 = ninguna)
+ * @param {string|null} hoja nombre de la hoja de arriba
+ * @returns {void}
+ */
 function ajustarHojas(nivel, hoja) {
     const antes = nivelAbierto;
     if (nivel === antes) return;
@@ -169,7 +199,11 @@ function ajustarHojas(nivel, hoja) {
     else enfocarPaso();
 }
 
-// Foco dentro de la hoja: el campo de búsqueda si lo tiene; si no, su título (h1).
+/**
+ * Foco dentro de la hoja: el campo de búsqueda si lo tiene; si no, su título (h1).
+ * @param {string} hoja
+ * @returns {void}
+ */
 function enfocarHoja(hoja) {
     const seccion = $(HOJAS[hoja]);
     const el = seccion.querySelector('input[type="search"]') || seccion.querySelector('h1');
@@ -177,14 +211,14 @@ function enfocarHoja(hoja) {
     el.focus({ preventScroll: true });
 }
 
-// Foco en el paso actual: el primer [data-foco] visible o, si no hay, el primer h2 visible (o la pantalla misma).
+/**
+ * Foco en el paso actual: el primer h2 que se dibuje (en el paso 1 hay uno sólo para lectores) o la pantalla misma.
+ * @returns {void}
+ */
 function enfocarPaso() {
     const pantalla = document.querySelector(`.pantalla[data-paso="${estado.paso}"]`);
     if (!pantalla) return;
-    const el =
-        [...pantalla.querySelectorAll('[data-foco]')].find(visible) ||
-        [...pantalla.querySelectorAll('h2')].find(visible) ||
-        pantalla;
+    const el = [...pantalla.querySelectorAll('h2')].find(visible) || pantalla;
     if (!el.matches('button, input, select, textarea, a[href], [tabindex]')) el.tabIndex = -1;
     el.focus({ preventScroll: true });
 }

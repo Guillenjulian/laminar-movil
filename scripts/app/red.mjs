@@ -89,6 +89,13 @@ async function casosOctoPrint(ctx, rutas, salida) {
     guia.compartirVisible = await visible('#compartir');
     const bajado = await descargar(ctx);
     revisar('red: el G-code de referencia trae la pausa (M600)', bajado.texto.includes('\nM600\n'));
+    await abrirHoja(ctx);
+    await pagina.keyboard.press('Escape');
+    await pagina.waitForSelector('#hojaRed', { state: 'hidden' });
+    revisar(
+        'hoja: Escape cierra y el foco vuelve a #configurarRed (el que la abrió)',
+        (await enfocado(pagina)) === 'configurarRed',
+    );
     await casosHoja(ctx, a, b);
     await guardar(ctx);
     revisar('guardar → aparece #enviarRed', await visible('#enviarRed'));
