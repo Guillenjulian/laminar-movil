@@ -17,7 +17,7 @@ import { nombreEntrega } from './entrega.js';
  * @property {{leer: (impresoraId: string) => Promise<object|null>}} repositorio `crearRepositorioRed(almacen)`.
  * @property {(config: object, archivo: File, nombre: string, opciones?: {senal?: AbortSignal}) => Promise<object>} enviarGcode
  *   `enviarGcode(config, archivo, nombre, deps, opciones)` con `deps` ya aplicadas (nunca lanza).
- * @property {() => void} abrirConfiguracion abre la hoja de red (main: abrirRedHoja).
+ * @property {(impresoraId?: string) => void} abrirConfiguracion abre la hoja de red (main: abrirRedHoja).
  */
 
 const CONFIRMAR = '¿Empezar a imprimir ahora? Fijate que la cama esté libre.';
@@ -85,11 +85,13 @@ async function enviar() {
     control = new AbortController();
     mostrarEstado('');
     $('ayudaEnvioRed').hidden = true;
-    progreso(true);
     let r = null;
     try {
         const config = await prepararEnvio(resultado);
-        if (config) r = await subir(config, resultado);
+        if (config) {
+            progreso(true); // después del confirm: recién ahí empieza el envío
+            r = await subir(config, resultado);
+        }
     } catch {
         r = fallo('config', 'No se pudo leer la configuración de red.');
     } finally {
@@ -109,8 +111,9 @@ export function iniciarEnvio(contexto) {
     ctx = contexto;
     $('enviarRed').onclick = enviar;
     $('cancelarEnvio').onclick = () => control?.abort();
-    $('configurarRed').onclick = () => ctx.abrirConfiguracion();
-    $('ayudaEnvioRed').onclick = () => ctx.abrirConfiguracion();
+    const abrir = () => ctx.abrirConfiguracion(estado.resultado?.impresoraId); // la del resultado, no la elegida ahora
+    $('configurarRed').onclick = abrir;
+    $('ayudaEnvioRed').onclick = abrir;
 }
 
 /**

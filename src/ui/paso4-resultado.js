@@ -82,6 +82,21 @@ export function iniciarPaso4({ alOtroModelo }) {
     };
 }
 
+/** Avisos de zonas sin soporte (ADR 0004) y de modelo simplificado por memoria. @param {object} info @returns {string[]} */
+function notasExtra(info) {
+    const notas = [];
+    const zonas = textoZonasSinSoporte(zonasVigentes()); // '' si no hay o el tipo es 'no'
+    if (zonas) notas.push(`${zonas}: ahí no se imprimieron soportes.`);
+    const d = info.decimado;
+    if (d) {
+        notas.push(
+            `Simplificamos ${info.copias > 1 ? 'las piezas' : 'el modelo'} de ${formato.triangulos(d.original)} a ${formato.triangulos(d.final)} ` +
+                `para que entre en la memoria del celu (detalle mínimo ≈ ${formato.numero(d.precisionMm, 2)} mm).`,
+        );
+    }
+    return notas;
+}
+
 /** Llena el resumen, los avisos y el botón Compartir/Descargar con `estado.resultado` y arma la
  *  vista previa (armarVistaPrevia). @returns {void} */
 export function mostrarResultado() {
@@ -105,16 +120,7 @@ export function mostrarResultado() {
     $('resumen').innerHTML = filas.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
     $('nombreArchivo').textContent = nombreEntrega(archivo, salida);
 
-    const notas = [...avisos, ...avisosDeCambios()];
-    const zonas = textoZonasSinSoporte(zonasVigentes()); // '' si no hay o el tipo es 'no' (ADR 0004)
-    if (zonas) notas.push(`${zonas}: ahí no se imprimieron soportes.`);
-    if (info.decimado) {
-        const d = info.decimado;
-        notas.push(
-            `Simplificamos ${info.copias > 1 ? 'las piezas' : 'el modelo'} de ${formato.triangulos(d.original)} a ${formato.triangulos(d.final)} ` +
-                `para que entre en la memoria del celu (detalle mínimo ≈ ${formato.numero(d.precisionMm, 2)} mm).`,
-        );
-    }
+    const notas = [...avisos, ...avisosDeCambios(), ...notasExtra(info)];
     $('avisoResultado').innerHTML = notas.join('<br><br>');
     $('avisoResultado').hidden = notas.length === 0;
 

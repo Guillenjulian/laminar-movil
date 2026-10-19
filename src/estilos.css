@@ -1092,3 +1092,6 @@ input[type='range'] {
 .envio-red .nota:empty {
     display: none;
 }
+.envio-red:not(:has(button:not([hidden]), .nota:not(:empty))) {
+    display: none; /* vacío: que no sume el espacio entre botones */
+}

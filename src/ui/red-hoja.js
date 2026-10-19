@@ -173,17 +173,18 @@ function rellenar(config) {
 }
 
 /**
- * Carga la config de la impresora elegida (`estado.impresoraId`) y abre la hoja.
+ * Carga la config de una impresora y abre la hoja; la hoja guarda bajo ese id.
+ * @param {string} [impresoraId] por defecto, la elegida (`estado.impresoraId`); desde el paso 4, la del resultado.
  * @returns {Promise<void>}
  */
-export async function abrirRedHoja() {
+export async function abrirRedHoja(impresoraId = estado.impresoraId) {
     if (abriendo) return;
     abriendo = true;
     abridor = document.activeElement;
     prueba++;
     $('probarRed').disabled = false;
     try {
-        const id = estado.impresoraId;
+        const id = impresoraId;
         let leida = null;
         try {
             leida = await ctx.repositorio.leer(id);
