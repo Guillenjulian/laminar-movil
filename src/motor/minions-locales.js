@@ -8,10 +8,15 @@
 
 import { newWidget } from '../../vendor/kiri/src/kiri/core/widget.js';
 import { polygons as POLY } from '../../vendor/kiri/src/geo/polygons.js';
+import { crearColaCediendo } from './cola-cediendo.js';
 import { codec } from '../../vendor/kiri/src/kiri/core/codec.js';
+
+// Las sombras se calculan de a una, cediendo el hilo cada ~100 ms para que el progreso salga a la interfaz.
+const CEDER_CADA_MS = 100;
 
 export function usarMinionsLocales(minions) {
     let sombras; // equivalente a cache.shadow_stack del minion
+    const encolar = crearColaCediendo(CEDER_CADA_MS);
 
     minions.broadcast = (cmd, datos) => {
         if (cmd === 'cam_shadow_stack') {
@@ -24,8 +29,10 @@ export function usarMinionsLocales(minions) {
         if (trabajo.cmd !== 'cam_shadow_z') {
             return Promise.reject(new Error(`Operación en paralelo no soportada: ${trabajo.cmd}`));
         }
-        const polys = newWidget().computeShadowAtZ(trabajo.z, trabajo.t, sombras);
-        return Promise.resolve({ data: codec.encode(polys) });
+        return encolar(() => {
+            const polys = newWidget().computeShadowAtZ(trabajo.z, trabajo.t, sombras);
+            return { data: codec.encode(polys) };
+        });
     };
 
     // Mismas cuentas que hace Kiri cuando no usa el pool (worker.js: ramas "concurrent < 2").

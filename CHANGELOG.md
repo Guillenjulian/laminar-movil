@@ -24,6 +24,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 ### Corregido
 
 - El laminado ya no se queda colgado en ~41 % con piezas cuyas capas tienen muchas islas (por ejemplo un llavero con letras, con o sin soportes): Kiri mandaba la resta de polígonos a un pool de sub-workers que acá no existe y esperaba para siempre. Ahora `minions-locales.js` hace `subtract`, `union` y `fill` en el mismo worker, y `clip`/`sliceZ` fallan con un error claro en vez de quedarse esperando. Prueba nueva: `scripts/motor/soportes-progreso.mjs` (placa de 36 islotes y esfera rugosa con soportes).
+- La barra de progreso de los soportes automáticos avanza mientras se calculan las sombras, en vez de quedarse quieta y saltar al final: el cálculo cede el hilo cada ~100 ms (`cola-cediendo.js`).
 
 ## [0.3.0] - 2026-10-18
 
