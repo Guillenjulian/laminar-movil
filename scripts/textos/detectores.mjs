@@ -9,8 +9,8 @@
 /** Clave válida (ADR 0008, B.3). */
 export const CLAVE = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9]+)+$/;
 const MARCADO_PERMITIDO = /<\/?(?:b|small)>|<br>/g;
-const MARCA_ES = /[áéíóúñüÁÉÍÓÚÑÜ¿¡]/;
-const PALABRAS_VACIAS = /(?<![\p{L}\p{N}_])(?:el|la|de|que|para|con|no)(?![\p{L}\p{N}_])/iu;
+
+export * from './lector-js.mjs';
 
 /** @param {string} texto @returns {string[]} variables `{x}` sin repetir, en orden de aparición */
 export function variablesDe(texto) {
@@ -21,12 +21,64 @@ export function variablesDe(texto) {
 export const colapsar = s => s.replace(/\s+/g, ' ').trim();
 
 /** Todas las formas de texto de un valor (un texto, o las formas del plural). @param {string|object} valor */
-export const formasDe = valor => (typeof valor === 'string' ? [valor] : Object.values(valor ?? {}));
+export const formasDe = valor =>
+    (typeof valor === 'string' ? [valor] : valor && typeof valor === 'object' ? Object.values(valor) : []).filter(
+        f => typeof f === 'string',
+    );
+
+/** Atributos que `data-t-attr` puede traducir (ADR 0008, B.4). */
+export const ATRIBUTOS_TRADUCIBLES = ['aria-label', 'placeholder', 'alt', 'content', 'title'];
+
+/** Un texto del diccionario: no vacío y sin llaves sueltas fuera de `{variable}`. @returns {string|null} el motivo */
+function textoInvalido(texto) {
+    if (typeof texto !== 'string' || texto.trim() === '') return 'tiene que ser un texto no vacío';
+    if (/[{}]/.test(texto.replace(/\{[a-zA-Z0-9]+\}/g, '')))
+        return 'lleva una llave { o } suelta (sólo valen {variable})';
+    return null;
+}
+
+/** Valor válido: texto no vacío, o `{ other: texto, one?: texto }` y nada más. @param {unknown} valor
+ *  @returns {string|null} el motivo del error, o null si es válido */
+export function valorValido(valor) {
+    if (typeof valor === 'string') return textoInvalido(valor);
+    if (valor === null || typeof valor !== 'object' || Array.isArray(valor))
+        return 'no es un texto ni un plural {one, other}';
+    const raras = Object.keys(valor).filter(f => f !== 'one' && f !== 'other');
+    if (raras.length) return `forma de plural no permitida: ${raras}`;
+    if (!('other' in valor)) return 'al plural le falta la forma other';
+    const mala = ['other', 'one'].find(f => f in valor && textoInvalido(valor[f]));
+    return mala ? `la forma ${mala}: ${textoInvalido(valor[mala])}` : null;
+}
+
+/** Valores inválidos de un diccionario (y áreas que no son un objeto de claves). @returns {string[]} */
+export function valoresInvalidos(dic) {
+    const errores = [];
+    for (const [area, claves] of Object.entries(dic)) {
+        if (claves === null || typeof claves !== 'object' || Array.isArray(claves)) {
+            errores.push(`${area}.json: tiene que ser un objeto { clave: valor }`);
+            continue;
+        }
+        for (const [clave, valor] of Object.entries(claves)) {
+            const motivo = valorValido(valor);
+            if (motivo) errores.push(`valor inválido en ${clave} (${area}.json): ${motivo}`);
+        }
+    }
+    return errores;
+}
+
+/** Reservas vencidas: un prefijo de `CLAVES_RESERVADAS` que ya no tiene ninguna clave definida sin uso.
+ *  @param {Set<string>} definidas @param {Set<string>} usadas @param {string[]} reservadas @returns {string[]} */
+export function reservasVencidas(definidas, usadas, reservadas) {
+    return reservadas
+        .filter(prefijo => ![...definidas].some(k => k.startsWith(prefijo) && !usadas.has(k)))
+        .map(p => `reserva vencida: ${p} ya no tiene claves sin uso; sacala de CLAVES_RESERVADAS`);
+}
 
 /** @param {Record<string, Record<string, any>>} dic @returns {Map<string, {area: string, valor: any}>} */
 export function aplanar(dic) {
     const mapa = new Map();
     for (const [area, claves] of Object.entries(dic)) {
+        if (!claves || typeof claves !== 'object') continue;
         for (const [clave, valor] of Object.entries(claves)) if (!mapa.has(clave)) mapa.set(clave, { area, valor });
     }
     return mapa;
@@ -55,7 +107,7 @@ function pares(es, en) {
 
 /** Misma forma (texto o plural) en las dos lenguas. @returns {string[]} */
 export function tiposDistintos(es, en) {
-    const tipo = v => (typeof v === 'string' ? 'texto' : 'plural');
+    const tipo = v => (typeof v === 'string' ? 'texto' : esPlural(v) ? 'plural' : 'otro');
     return pares(es, en)
         .filter(([, a, b]) => tipo(a) !== tipo(b))
         .map(([k, a, b]) => `tipo distinto en ${k}: es ${tipo(a)}, en ${tipo(b)}`);
@@ -69,11 +121,13 @@ export function variablesDistintas(es, en) {
         .map(([k, a, b]) => `variables distintas en ${k}: es {${vars(a)}} / en {${vars(b)}}`);
 }
 
+const esPlural = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+
 /** Mismas formas de plural (`one`, `other`) en las claves que son plural en los dos. @returns {string[]} */
 export function pluralDistinto(es, en) {
     const formas = v => Object.keys(v).sort();
     return pares(es, en)
-        .filter(([, a, b]) => typeof a === 'object' && typeof b === 'object' && String(formas(a)) !== String(formas(b)))
+        .filter(([, a, b]) => esPlural(a) && esPlural(b) && String(formas(a)) !== String(formas(b)))
         .map(([k, a, b]) => `formas de plural distintas en ${k}: es ${formas(a)} / en ${formas(b)}`);
 }
 
@@ -134,126 +188,6 @@ export function cruzarClaves(definidas, usadas, reservadas = []) {
         sinDefinir: [...usadas].filter(k => !definidas.has(k)).sort(),
         sinUso: [...definidas].filter(k => !usadas.has(k) && !reservada(k)).sort(),
     };
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Lectura de JavaScript: comentarios, literales y usos de t()/existe()/marcar()
-// ---------------------------------------------------------------------------------------------------------------------
-
-/** Fin (exclusivo) de una cadena '…' o "…" que empieza en `i`; se corta en el salto de línea. */
-function finCadena(js, i) {
-    let j = i + 1;
-    while (j < js.length && js[j] !== js[i] && js[j] !== '\n') j += js[j] === '\\' ? 2 : 1;
-    return js[j] === js[i] ? j + 1 : j;
-}
-
-/** Fin (exclusivo) del bloque `{…}` que empieza en `i`, saltando cadenas. */
-function finLlave(js, i) {
-    let profundidad = 0;
-    for (let j = i; j < js.length; j++) {
-        if (js[j] === '"' || js[j] === "'") j = finCadena(js, j) - 1;
-        else if (js[j] === '`') j = finPlantilla(js, j) - 1;
-        else if (js[j] === '{') profundidad++;
-        else if (js[j] === '}' && --profundidad === 0) return j + 1;
-    }
-    return js.length;
-}
-
-/** Fin (exclusivo) de una plantilla `…` que empieza en `i`, con sus `${…}`. */
-function finPlantilla(js, i) {
-    let j = i + 1;
-    while (j < js.length && js[j] !== '`') {
-        if (js[j] === '$' && js[j + 1] === '{') j = finLlave(js, j + 1);
-        else j += js[j] === '\\' ? 2 : 1;
-    }
-    return j + 1;
-}
-
-/** Fin (exclusivo) de un literal de regex que empieza en `i`. */
-function finRegex(js, i) {
-    let j = i + 1;
-    for (let clase = false; j < js.length && js[j] !== '\n' && (clase || js[j] !== '/'); j++) {
-        if (js[j] === '\\') j++;
-        else if (js[j] === '[') clase = true;
-        else if (js[j] === ']') clase = false;
-    }
-    return js[j] === '/' ? j + 1 : i + 1;
-}
-
-/** Qué empieza en `i`: comentario, cadena, regex u otro (un carácter). @param {string} previo último carácter útil
- *  @returns {{tipo: 'comentario'|'cadena'|'regex'|'otro', fin: number}} */
-function tokenEn(js, i, previo) {
-    const c = js[i];
-    if (c === '/' && js[i + 1] === '/')
-        return { tipo: 'comentario', fin: js.indexOf('\n', i) < 0 ? js.length : js.indexOf('\n', i) };
-    if (c === '/' && js[i + 1] === '*')
-        return { tipo: 'comentario', fin: js.indexOf('*/', i + 2) < 0 ? js.length : js.indexOf('*/', i + 2) + 2 };
-    if (c === '"' || c === "'") return { tipo: 'cadena', fin: finCadena(js, i) };
-    if (c === '`') return { tipo: 'cadena', fin: finPlantilla(js, i) };
-    if (c === '/' && (previo === '' || '(,=:[!&|?{};'.includes(previo))) return { tipo: 'regex', fin: finRegex(js, i) };
-    return { tipo: 'otro', fin: i + 1 };
-}
-
-/** Separa el código de sus comentarios y junta los literales de texto.
- *  @param {string} js @returns {{codigo: string, literales: {texto: string, linea: number}[]}}
- *  `codigo` es el mismo texto con los comentarios en blanco (mismas líneas y columnas). */
-export function analizarJs(js) {
-    const literales = [];
-    let codigo = '';
-    let previo = '';
-    let linea = 1;
-    for (let i = 0; i < js.length;) {
-        const { tipo, fin } = tokenEn(js, i, previo);
-        const trozo = js.slice(i, fin);
-        if (tipo === 'comentario') codigo += trozo.replace(/[^\n]/g, ' ');
-        else codigo += trozo;
-        if (tipo === 'cadena')
-            literales.push({ texto: trozo.slice(1, trozo.at(-1) === trozo[0] ? -1 : undefined), linea });
-        if (tipo !== 'comentario' && !/^\s$/.test(trozo)) previo = tipo === 'otro' ? trozo : 'x';
-        linea += trozo.split('\n').length - 1;
-        i = fin;
-    }
-    return { codigo, literales };
-}
-
-/** Claves literales y llamadas dinámicas de t()/existe()/marcar() en un JavaScript (sin mirar los comentarios).
- *  Una llamada dinámica a `existe` se tolera (la usan las claves de perfiles por id); a `t` y `marcar`, no.
- *  @returns {{claves: string[], dinamicas: string[]}} */
-export function usosEnJs(js) {
-    const { codigo } = analizarJs(js);
-    const claves = [];
-    const dinamicas = [];
-    const llamada = /(?<![\w$.])(?<!function\s+)(t|existe|marcar)\(\s*(?=[^\s)])/g;
-    const literal = /(['"`])((?:\\.|(?!\1)[^\\\n])*)\1(?=\s*[,)])/y;
-    for (const m of codigo.matchAll(llamada)) {
-        literal.lastIndex = m.index + m[0].length;
-        const lit = literal.exec(codigo);
-        if (lit && !(lit[1] === '`' && lit[2].includes('${'))) claves.push(lit[2]);
-        else if (m[1] !== 'existe') {
-            const resto = codigo
-                .slice(m.index + m[0].length)
-                .split('\n')[0]
-                .slice(0, 40)
-                .trim();
-            dinamicas.push(`${m[1]}(${resto}`);
-        }
-    }
-    return { claves, dinamicas };
-}
-
-/** Literales con español suelto: acentos, ñ, ¿ ¡ o (en textos de dos palabras o más) palabras vacías del español.
- *  Una línea con `// t-ignorar` no cuenta. @returns {string[]} */
-export function espanolSuelto(js, nombre = '') {
-    const lineas = js.split('\n');
-    const errores = [];
-    for (const { texto, linea } of analizarJs(js).literales) {
-        if (lineas[linea - 1]?.includes('// t-ignorar')) continue;
-        const limpio = texto.replace(/\$\{[^}]*\}/g, '');
-        const espanol =
-            MARCA_ES.test(limpio) || (limpio.trim().split(/\s+/).length > 1 && PALABRAS_VACIAS.test(limpio));
-        if (espanol) errores.push(`${nombre}:${linea} español suelto: ${texto.slice(0, 60)}`);
-    }
-    return errores;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -367,6 +301,10 @@ export function htmlContraEs(elementos, es) {
             comparar(donde, attrs['data-t'], decodificar(interno.replace(/<[^>]*>/g, '')));
         }
         if (attrs['data-t-html'] !== undefined) comparar(donde, attrs['data-t-html'], interno);
+        for (const [atributo] of paresAttr(attrs['data-t-attr'] ?? '')) {
+            if (!ATRIBUTOS_TRADUCIBLES.includes(atributo))
+                errores.push(`${donde}: data-t-attr no traduce el atributo ${atributo}`);
+        }
         for (const [atributo, clave] of paresAttr(attrs['data-t-attr'] ?? ''))
             comparar(`${donde} [${atributo}]`, clave, decodificar(attrs[atributo] ?? ''));
     }

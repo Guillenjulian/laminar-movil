@@ -1,5 +1,6 @@
 // La suite de textos se prueba a sí misma (ADR 0008, I2): diccionarios sintéticos en memoria. Cada detector tiene un
 // caso que lo hace fallar (se espera su mensaje) y uno que pasa (lista vacía). Sin disco ni src/. Sin `export default`.
+import { autopruebasNuevas } from './autopruebas-cableado.mjs';
 import {
     aplanar,
     clavesDelHtml,
@@ -82,10 +83,34 @@ const ESTRUCTURA = [
         () => tiposDistintos(ES, EN),
     ],
     [
-        'compararEstructura junta todo',
+        'compararEstructura: clave faltante',
         () => compararEstructura(ES, mutar(EN, 'comun', 'comun.ok', undefined)),
         'falta en en: comun.ok',
         () => compararEstructura(ES, EN),
+    ],
+    [
+        'compararEstructura: texto contra plural',
+        () => compararEstructura(ES, mutar(EN, 'paso2', 'paso2.cant', '{n} parts')),
+        'tipo distinto en paso2.cant',
+        () => compararEstructura(ES, EN),
+    ],
+    [
+        'compararEstructura: variables distintas',
+        () => compararEstructura(ES, mutar(EN, 'paso2', 'paso2.entran.error', 'Fit: {y}')),
+        'variables distintas en paso2.entran.error',
+        () => compararEstructura(ES, EN),
+    ],
+    [
+        'compararEstructura: formas de plural distintas',
+        () => compararEstructura(ES, mutar(EN, 'paso2', 'paso2.cant', { other: '{n} parts' })),
+        'formas de plural distintas en paso2.cant',
+        () => compararEstructura(ES, EN),
+    ],
+    [
+        'pluralDistinto compara los nombres de las formas, no la cantidad',
+        () => pluralDistinto({ a: { 'a.x': { one: 'u', other: 'o' } } }, { a: { 'a.x': { few: 'u', other: 'o' } } }),
+        'formas de plural distintas en a.x',
+        () => pluralDistinto({ a: { 'a.x': { one: 'u', other: 'o' } } }, { a: { 'a.x': { one: 'v', other: 'p' } } }),
     ],
 ];
 
@@ -139,10 +164,6 @@ function correr({ revisar, igual }, tabla) {
 /** Utilidades y cruce de claves usadas/definidas. */
 function cruce({ revisar, igual }) {
     revisar('variablesDe: sin repetir y en orden', igual(variablesDe('{b} y {a} y {b}'), ['b', 'a']));
-    revisar(
-        'aplanar: junta las áreas',
-        igual([...aplanar(ES).keys()], ['paso2.entran.error', 'paso2.cant', 'comun.ok']),
-    );
     const copiado = mutar(EN, 'paso2', 'paso2.entran.error', ES.paso2['paso2.entran.error']);
     revisar('inglés copiado: avisa (más de una palabra)', inglesCopiado(ES, copiado).length === 1);
     revisar(
@@ -254,6 +275,12 @@ const HTML = [
         '[placeholder]',
         () => un('<input placeholder="Y" data-t-attr="placeholder:a.z" />', { 'a.z': 'Y' }),
     ],
+    [
+        'data-t-attr con un atributo no traducible',
+        () => un('<a href="Y" data-t-attr="href:a.z" />', { 'a.z': 'Y' }),
+        'no traduce el atributo href',
+        () => un('<a title="Y" data-t-attr="title:a.z" />', { 'a.z': 'Y' }),
+    ],
 ];
 
 const SUCIO = `const a = t('x.y'); // acá un comentario con ñ
@@ -261,15 +288,15 @@ const b = 'Subí el archivo';
 const c = "para ti";
 const d = \`Quedan \${n} piezas con el borde\`;
 const e = '¿Listo?'; // t-ignorar
-const f = /['"]ñ/; const g = 'no'; const h = 'Done';`;
+const f = /['"]ñ/; const g = 'no'; const h = 'Done'; const i = 'AbortError';`;
 
 /** El detector de español suelto en módulos migrados. */
 function suelto({ revisar, igual }) {
     const salida = espanolSuelto(SUCIO, 'x.js');
     const lineas = salida.map(s => parseInt(s.split(':')[1]));
     revisar(
-        'español suelto: acento, comillas dobles y plantilla (líneas 2, 3 y 4)',
-        igual(lineas, [2, 3, 4]),
+        'español suelto: acento, comillas dobles, plantilla y mayúscula (líneas 2, 3, 4 y 6)',
+        igual(lineas, [2, 3, 4, 6]),
         `(salió ${JSON.stringify(salida)})`,
     );
     const limpio =
@@ -290,4 +317,5 @@ export function autopruebas(ctx) {
     lectorHtml(ctx);
     correr(ctx, HTML);
     suelto(ctx);
+    autopruebasNuevas(ctx);
 }

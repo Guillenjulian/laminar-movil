@@ -15,13 +15,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const TOPE_PRINCIPAL = 100000;
 const TOPE_CLAUSURA = 400000;
 const MARCA_VISOR = 'WebGLRenderer';
 const MARCA_JSZIP = 'generateAsync'; // API de jszip; no aparece en el código propio de la app
 const MIN_CLAVES_TEXTOS = 3;
+const MARCA_IDIOMA = /["']idioma["']/; // la clave de ajuste que lee src/ui/idioma.js: si está en la clausura, el módulo llegó
 const CARPETA_TEXTOS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'textos');
 
 const carpeta = path.resolve(process.argv[2] ?? 'dist');
@@ -86,14 +87,15 @@ const leerArchivosSw = () => {
     return JSON.parse(m[1]);
 };
 
-// Claves de todos los .json de src/textos (recursivo). [] si la carpeta no existe o no tiene ninguno.
+// Claves de todos los .json de src/textos (recursivo), sin repetir (es y en comparten claves). [] si no hay ninguno.
 const clavesDeTextos = (carpeta = CARPETA_TEXTOS) => {
     if (!fs.existsSync(carpeta)) return [];
-    return fs.readdirSync(carpeta, { withFileTypes: true }).flatMap(e => {
+    const claves = fs.readdirSync(carpeta, { withFileTypes: true }).flatMap(e => {
         const ruta = path.join(carpeta, e.name);
         if (e.isDirectory()) return clavesDeTextos(ruta);
         return e.name.endsWith('.json') ? Object.keys(JSON.parse(fs.readFileSync(ruta, 'utf8'))) : [];
     });
+    return [...new Set(claves)];
 };
 
 // ¿El chunk trae los diccionarios? Vite los deja como objeto literal o como JSON.parse("…") con las comillas escapadas.
@@ -118,6 +120,7 @@ const medir = (ruta, enClausura, claves) => {
         jszip: buf.includes(MARCA_JSZIP),
         diagnostico: esDeDiagnostico(nombre),
         textos: trae(buf.toString('utf8'), claves),
+        idioma: MARCA_IDIOMA.test(buf.toString('utf8')),
     };
 };
 
@@ -129,7 +132,28 @@ const imprimirTabla = filas => {
     }
 };
 
-const evaluar = (principal, filas, archivos) => {
+// Reglas de los diccionarios (ADR 0008): fuera de la carga inicial, en el service worker y reconocibles.
+const evaluarTextos = (filas, enClausura, archivos, hayTextos) => {
+    const fallas = [];
+    for (const f of enClausura.filter(f => f.textos)) {
+        fallas.push(
+            `[textos-en-clausura] ${f.nombre} se carga con la app y trae los diccionarios de src/textos; deben ir en import() dinámico`,
+        );
+    }
+    // idioma.js llegó a la carga inicial pero no se reconoce ningún chunk de diccionarios: o no se generaron
+    // (las claves quedaron sin chunk es/en) o el detector quedó ciego (cambió el formato del build).
+    if (hayTextos && enClausura.some(f => f.idioma) && !filas.some(f => f.textos)) {
+        fallas.push(
+            '[textos-sin-chunks] src/ui/idioma.js está en la carga inicial y no hay chunks es/en con los diccionarios',
+        );
+    }
+    for (const f of filas.filter(f => f.textos && !archivos.includes(f.nombre))) {
+        fallas.push(`[textos-fuera-sw] ${f.nombre} trae los diccionarios y no está en ARCHIVOS de sw.js`);
+    }
+    return fallas;
+};
+
+export const evaluar = (principal, filas, archivos, hayTextos = false) => {
     const fallas = [];
     if (principal.bytes >= TOPE_PRINCIPAL) {
         fallas.push(
@@ -151,20 +175,13 @@ const evaluar = (principal, filas, archivos) => {
             `[jszip-en-clausura] ${f.nombre} se carga con la app y contiene ${MARCA_JSZIP}; jszip debe ir en import() dinámico`,
         );
     }
-    for (const f of enClausura.filter(f => f.textos)) {
-        fallas.push(
-            `[textos-en-clausura] ${f.nombre} se carga con la app y trae los diccionarios de src/textos; deben ir en import() dinámico`,
-        );
-    }
+    fallas.push(...evaluarTextos(filas, enClausura, archivos, hayTextos));
     // Todo chunk con visor o jszip se pide recién cuando hace falta (import() dinámico), así que sin conexión
     // sólo anda si el service worker lo guardó. Los workers se cachean aparte y no entran en esta regla.
     for (const f of filas.filter(f => (f.visor || f.jszip) && !f.diagnostico && !esWorker(f.nombre))) {
         if (archivos.includes(f.nombre)) continue;
         const que = f.visor ? MARCA_VISOR : MARCA_JSZIP;
         fallas.push(`[dinamico-fuera-sw] ${f.nombre} contiene ${que} y no está en ARCHIVOS de sw.js`);
-    }
-    for (const f of filas.filter(f => f.textos && !archivos.includes(f.nombre))) {
-        fallas.push(`[textos-fuera-sw] ${f.nombre} trae los diccionarios y no está en ARCHIVOS de sw.js`);
     }
     return fallas;
 };
@@ -189,7 +206,7 @@ const main = () => {
     const deTextos = filas.filter(f => f.textos).map(f => f.nombre);
     if (claves.length === 0) console.log('· sin diccionarios en src/textos: no se aplican las reglas de textos');
     else console.log(`· diccionarios (${claves.length} claves) en: ${deTextos.join(', ') || 'ningún chunk'}`);
-    const fallas = evaluar(principal, filas, archivos);
+    const fallas = evaluar(principal, filas, archivos, claves.length > 0);
     if (fallas.length === 0) {
         console.log(`OK: principal ${principal.bytes} bytes, carga inicial de ${enClausura.size} chunks`);
         return;
@@ -198,9 +215,12 @@ const main = () => {
     process.exitCode = 1;
 };
 
-try {
-    main();
-} catch (err) {
-    console.error(`FALLA ${err.message}`);
-    process.exitCode = 1;
+// Sólo como script: `scripts/textos/chunks.mjs` importa `evaluar` para probarlo con filas sintéticas.
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+    try {
+        main();
+    } catch (err) {
+        console.error(`FALLA ${err.message}`);
+        process.exitCode = 1;
+    }
 }

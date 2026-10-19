@@ -2,7 +2,7 @@
 #
 # Corre en cada pull request y en cada push a main. Flujo:
 #   1. npm ci con la versión de Node de .node-version (cache de npm).
-#   2. lint y format:check (rápidos, fallan primero).
+#   2. lint, format:check y test:textos (textos e idioma, ADR 0008; Node puro, sin build; rápidos, fallan primero).
 #   3. build de producción (dist/), que necesitan test:motor y test:app.
 #   4. Chromium: se instala con la versión de playwright-core del lock y su
 #      ruta se pasa a los scripts en CHROMIUM_PATH (la leen probar-motor y probar-app).
@@ -45,11 +45,11 @@ jobs:
             - name: Format check
               run: npm run format:check
 
-            - name: Build
-              run: npm run build
-
             - name: Test textos
               run: npm run test:textos
+
+            - name: Build
+              run: npm run build
 
             - name: Test visor-carga
               run: npm run test:visor-carga
