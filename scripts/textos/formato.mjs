@@ -38,8 +38,24 @@ function pruebasEs(en) {
     en('es milimetros', milimetros({ x: 1234.5, y: 20, z: 3.25 }), '1.234,5 × 20,0 × 3,3 mm');
     en(
         'es triangulos',
-        [triangulos(1), triangulos(2), triangulos(1234), triangulos(12345), triangulos(2500000)],
-        ['1 triángulo', '2 triángulos', '1.234 triángulos', '12 mil triángulos', '2,5 millones de triángulos'],
+        [
+            triangulos(0),
+            triangulos(1),
+            triangulos(2),
+            triangulos(1000),
+            triangulos(1234),
+            triangulos(12345),
+            triangulos(2500000),
+        ],
+        [
+            '0 triángulos',
+            '1 triángulo',
+            '2 triángulos',
+            '1.000 triángulos',
+            '1.234 triángulos',
+            '12 mil triángulos',
+            '2,5 millones de triángulos',
+        ],
     );
     en('es duracion', [duracion(120), duracion(3600), duracion(7325)], ['2 min', '1 h 0 min', '2 h 2 min']);
     en('es gramos', Math.round(gramos(1000) * 1000), 2983);
@@ -63,8 +79,24 @@ function pruebasEn(en) {
     en('en milimetros', milimetros({ x: 1234.5, y: 20, z: 3.25 }), '1,234.5 × 20.0 × 3.3 mm');
     en(
         'en triangulos',
-        [triangulos(1), triangulos(2), triangulos(1234), triangulos(12345), triangulos(2500000)],
-        ['1 triangle', '2 triangles', '1,234 triangles', '12k triangles', '2.5 million triangles'],
+        [
+            triangulos(0),
+            triangulos(1),
+            triangulos(2),
+            triangulos(1000),
+            triangulos(1234),
+            triangulos(12345),
+            triangulos(2500000),
+        ],
+        [
+            '0 triangles',
+            '1 triangle',
+            '2 triangles',
+            '1,000 triangles',
+            '1,234 triangles',
+            '12k triangles',
+            '2.5 million triangles',
+        ],
     );
     en('en duracion', [duracion(120), duracion(3600), duracion(7325)], ['2 min', '1 h 0 min', '2 h 2 min']);
     en('en filamento', filamento(12345), '12.35 m (≈ 37 g)');
