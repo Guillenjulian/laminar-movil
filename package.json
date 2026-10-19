@@ -18,6 +18,7 @@
         "test:cambios": "node scripts/probar-cambios.mjs",
         "test:piezas": "node scripts/probar-piezas.mjs",
         "test:soportes": "node scripts/probar-soportes.mjs",
+        "test:red": "node scripts/probar-red.mjs",
         "test:visor": "node scripts/probar-visor.mjs",
         "test:recorridos": "node scripts/probar-recorridos.mjs",
         "test:visor-carga": "node scripts/probar-visor-carga.mjs",
