@@ -1,4 +1,5 @@
 // Pruebas de `normalizarDireccion` (ADR 0007, 6.1 y sección 5). Puro: sin red ni DOM.
+import { CASOS_LOCAL } from './lib/impresora-falsa.mjs';
 
 const ok = (direccion, http, nombreSinLocal) => ({ ok: true, direccion, http, nombreSinLocal });
 
@@ -25,8 +26,19 @@ function aceptadas(n, revisar, igual) {
 function nombres(n, revisar) {
     console.log('\nnormalizarDireccion: http y nombreSinLocal (IP privada y .local detectados)');
     const sinLocal = texto => n(texto).nombreSinLocal;
-    revisar('http://octopi: nombreSinLocal true', sinLocal('http://octopi') === true);
-    revisar('http://impresora.lan: nombreSinLocal true', sinLocal('http://impresora.lan') === true);
+    for (const url of [
+        'http://octopi',
+        'http://mainsail:7125',
+        'http://impresora.lan',
+        'http://x.home.arpa',
+        'http://[fd00::1]:5000',
+        'http://[fe80::1]',
+    ]) {
+        revisar(`${url}: nombreSinLocal false (ya lleva la marca de red local)`, sinLocal(url) === false);
+    }
+    for (const url of ['http://octopi.ejemplo.com', 'http://mi-impresora.casa']) {
+        revisar(`${url}: nombreSinLocal true (nombre con punto fuera de la lista)`, sinLocal(url) === true);
+    }
     revisar('http://octopi.local: nombreSinLocal false', sinLocal('http://octopi.local') === false);
     revisar('http://192.168.0.2: nombreSinLocal false', sinLocal('http://192.168.0.2') === false);
     revisar('http://10.0.0.7:5000: nombreSinLocal false', sinLocal('http://10.0.0.7:5000') === false);
@@ -69,6 +81,19 @@ function rechazadas(n, revisar) {
     );
 }
 
+function locales(modulo, revisar) {
+    console.log('\nesDireccionLocal (misma tabla que targetAddressSpace)');
+    for (const [url, local] of CASOS_LOCAL) {
+        let r;
+        try {
+            r = modulo.esDireccionLocal(url);
+        } catch (e) {
+            r = e.message;
+        }
+        revisar(`esDireccionLocal(${url}) → ${local}`, r === local, String(r));
+    }
+}
+
 export default async function ({ revisar, igual, cargar }) {
     const modulo = await cargar('direccion');
     if (!modulo) return;
@@ -83,4 +108,5 @@ export default async function ({ revisar, igual, cargar }) {
     aceptadas(n, revisar, igual);
     nombres(n, revisar);
     rechazadas(n, revisar);
+    locales(modulo, revisar);
 }

@@ -177,3 +177,29 @@ export function transporteQueRompe() {
         origenApp: ORIGEN_APP,
     };
 }
+
+// Tabla compartida (transporte.mjs y direccion.mjs): [url, ¿es red local?]. Misma regla para targetAddressSpace y esDireccionLocal.
+export const CASOS_LOCAL = [
+    ['http://192.168.1.50/api/version', true],
+    ['http://10.0.0.7:5000/api/version', true],
+    ['http://172.16.4.2/api/version', true],
+    ['http://172.31.255.1/api/version', true],
+    ['http://octopi.local/api/version', true],
+    ['http://OCTOPI.LOCAL:7125/server/info', true],
+    ['https://192.168.1.50:8443/api/version', true],
+    ['https://impresora.tail1234.ts.net/api/version', false],
+    ['http://8.8.8.8/api/version', false],
+    ['http://172.32.0.1/api/version', false],
+    ['http://impresora.lan/api/version', true],
+    ['http://x.home.arpa/api/version', true],
+    ['http://octopi/api/version', true],
+    ['http://mainsail:7125/server/info', true],
+    ['http://[fd00::1]:5000/api/version', true],
+    ['http://[fc00::2]/api/version', true],
+    ['http://[fe80::1]/api/version', true],
+    ['http://octopi.ejemplo.com/api/version', false],
+    ['http://127.0.0.1:5000/api/version', false],
+    ['http://[::1]:5000/api/version', false],
+    ['http://[2001:db8::1]/api/version', false],
+    ['https://ejemplo.com/api/version', false],
+];

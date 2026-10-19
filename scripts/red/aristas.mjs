@@ -8,7 +8,7 @@ const PERMITIDAS = {
     direccion: [],
     peticiones: [],
     errores: [],
-    transporte: [],
+    transporte: ['red/direccion'],
     cliente: ['red/peticiones', 'red/errores'],
     'config-red': ['red/direccion'],
 };

@@ -1,7 +1,7 @@
 // Pruebas de src/red/transporte.js (ADR 0007, 6.5 con la decisión 5 del CTO): `crearTransporte({ fetch })` con un
 // fetch falso (no XHR) y `sondaSinCors(url, fetchFn)`. Sin porcentaje de subida.
 // Lectura del contrato: la dependencia inyectable se llama `fetch` (`crearTransporte({ fetch: fetchFalso })`).
-import { CENTINELA, conLimite, espiarConsola, intentar } from './lib/impresora-falsa.mjs';
+import { CASOS_LOCAL, CENTINELA, conLimite, espiarConsola, intentar } from './lib/impresora-falsa.mjs';
 
 /** fetch falso: guarda las llamadas; `como` decide la respuesta: {status,texto} | 'rechazar' | 'colgar' (hasta el abort). */
 function fetchFalso(como) {
@@ -83,19 +83,7 @@ async function mapeoPost(T, revisar) {
 
 async function espacioLocal(T, revisar) {
     console.log('\ncrearTransporte: targetAddressSpace solo en direcciones privadas o .local');
-    const casos = [
-        ['http://192.168.1.50/api/version', true],
-        ['http://10.0.0.7:5000/api/version', true],
-        ['http://172.16.4.2/api/version', true],
-        ['http://172.31.255.1/api/version', true],
-        ['http://octopi.local/api/version', true],
-        ['http://OCTOPI.LOCAL:7125/server/info', true],
-        ['https://192.168.1.50:8443/api/version', true],
-        ['https://impresora.tail1234.ts.net/api/version', false],
-        ['http://8.8.8.8/api/version', false],
-        ['http://172.32.0.1/api/version', false],
-        ['https://ejemplo.com/api/version', false],
-    ];
+    const casos = CASOS_LOCAL;
     for (const [url, local] of casos) {
         const f = fetchFalso({ status: 200, texto: '{}' });
         await intentar(() => T.crearTransporte({ fetch: f.fn })(pet({ url })));
