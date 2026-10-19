@@ -1,0 +1,142 @@
+{
+    "_nota": "Perfil de impresora. Las claves de 'dispositivo' y 'proceso' son las de Kiri:Moto; ver src/perfiles/LEEME.md. Las claves que empiezan con _ son comentarios y se ignoran.",
+    "id": "bambu-lab-a1",
+    "nombre": "Bambu Lab A1",
+    "marca": "Bambu Lab",
+    "estado": "revisado",
+    "aviso": "Perfil sin validar con la impresora: probalo con un cubo antes de una pieza grande.",
+    "adhesion": "falda",
+    "_nota_perfil": "Datos de fábrica de Bambu Lab (ADR 0005): cama 256x256x256 mm, boquilla 0,4 mm, hotend hasta 300 °C, cama hasta 100 °C. Inicio y fin planos, sin macros de Bambu Studio (M1002, M620/M621 del AMS ni calibraciones de flujo). Sin nivelación en el inicio: pendiente de validar con la impresora (T9).",
+    "_nota_salida": "salida gcode.3mf: la app entrega un ZIP de Bambu (.gcode.3mf) en vez de G-code plano.",
+    "salida": "gcode.3mf",
+    "modeloBambu": {
+        "id": "N2S",
+        "nombre": "Bambu Lab A1"
+    },
+    "_nota_pausa": "La firmware de Bambu no implementa M600: M400 U1 espera el movimiento y deja la impresora en pausa hasta retomar desde la pantalla o Bambu Handy.",
+    "pausa": ["M400 U1"],
+    "limites": {
+        "_nota": "Máximos del fabricante. La app no deja pasar estas temperaturas.",
+        "hotendMax": 300,
+        "camaMax": 100
+    },
+    "dispositivo": {
+        "deviceName": "Bambu Lab A1",
+        "bedWidth": 256,
+        "bedDepth": 256,
+        "maxHeight": 256,
+        "_nota_origen": "originCenter false = el origen (0,0) es la esquina frontal izquierda de la cama.",
+        "originCenter": false,
+        "bedRound": false,
+        "bedBelt": false,
+        "fwRetract": false,
+        "filamentSource": "direct",
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extNozzle": 0.4,
+                "extFilament": 1.75,
+                "extOffsetX": 0,
+                "extOffsetY": 0
+            }
+        ],
+        "gcodePre": [
+            "; --- Inicio: Bambu Lab A1 (laminar-movil) ---",
+            "; total layer number: {layers}",
+            "M104 S140                    ; precalentar boquilla sin que gotee",
+            "M140 S{bed_temp}             ; calentar cama",
+            "G28                          ; home de todos los ejes",
+            "M190 S{bed_temp}             ; esperar la cama",
+            "M104 S{temp}                 ; temperatura de impresión",
+            "M109 S{temp}                 ; esperar la boquilla",
+            "G90                          ; coordenadas absolutas",
+            "M83                          ; extrusor relativo",
+            "G92 E0",
+            "G1 Z2.0 F3000",
+            "G1 X20 Y6 F5000              ; ir al borde delantero",
+            "G1 Z0.3 F1000",
+            "G1 X230 Y6 F1800 E20 ; línea de purga",
+            "G1 X230 Y6.6 F5000",
+            "G1 X20 Y6.6 F1800 E20 ; segunda línea de purga",
+            "G92 E0",
+            "G1 Z2.0 F3000"
+        ],
+        "gcodePost": [
+            "; --- Fin ---",
+            "G91                          ; coordenadas relativas",
+            "G1 E-2 F2700                 ; retraer",
+            "G1 Z5 F600                   ; subir",
+            "G90",
+            "G1 X0 Y{top} F3000           ; presentar la pieza",
+            "M106 S0                      ; apagar ventilador de pieza",
+            "M106 P2 S0                   ; apagar ventilador auxiliar",
+            "M104 S0                      ; apagar boquilla",
+            "M140 S0                      ; apagar cama",
+            "M84                          ; soltar motores"
+        ],
+        "_nota_ventilador": "Sin gcodeFan, Kiri no prende nunca el ventilador de capa.",
+        "gcodeFan": ["M106 S{fan_speed}"],
+        "gcodeTrack": ["M73 P{progress}"],
+        "gcodeLayer": [";LAYER:{layer}", "M991 S0 P{layer}"]
+    },
+    "proceso": {
+        "_nota": "Valores base para cualquier calidad. Velocidades en mm/s, distancias en mm. Retracción de directo (0,8 mm a 30 mm/s) y 21 mm³/s de caudal, como el PLA de Bambu; velocidades de calidad más conservadoras que las de Bambu Studio.",
+        "outputRetractDist": 0.8,
+        "outputRetractSpeed": 30,
+        "outputRetractWipe": 0,
+        "outputRetractDwell": 0,
+        "zHopDistance": 0,
+        "outputSeekrate": 200,
+        "firstLayerRate": 50,
+        "firstLayerFillRate": 50,
+        "outputMaxFlowrate": 21,
+        "outputBrimCount": 2,
+        "outputBrimOffset": 3,
+        "sliceFillType": "hex",
+        "sliceSupportType": "disabled"
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceShells": 2,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "sliceFillSparse": 0.15,
+                "outputFeedrate": 200,
+                "outputFinishrate": 120
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceShells": 3,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "sliceFillSparse": 0.2,
+                "outputFeedrate": 150,
+                "outputFinishrate": 90
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceShells": 3,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "sliceFillSparse": 0.2,
+                "outputFeedrate": 100,
+                "outputFinishrate": 60
+            }
+        }
+    }
+}

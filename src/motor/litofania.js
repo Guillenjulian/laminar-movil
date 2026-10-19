@@ -19,23 +19,54 @@
 // Devuelve un Float32Array de triángulos (como leerSTL).
 export const MARCO_MM = 2;
 
+/**
+ * Genera la malla cerrada de una litofanía o relieve (ver las opciones arriba).
+ * @param {object} opciones
+ * @param {Uint8Array} opciones.grises Grises de ancho × alto (0 = negro, 255 = blanco).
+ * @param {number} opciones.ancho Ancho en píxeles (mínimo 2).
+ * @param {number} opciones.alto Alto en píxeles (mínimo 2).
+ * @param {number} opciones.anchoMm Ancho de la imagen en mm.
+ * @param {number} opciones.minMm Espesor mínimo en mm.
+ * @param {number} opciones.maxMm Espesor máximo en mm.
+ * @param {'litofania'|'relieve'} [opciones.tipo] Por defecto 'litofania'.
+ * @param {boolean} [opciones.marco] Agrega un borde de MARCO_MM al espesor máximo.
+ * @returns {Float32Array} Vértices de cada triángulo, en mm.
+ * @throws {Error} Si la imagen es muy chica o los anchos y espesores no son válidos.
+ */
 export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, tipo = 'litofania', marco = false }) {
-    if (!(ancho >= 2 && alto >= 2) || !grises || grises.length < ancho * alto) {
-        throw new Error('La imagen es demasiado chica para hacer una litofanía.');
-    }
-    if (!(anchoMm > 0)) throw new Error('El ancho tiene que ser mayor que 0.');
-    if (!(minMm > 0)) throw new Error('El espesor mínimo tiene que ser mayor que 0.');
-    if (!(maxMm >= minMm)) throw new Error('El espesor máximo tiene que ser mayor o igual que el mínimo.');
+    validarOpciones({ grises, ancho, alto, anchoMm, minMm, maxMm });
 
     const paso = anchoMm / (ancho - 1); // mm entre píxeles vecinos
     // Con marco, agregamos k píxeles de cada lado al espesor máximo.
     const k = marco ? Math.max(1, Math.round(MARCO_MM / paso)) : 0;
     const W = ancho + 2 * k,
         H = alto + 2 * k;
+    const z = calcularAlturas({ grises, ancho, alto, minMm, maxMm, tipo }, k, W, H);
 
-    // Alturas en una grilla W × H. La fila r = 0 es el frente de la cama (Y = 0),
-    // así que la fila 0 de la foto (arriba) va al fondo (Y máximo): vista desde
-    // arriba, la imagen se lee derecha.
+    const borde = 2 * (W - 1) + 2 * (H - 1); // vértices del contorno
+    const triangulos = 2 * (W - 1) * (H - 1) + borde + 2 * borde;
+    const malla = nuevaMalla(new Float32Array(triangulos * 9), { paso, W, H, z });
+
+    agregarSuperficie(malla);
+    const contorno = armarContorno(W, H);
+    agregarBase(malla, contorno);
+    agregarParedes(malla, contorno);
+    return malla.v;
+}
+
+function validarOpciones({ grises, ancho, alto, anchoMm, minMm, maxMm }) {
+    if (!(ancho >= 2 && alto >= 2) || !grises || grises.length < ancho * alto) {
+        throw new Error('La imagen es demasiado chica para hacer una litofanía.');
+    }
+    if (!(anchoMm > 0)) throw new Error('El ancho tiene que ser mayor que 0.');
+    if (!(minMm > 0)) throw new Error('El espesor mínimo tiene que ser mayor que 0.');
+    if (!(maxMm >= minMm)) throw new Error('El espesor máximo tiene que ser mayor o igual que el mínimo.');
+}
+
+// Alturas en una grilla W × H (con `k` píxeles de marco de cada lado). La fila
+// r = 0 es el frente de la cama (Y = 0), así que la fila 0 de la foto (arriba)
+// va al fondo (Y máximo): vista desde arriba, la imagen se lee derecha.
+function calcularAlturas({ grises, ancho, alto, minMm, maxMm, tipo }, k, W, H) {
     const z = new Float32Array(W * H).fill(maxMm);
     const rango = maxMm - minMm;
     for (let j = 0; j < alto; j++) {
@@ -45,21 +76,30 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
             z[r * W + i + k] = tipo === 'relieve' ? minMm + rango * g : maxMm - rango * g;
         }
     }
+    return z;
+}
 
-    const borde = 2 * (W - 1) + 2 * (H - 1); // vértices del contorno
-    const triangulos = 2 * (W - 1) * (H - 1) + borde + 2 * borde;
-    const v = new Float32Array(triangulos * 9);
+// Buffer de triángulos con un cursor: `punto` agrega un vértice y `arriba` uno de la superficie.
+function nuevaMalla(v, { paso, W, H, z }) {
     let o = 0;
     const punto = (x, y, zz) => {
         v[o++] = x;
         v[o++] = y;
         v[o++] = zz;
     };
-    const X = i => i * paso,
-        Y = r => r * paso;
-    const arriba = (i, r) => punto(X(i), Y(r), z[r * W + i]);
+    return {
+        v,
+        W,
+        H,
+        punto,
+        X: i => i * paso,
+        Y: r => r * paso,
+        arriba: (i, r) => punto(i * paso, r * paso, z[r * W + i]),
+    };
+}
 
-    // Superficie de arriba (mira a +Z: antihorario visto desde arriba).
+// Superficie de arriba (mira a +Z: antihorario visto desde arriba).
+function agregarSuperficie({ W, H, arriba }) {
     for (let r = 0; r < H - 1; r++) {
         for (let i = 0; i < W - 1; i++) {
             arriba(i, r);
@@ -70,15 +110,20 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
             arriba(i, r + 1);
         }
     }
+}
 
-    // Contorno en sentido antihorario visto desde arriba: frente, derecha, fondo, izquierda.
+// Contorno en sentido antihorario visto desde arriba: frente, derecha, fondo, izquierda.
+function armarContorno(W, H) {
     const contorno = [];
     for (let i = 0; i < W - 1; i++) contorno.push([i, 0]);
     for (let r = 0; r < H - 1; r++) contorno.push([W - 1, r]);
     for (let i = W - 1; i > 0; i--) contorno.push([i, H - 1]);
     for (let r = H - 1; r > 0; r--) contorno.push([0, r]);
+    return contorno;
+}
 
-    // Base (mira a -Z): abanico desde el centro, en sentido horario visto desde arriba.
+// Base (mira a -Z): abanico desde el centro, en sentido horario visto desde arriba.
+function agregarBase({ W, H, X, Y, punto }, contorno) {
     const cx = X(W - 1) / 2,
         cy = Y(H - 1) / 2;
     for (let n = 0; n < contorno.length; n++) {
@@ -88,8 +133,10 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
         punto(X(i2), Y(r2), 0);
         punto(X(i1), Y(r1), 0);
     }
+}
 
-    // Paredes: para cada tramo p -> q del contorno, el exterior queda a la derecha.
+// Paredes: para cada tramo p -> q del contorno, el exterior queda a la derecha.
+function agregarParedes({ X, Y, punto, arriba }, contorno) {
     for (let n = 0; n < contorno.length; n++) {
         const [i1, r1] = contorno[n],
             [i2, r2] = contorno[(n + 1) % contorno.length];
@@ -100,12 +147,19 @@ export function generarLitofania({ grises, ancho, alto, anchoMm, minMm, maxMm, t
         arriba(i2, r2);
         arriba(i1, r1);
     }
-
-    return v;
 }
 
-// Tamaño en píxeles para muestrear la foto: ~0,25 mm por píxel y como mucho
-// `maxPx` de lado (para no reventar la memoria del celu).
+/**
+ * Tamaño en píxeles para muestrear la foto: ~0,25 mm por píxel y como mucho
+ * `maxPx` de lado (para no reventar la memoria del celu).
+ * @param {number} anchoImagen Ancho de la foto en píxeles.
+ * @param {number} altoImagen Alto de la foto en píxeles.
+ * @param {number} anchoMm Ancho de la litofanía en mm.
+ * @param {number} [mmPorPixel] Milímetros por píxel.
+ * @param {number} [maxPx] Máximo de píxeles de lado.
+ * @returns {{ancho: number, alto: number}} Tamaño de muestreo (mínimo 2 × 2).
+ * @throws {Error} No lanza errores propios.
+ */
 export function resolucionLitofania(anchoImagen, altoImagen, anchoMm, mmPorPixel = 0.25, maxPx = 500) {
     const proporcion = altoImagen / anchoImagen;
     let ancho = Math.round(anchoMm / mmPorPixel) + 1;

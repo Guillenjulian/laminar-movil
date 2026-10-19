@@ -8,8 +8,9 @@ import { materiales, armarConfiguracion } from '../perfiles/perfiles.js';
 import * as formato from './formato.js';
 import * as almacen from '../almacen.js';
 
-// Se leen una sola vez al cargar la app (main.js ya espera con top-level await).
-let precios = (await almacen.leerAjuste('precios').catch(() => null)) || {};
+// Se leen una sola vez al arrancar: `iniciarMateriales()` devuelve la promesa y main.js la espera
+// antes del primer dibujo.
+let precios = {};
 
 const escapar = texto =>
     String(texto).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -64,11 +65,21 @@ export function dibujarTarjeta(contenedor, config) {
     });
 }
 
+/**
+ * Gramos de un largo de filamento, con la densidad del material.
+ * @param {number} mmFilamento largo de filamento usado (mm)
+ * @param {number} diametro diámetro del filamento (mm)
+ * @param {string} id id del material (`materiales.json`); si no existe, PLA
+ * @returns {number} gramos (densidad del material, o 1,24 g/cm³ si no la trae)
+ */
+export function gramosDe(mmFilamento, diametro, id) {
+    return formato.gramos(mmFilamento, diametro, material(id).densidad || 1.24);
+}
+
 // Filas del resumen del paso 4: filamento (con la densidad del material) y costo.
 export function filasResumen(mmFilamento, diametro, id) {
-    const m = material(id);
-    const densidad = m.densidad || 1.24;
-    const g = formato.gramos(mmFilamento, diametro, densidad);
+    const densidad = material(id).densidad || 1.24;
+    const g = gramosDe(mmFilamento, diametro, id);
     const p = precio(id);
     const costo = p
         ? `≈ ${formato.pesos((g * p) / 1000)}`
@@ -82,7 +93,8 @@ export function filasResumen(mmFilamento, diametro, id) {
 /**
  * Registra el listener de "Poné el precio": vuelve al paso 2 (el resultado se
  * abre reemplazando al paso 3, así que "atrás" lleva a la configuración) y
- * pone el foco en el precio. Llamar una sola vez desde main.js.
+ * pone el foco en el precio. Llamar una sola vez desde main.js. Devuelve una promesa que se cumple
+ * cuando los precios guardados ya están cargados (main.js la espera antes del primer dibujo).
  */
 export function iniciarMateriales() {
     document.addEventListener('click', e => {
@@ -92,4 +104,10 @@ export function iniciarMateriales() {
             once: true,
         });
     });
+    return almacen
+        .leerAjuste('precios')
+        .catch(() => null)
+        .then(guardados => {
+            precios = guardados || {};
+        });
 }

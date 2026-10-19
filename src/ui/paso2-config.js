@@ -6,9 +6,11 @@
 
 import { estado, valoresActuales, guardarPreferencias } from './estado.js';
 import { dibujarImpresoraElegida } from './impresoras.js';
+import { acomodarPiezas } from './acomodo.js';
 import { $ } from './util-dom.js';
 import { crearAvanzado } from './avanzado.js';
 import { crearCambios } from './cambios.js';
+import { crearTipoSoportes } from './soportes-tipo-ui.js';
 import * as materialesUI from './materiales.js';
 import { iconoRelleno } from './iconos-relleno.js';
 import { buscarImpresora, opciones, valoresDeCalidad } from '../perfiles/perfiles.js';
@@ -18,6 +20,8 @@ import { armarTorre } from '../perfiles/torres.js';
 let avanzado = null;
 /** Sección Cambios por altura; se crea dentro de iniciarPaso2. */
 let cambios = null;
+/** Selector del tipo de soporte (ADR 0004); se crea dentro de iniciarPaso2. */
+let tipoSoportes = null;
 
 /** HTML de una opción de radio.
  *  @param {string} grupo @param {string} valor @param {string} titulo @param {string} detalle
@@ -50,11 +54,29 @@ export function dibujarOpciones() {
         )
         .join('');
     dibujarMaterial();
-    $('soportes').checked = estado.soportes;
+    tipoSoportes?.dibujar();
     dibujarPersonalizar();
     avanzado?.dibujar();
     cambios?.dibujar();
     dibujarTorre();
+    dibujarAvisoEntran();
+}
+
+/** Aviso del paso 2 si con la impresora elegida no entran todas las piezas (varias piezas o copias): lo dice
+ *  junto a la tarjeta de impresora y deshabilita Laminar. Con una pieza y una copia no cambia nada (el aviso es el
+ *  de ajuste-modelo en el paso 1 y el error del paso 3). Re-acomoda desde `estado`, así que sirve también al
+ *  entrar al paso. @returns {void} */
+function dibujarAvisoEntran() {
+    const sola = estado.piezas.length === 1 && estado.piezas[0].copias === 1;
+    const { entra, fuera } = acomodarPiezas();
+    const bloquea = !entra && !sola;
+    const texto = bloquea
+        ? `Con esta impresora no entran todas las piezas (${fuera.length} ${fuera.length === 1 ? 'copia queda afuera' : 'copias quedan afuera'}): volvé al paso 1 para achicarlas, bajar copias o quitar piezas.`
+        : '';
+    // La región viva (role=status) queda siempre en el DOM y sólo cambia su texto; el botón va afuera.
+    if ($('avisoEntranPaso2').textContent !== texto) $('avisoEntranPaso2').textContent = texto; // no re-anunciar
+    $('irPaso1').hidden = !bloquea;
+    $('laminar').disabled = bloquea;
 }
 
 /** Línea informativa de la torre de calibración cargada; sus valores pisan Avanzado, el relleno y los cambios.
@@ -177,11 +199,11 @@ function conectarPersonalizar() {
     };
 }
 
-/** Cablea el `change` de la pantalla: calidad, material, soportes, patrón, adhesión y densidad.
+/** Cablea el `change` de la pantalla: calidad, material, patrón, adhesión y densidad (el tipo de soporte, su selector).
  *  @returns {void} */
 function conectarEleccion() {
     document.querySelector('[data-paso="2"].pantalla').addEventListener('change', e => {
-        const { name, value, checked } = e.target;
+        const { name, value } = e.target;
         if (name === 'calidad') {
             estado.calidad = value;
             dibujarPersonalizar();
@@ -190,7 +212,6 @@ function conectarEleccion() {
             estado.material = value;
             dibujarMaterial();
         }
-        if (e.target.id === 'soportes') estado.soportes = checked;
         if (name === 'patron') return cambiarPersonal('patron', value);
         if (name === 'adhesion') return cambiarPersonal('adhesion', value);
         if (e.target.id === 'densidad') return cambiarPersonal('densidad', Number(value) / 100);
@@ -198,10 +219,13 @@ function conectarEleccion() {
     });
 }
 
-/** Cablea los cambios de calidad/material/soportes/patrón/adhesión/densidad, los contadores,
+/** Cablea los cambios de calidad/material/patrón/adhesión/densidad, los contadores,
  *  los atajos de densidad y #restablecer; crea la sección Avanzado (crearAvanzado con
- *  { estado, alCambiar: guardarPreferencias }). Llamar una vez. @returns {void} */
-export function iniciarPaso2() {
+ *  { estado, alCambiar: guardarPreferencias }). `irAPaso1` es el callback de
+ *  "Ir al paso 1" (lo inyecta main; paso2 no importa navegacion). Llamar una vez.
+ *  @param {{irAPaso1?: () => void}} [cb] @returns {void} */
+export function iniciarPaso2({ irAPaso1 } = {}) {
+    $('irPaso1').onclick = () => irAPaso1?.();
     avanzado = crearAvanzado({
         estado,
         alCambiar: () => {
@@ -210,6 +234,10 @@ export function iniciarPaso2() {
         },
     });
     cambios = crearCambios({ estado, alCambiar: () => {} });
+    // El `change` de la pantalla (conectarEleccion) ya guarda las preferencias cuando cambia el tipo: el listener del
+    // grupo corre antes (está más adentro), así que guarda el valor nuevo. Por eso acá `alCambiar` no hace nada.
+    tipoSoportes = crearTipoSoportes({ alCambiar: () => {} });
+    tipoSoportes.conectar();
     conectarPersonalizar();
     conectarEleccion();
 }

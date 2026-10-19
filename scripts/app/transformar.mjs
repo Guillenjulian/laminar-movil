@@ -8,6 +8,7 @@
 // Deja: paso 2 (tras dos "atrás" desde el resultado), con la T acostada al 50 % cargada.
 
 import fs from 'node:fs';
+import { esperarVisor, tocarLienzo } from '../lib/visor.mjs';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarTransformar(ctx) {
@@ -78,8 +79,8 @@ async function probarApoyarCara({ page: pagina, ok: revisar, captura }) {
         'modo apoyar cara',
         (await pagina.isVisible('#ayudaCara')) && (await pagina.textContent('#apoyarCara')) === 'Cancelar',
     );
-    const lienzo = await pagina.locator('#visor canvas').boundingBox();
-    await pagina.touchscreen.tap(lienzo.x + lienzo.width / 2, lienzo.y + lienzo.height / 2);
+    await esperarVisor(pagina, '#visor');
+    await tocarLienzo(pagina);
     await pagina.waitForFunction(() => document.getElementById('ayudaCara').hidden, null, { timeout: 5000 });
     revisar('apoyar la cara del frente acuesta la T', (await medidas()) === '50,0 × 23,0 × 10,0 mm', await medidas());
     await captura('1-apoyar-cara');

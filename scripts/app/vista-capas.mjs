@@ -7,6 +7,8 @@
 // Precondición: paso 4 visible con el cubo de 20 mm en PLA/Rápido (72 capas).
 // Deja: paso 4, vista en la capa penúltima (la que fuerza el dibujo), sin pausas.
 
+import { esperarVisor } from '../lib/visor.mjs';
+
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarVistaCapas(ctx) {
     const { page: pagina, ok: revisar, captura } = ctx;
@@ -20,6 +22,11 @@ export async function probarVistaCapas(ctx) {
         ultima,
     );
     revisar('vista previa: tantas capas como Kiri', m && Math.abs(Number(m[2]) - 72) <= 1, `${m?.[2]} capas`);
+    revisar(
+        'vista previa: un cubo no muestra aviso (texto vacío)',
+        (await pagina.textContent('#avisoVista')) === '',
+        await pagina.textContent('#avisoVista'),
+    );
     await pagina.tap('#capaMenos');
     revisar('botón − baja una capa', (await textoCapa()).startsWith(`Capa ${Number(m[2]) - 1}/`));
     await pagina.locator('#capa').fill('0');
@@ -50,7 +57,8 @@ async function reproducir({ page: pagina, ok: revisar }, ultima) {
     );
 }
 
-function pixelesConColor(pagina) {
+async function pixelesConColor(pagina) {
+    await esperarVisor(pagina, '#visorCapas');
     return pagina.evaluate(
         () =>
             new Promise(listo => {

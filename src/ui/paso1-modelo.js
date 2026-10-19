@@ -5,28 +5,56 @@
 // `visor`, la instancia de crearVisor del paso 1.
 //
 // Flujo: iniciarPaso1 cablea los controles -> cargarArchivo (despacha por tipo) -> leerModelo
-// (convierte y arma la vista) -> montarModelo (llena `estado` y el visor) -> aplicarTransformacion
-// (escala, rotación, textos y avisos). "Siguiente" va al paso 2. Importarlo no toca el DOM.
+// (convierte y arma la vista) -> montarModelo (crea la pieza en `estado` y llena el visor) -> ajuste.aplicar
+// (ajuste-modelo: escala, rotación, textos y avisos). "Siguiente" va al paso 2. Importarlo no toca el DOM.
 
 import { leerParaVista, convertirAStl } from '../motor/motor.js';
-import * as transformar from '../motor/transformar.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
-import { maxTriangulos } from '../config.js';
 import * as almacen from '../almacen.js';
-import { crearVisor } from './visor.js';
+import { crearVisor } from './visor-carga.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
-import * as formato from './formato.js';
 import { $ } from './util-dom.js';
-import { estado, matrizModelo } from './estado.js';
+import { estado, crearPieza } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
+import { crearAjuste } from './ajuste-modelo.js';
+import { crearPiezas } from './piezas-ui.js';
+import { crearBloqueosUI } from './bloqueos-ui.js';
 
 export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 
 let visor = null; // visor del modelo (se crea al cargar el primer modelo)
 let litofania = null; // hoja "Litofanía desde una foto" (se crea en iniciarPaso1)
 let torres = null; // hoja "Torre de calibración" (se crea en iniciarPaso1)
+const ajuste = crearAjuste({
+    visor: () => visor,
+    alCambiar: () => {
+        programarGuardado();
+        piezas.reacomodar();
+        bloqueos.sincronizar(); // después de acomodar: si cambió la pieza, vacía las zonas y lo avisa (ADR 0004)
+    },
+    alActivarCara: () => bloqueos.apagar(), // "apoyar cara" y "marcar zona" son modos excluyentes
+    torres: () => torres,
+});
+const piezas = crearPiezas({
+    visor: () => visor,
+    ajuste,
+    ejemplo: bufferEjemplo,
+    leer: (nombre, buffer) => leerModelo(nombre, buffer, tipoArchivo(nombre), null), // mismo camino que cargarArchivo
+    elegirOtro: elegirOtroModelo,
+    guardar: almacen.guardarModelo, // las piezas agregadas también van a recientes
+    alReacomodar: () => bloqueos.dibujar(), // cambió la pieza activa, las copias o sus posiciones: las marcas siguen
+});
+// Panel "Zona sin soporte" (ADR 0004): sólo modelos; el aviso va a la región viva del panel.
+const bloqueos = crearBloqueosUI({
+    visor: () => visor,
+    avisar: msg => {
+        $('bloqueoAyuda').textContent = msg;
+    },
+    nuevoId: () => ++estado.ultimoIdBloqueo,
+    cancelarCara: () => ajuste.cancelarCara(),
+});
 
 /**
  * Cablea #archivo, #foto, #otroModelo, #ejemplo, #siguiente, la lista de recientes, escala,
@@ -50,7 +78,9 @@ export function iniciarPaso1() {
     });
     $('botonTorre').onclick = torres.abrir;
     conectarSubida();
-    conectarTransformacion();
+    ajuste.conectar();
+    piezas.conectar();
+    bloqueos.conectar();
 }
 
 /**
@@ -63,7 +93,8 @@ export function alCambiarImpresora() {
         const d = buscarImpresora(estado.impresoraId).dispositivo;
         visor.ponerCama({ x: d.bedWidth, y: d.bedDepth, z: d.maxHeight });
     }
-    actualizarAvisoModelo();
+    ajuste.actualizarAviso();
+    piezas.reacomodar();
 }
 
 /**
@@ -73,10 +104,11 @@ export function alCambiarImpresora() {
  */
 export function elegirOtroModelo() {
     guardarPendiente();
-    estado.stl = null;
-    estado.vista = null;
+    estado.piezas = [];
+    estado.activa = null;
     estado.torre = null;
     visor?.quitarModelo();
+    bloqueos.dibujar(); // sin pieza: esconde el panel y saca las marcas
     $('conModelo').hidden = true;
     $('sinModelo').hidden = false;
     $('siguiente').disabled = true;
@@ -90,10 +122,20 @@ function conectarSubida() {
     $('otroModelo').onclick = elegirOtroModelo;
     $('siguiente').onclick = () => irA(2);
     $('ejemplo').onclick = async () => {
-        const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
-        await cargarArchivo('cubo-20mm.stl', await r.arrayBuffer());
+        try {
+            await cargarArchivo('cubo-20mm.stl', await bufferEjemplo());
+        } catch (err) {
+            alert('No pudimos leer el archivo: ' + err.message);
+        }
     };
     iniciarRecientes((nombre, stl, transformacion) => cargarArchivo(nombre, stl, { esStl: true, transformacion }));
+}
+
+/** Descarga el cubo de ejemplo (lo usan #ejemplo y "Agregar cubo de ejemplo"). */
+async function bufferEjemplo() {
+    const r = await fetch(new URL('ejemplos/cubo-20mm.stl', document.baseURI));
+    if (!r.ok) throw new Error('No se pudo descargar el ejemplo (' + r.status + ')');
+    return r.arrayBuffer();
 }
 
 /** Handler de #archivo y #foto: lee el archivo elegido y lo carga. */
@@ -125,7 +167,7 @@ async function cargarArchivo(
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
-        montarModelo(nombre, datos, transformacion, torre);
+        montarModelo(nombre, datos, transformacion, torre, generar ? 'litofania' : 'modelo');
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
         if (guardar)
             await almacen.guardarModelo(nombre, datos.buffer).catch(err => console.warn('No se guardó el modelo', err));
@@ -151,125 +193,41 @@ async function leerModelo(nombre, buffer, tipo, generar) {
 }
 
 /** Llena `estado`, crea el visor si falta, pone cama y modelo y actualiza los textos del paso. */
-function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre = null) {
-    estado.nombre = nombre;
-    estado.stl = buffer;
-    estado.vista = { triangulos, tamano };
+function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre, origen) {
     estado.resultado = null;
     estado.torre = torre; // la torre fija sus alturas: sin escala ni rotación
     estado.cambios = []; // los cambios por altura dependen del modelo
     $('ajustesModelo').hidden = !!torre;
-    ({ rotacion: estado.rotacion, escala: estado.escala } = transformacion ?? almacen.normalizarTransformacion());
 
     $('conModelo').hidden = false;
-    if (!visor) visor = crearVisor($('visor'));
+    if (!visor) {
+        // Mientras three.js carga, la medida real no existe: al quedar listo se rehace con ella (ADR 0006).
+        visor = crearVisor($('visor'), {
+            alListo: () => {
+                ajuste.aplicar();
+                piezas.reacomodar();
+            },
+        });
+    }
     const imp = buscarImpresora(estado.impresoraId).dispositivo;
     visor.ponerCama({ x: imp.bedWidth, y: imp.bedDepth, z: imp.maxHeight });
-    visor.ponerModelo(vertices);
 
+    // La pieza se crea antes (para tener su id) pero entra en `estado` después del visor: si ponerModelo
+    // lanza, estado no apunta a una pieza sin malla.
+    const pieza = crearPieza({
+        nombre,
+        stl: buffer,
+        vista: { triangulos, tamano },
+        transformacion: transformacion ?? almacen.normalizarTransformacion(),
+        origen: torre ? 'torre' : origen,
+    });
+    visor.ponerModelo(vertices, pieza.id);
+    estado.piezas = [pieza];
+    estado.activa = pieza.id;
     $('nombreModelo').textContent = nombre;
-    activarElegirCara(false);
-    aplicarTransformacion();
+    ajuste.cancelarCara();
+    ajuste.aplicar();
+    piezas.dibujar();
+    bloqueos.dibujar(); // el panel sólo se ve con un modelo (no con torre ni litofanía)
     $('siguiente').disabled = false;
-}
-
-// --- Modelo en la cama: avisos, escala, rotaciones y "apoyar cara" ---
-
-/** Avisos sobre el modelo: si es muy pesado (se va a simplificar) o si no entra en la cama. */
-function actualizarAvisoModelo() {
-    if (!estado.vista) return;
-    torres?.revisar(estado.torre);
-    const { triangulos } = estado.vista;
-    const tamano = tamanoActual();
-    const imp = buscarImpresora(estado.impresoraId);
-    const d = imp.dispositivo;
-    const avisos = [];
-    const noEntra = tamano.x > d.bedWidth || tamano.y > d.bedDepth || tamano.z > d.maxHeight;
-    if (noEntra) {
-        avisos.push(
-            `<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
-                'Rotalo o achicalo con los botones de abajo.',
-        );
-    }
-    $('ajustarCama').hidden = !noEntra;
-    const max = maxTriangulos();
-    if (triangulos > max) {
-        avisos.push(
-            `<b>Modelo pesado:</b> tiene ${formato.triangulos(triangulos)}. Para que el celu no se quede ` +
-                `sin memoria, antes de laminar lo vamos a simplificar a unos ${formato.triangulos(max)}. ` +
-                'Se pueden perder detalles muy finos.',
-        );
-    }
-    $('avisoModelo').innerHTML = avisos.join('<br><br>');
-    $('avisoModelo').hidden = avisos.length === 0;
-}
-
-/** Tamaño del modelo como va a quedar en la cama. */
-function tamanoActual() {
-    return visor?.tamanoModelo() || estado.vista.tamano;
-}
-
-/** Aplica rotación y escala al visor y refresca escala, textos, "restablecer" y avisos. */
-function aplicarTransformacion() {
-    visor.ponerTransformacion(matrizModelo());
-    const pct = Math.round(estado.escala * 1000) / 10;
-    $('escala').value = pct;
-    $('datosModelo').textContent =
-        `${formato.milimetros(tamanoActual())} · ${formato.triangulos(estado.vista.triangulos)}`;
-    $('restablecerModelo').hidden = estado.escala === 1 && transformar.esIdentidad(estado.rotacion);
-    actualizarAvisoModelo();
-    programarGuardado();
-}
-
-/** Cambia la escala (entre 0,01 y 20) y reaplica la transformación; ignora valores no positivos. */
-function ponerEscala(s) {
-    if (!(s > 0)) return;
-    estado.escala = Math.min(20, Math.max(0.01, s));
-    aplicarTransformacion();
-}
-
-/** "Apoyar cara": el usuario toca una cara y el modelo gira para que quede sobre la cama. */
-function activarElegirCara(activo) {
-    estado.eligiendoCara = activo;
-    $('apoyarCara').classList.toggle('activo', activo);
-    $('apoyarCara').textContent = activo ? 'Cancelar' : 'Apoyar cara';
-    $('ayudaCara').hidden = !activo;
-    visor?.elegirCara(activo, normal => {
-        // La normal viene en coordenadas de la impresora; la escala es uniforme, así
-        // que alcanza con agregar la rotación que la lleva hacia abajo.
-        estado.rotacion = transformar.multiplicar(transformar.rotacionQueApoya(normal), estado.rotacion);
-        activarElegirCara(false);
-        aplicarTransformacion();
-    });
-}
-
-/** Cablea escala, rotaciones, "ajustar a la cama", "restablecer" y "apoyar cara". */
-function conectarTransformacion() {
-    $('escalaMenos').onclick = () => ponerEscala(Math.round(estado.escala * 10 - 1) / 10 || 0.05);
-    $('escalaMas').onclick = () => ponerEscala(Math.round(estado.escala * 10 + 1) / 10);
-    $('escala').addEventListener('change', e => ponerEscala(Number(e.target.value) / 100));
-
-    document.querySelectorAll('[data-rotar]').forEach(b => {
-        b.onclick = () => {
-            estado.rotacion = transformar.multiplicar(transformar.rotacion90(b.dataset.rotar), estado.rotacion);
-            aplicarTransformacion();
-        };
-    });
-
-    // "Achicar para que entre": la escala más grande que entra en la cama (con un 2 % de margen).
-    $('ajustarCama').onclick = () => {
-        const d = buscarImpresora(estado.impresoraId).dispositivo;
-        const t = tamanoActual(),
-            s = estado.escala;
-        const factor = Math.min(d.bedWidth / t.x, d.bedDepth / t.y, d.maxHeight / t.z) * 0.98;
-        ponerEscala(Math.floor(s * factor * 100) / 100);
-    };
-
-    $('restablecerModelo').onclick = () => {
-        estado.rotacion = transformar.identidad();
-        estado.escala = 1;
-        activarElegirCara(false);
-        aplicarTransformacion();
-    };
-    $('apoyarCara').onclick = () => activarElegirCara(!estado.eligiendoCara);
 }

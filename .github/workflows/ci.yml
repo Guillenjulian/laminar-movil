@@ -6,7 +6,7 @@
 #   3. build de producción (dist/), que necesitan test:motor y test:app.
 #   4. Chromium: se instala con la versión de playwright-core del lock y su
 #      ruta se pasa a los scripts en CHROMIUM_PATH (la leen probar-motor y probar-app).
-#   5. Las suites: transformar y formatos (Node), motor y app (Chromium), y contratos.
+#   5. Las suites: visor-carga y chunks (tamaño del principal, ADR 0006), transformar y formatos (Node), motor y app (Chromium), y contratos.
 # Una corrida nueva del mismo PR cancela la anterior.
 name: CI
 
@@ -48,6 +48,12 @@ jobs:
             - name: Build
               run: npm run build
 
+            - name: Test visor-carga
+              run: npm run test:visor-carga
+
+            - name: Test chunks
+              run: npm run test:chunks
+
             - name: Instalar Chromium
               run: |
                   npx playwright-core install --with-deps chromium
@@ -64,6 +70,18 @@ jobs:
 
             - name: Test cambios
               run: npm run test:cambios
+
+            - name: Test piezas
+              run: npm run test:piezas
+
+            - name: Test recorridos
+              run: npm run test:recorridos
+
+            - name: Test soportes
+              run: npm run test:soportes
+
+            - name: Test visor
+              run: npm run test:visor
 
             - name: Test motor
               run: npm run test:motor

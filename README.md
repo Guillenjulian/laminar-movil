@@ -22,7 +22,10 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
 1. **Subir STL, OBJ o 3MF**, o generar una **litofanía o relieve desde una foto** (o abrir uno reciente). Visor 3D con gestos: 1 dedo gira, 2 dedos zoom/mover, doble toque centra.
    **Acomodar el modelo en la cama**: escala (%), rotar de a 90° en X/Y/Z, **apoyar cara** (tocás una
    cara y queda sobre la cama) y "Achicar para que entre" si es más grande que la cama.
-2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y si lleva soportes.
+   **Zonas sin soporte**: con "Marcar zona sin soporte", un toque sobre la pieza deja una esfera donde no querés
+   soportes (hasta 20 por pieza). "Apoyar cara" y marcar zonas no van juntos: es uno u otro.
+2. **Elegir impresora, calidad y material** (Rápido 0,28 · Normal 0,2 · Detalle 0,12 mm; PLA) y los soportes:
+   No, Normal o Árbol (el árbol usa menos material).
    En **Personalizar**: patrón de relleno (panal, cuadrícula, giroide, cúbico, triángulos, líneas),
    densidad, paredes, capas sólidas y adhesión (nada, falda, borde o balsa).
    En **Avanzado**: modo jarrón (espiral), altura de capa variable, costura, retracción, z-hop,
@@ -34,17 +37,22 @@ El motor de laminado es [Kiri:Moto](https://github.com/GridSpace/grid-apps) (lic
    línea), **pausas para cambiar de filamento** en las capas que elijas (piezas de varios colores,
    con la vista previa pintada del color de cada filamento)
    y **descargar o compartir** el G-code (Web Share API en celus que lo soportan).
+   Las Bambu Lab (A1, A1 mini, P1S y X1C) bajan un **`.gcode.3mf`** (ZIP con el G-code y los metadatos que espera Bambu) en vez de `.gcode`. Los perfiles no están validados con la impresora.
 
 Además:
 
 - Si el STL tiene demasiados triángulos para la RAM del equipo, se **simplifica antes de laminar** y se avisa.
 - Recuerda la última configuración y los últimos 6 modelos (IndexedDB, en el celu).
 - Avisa si el modelo no entra en la cama y limita las temperaturas a los máximos de la impresora.
+- **Varias piezas y copias en la cama**: agregás piezas (archivo o cubo de ejemplo), les ponés copias y la app
+  las acomoda sola (ADR 0003). Las copias que no entran se marcan en rojo y "Siguiente" queda deshabilitado.
 
 Impresoras:
 
-- **Creality Ender 3 V3 SE**: perfil armado a mano.
-- **50 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
+- **Perfiles revisados a mano** (con pruebas automáticas): Creality Ender 3 V3 SE, Ender 3 V2, Ender 3 V3 KE
+  y K1; Elegoo Neptune 4; Anycubic Kobra 2 y Kobra 3; Prusa MK4; Sovol SV06; Bambu Lab A1, A1 mini, P1S y X1C (salen como
+  `.gcode.3mf`, sin validar con la impresora).
+- **48 impresoras importadas de Kiri:Moto** (Creality, Anycubic, Prusa, Flashforge, Wanhao…),
   marcadas "sin revisar".
 - **Mi impresora**: cada usuario puede cargar la suya (medidas, boquilla, Marlin/Klipper, G-code)
   o copiar una existente para ajustarla. Se guarda en el celu.
@@ -64,8 +72,10 @@ Pruebas automáticas (usan Chromium; en otra máquina definí `CHROMIUM_PATH`):
 
 ```bash
 npm run build
+npm run test:chunks  # tamaño de los chunks del build: el principal y la carga inicial tienen tope, y el visor está en el service worker
 npm run test:motor   # lamina mallas de prueba y valida el G-code (perfil, calidades, soportes, malla de 1,2 M triángulos)
 npm run test:transformar  # matrices de escala/rotación (Node, sin navegador)
+npm run test:visor-carga  # fachada del visor que carga three.js bajo demanda (Node, sin navegador)
 npm run test:app     # recorre la app emulando un Pixel 7: 4 pasos, cancelar, atrás, descarga, recientes, offline
 ```
 
@@ -136,8 +146,8 @@ Las claves son las de Kiri:Moto y están explicadas en español en
 prende nunca el ventilador de capa. Los materiales se agregan en `src/perfiles/materiales.json`.
 
 Las 50 importadas se regeneran con `npm run importar:impresoras` (usa el clon de grid-apps de
-`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Bambu Lab,
-Makerbot) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
+`npm run vendor:kiri`). El importador saltea las que no sirven con G-code plano (Makerbot; las
+Bambu Lab tienen perfil revisado propio) y avisa en la app cuando el G-code de inicio no usa la temperatura elegida.
 
 ## Cómo está armado
 
@@ -239,6 +249,15 @@ Esto queda pendiente de validar a mano:
 - [ ] iOS Safari puede borrar los datos guardados (recientes) si la app no está instalada y no se usa por un tiempo.
 - [ ] Flujo de "Hay una versión nueva" después de publicar una actualización.
 
+### Varias piezas y perfiles revisados nuevos
+
+- [ ] Imprimir varias copias en una cama real: que el acomodo y la separación de 10 mm se vean igual en el G-code y en la impresora.
+- [ ] Los perfiles revisados nuevos, sobre todo el Kobra 3 (el aviso del perfil dice que no se pudo confirmar el firmware de fábrica).
+- [ ] `M600` en la Ender 3 V2 (el firmware de fábrica puede no traerlo).
+- [ ] Macros `START_PRINT` en la K1 y la Ender 3 V3 KE: que el firmware real las tenga con esos parámetros.
+- [ ] `PAUSE` y `BED_MESH_CALIBRATE` en el Neptune 4 (el perfil los marca como sin confirmar en el equipo real).
+- [ ] La memoria con muchas copias en un celu de gama baja.
+
 ### Impresoras importadas de Kiri
 
 - [ ] Las 50 laminan el cubo de prueba sin errores, centrado y con ventilador (prueba automática),
@@ -246,6 +265,25 @@ Esto queda pendiente de validar a mano:
       tienen G-code de inicio dudoso (la app lo avisa cuando no usa `{temp}`/`{bed_temp}`).
 - [ ] En Kiri, a igual porcentaje, el giroide usa bastante menos material que el panal (cubo de
       20 mm al 20 %: 1,18 m contra 2,08 m). Revisar si conviene compensar la densidad por patrón.
+
+### Bambu Lab: `.gcode.3mf` (ADR 0005)
+
+- [ ] Abrir el `.gcode.3mf` en **Bambu Studio** sin errores, con tiempo y gramos a la vista (y qué hace con el `3dmodel.model` sin malla).
+- [ ] Abrirlo en **Bambu Handy** y que muestre el resumen.
+- [ ] **Imprimir un cubo por SD y por LAN** en A1 y P1S, y que la impresora no rechace el archivo por el MD5.
+- [ ] La pausa **`M400 U1`**: que pause, muestre el aviso en la pantalla y retome. Qué pasa con la temperatura durante la pausa.
+- [ ] **Compartir en Android (Chrome) e iOS (Safari)**: qué MIME acepta `canShare` para el `.gcode.3mf` (`application/octet-stream`, `application/zip`, `model/3mf`).
+- [ ] Las miniaturas: que la pantalla de la impresora y Bambu Studio las muestren.
+- [ ] Volver con "Adelante" al paso 4 después de cambiar el material: que el archivo que se descarga o comparte tenga el G-code del material nuevo.
+- [ ] Filamento: el color de `slice_info.config` es fijo (`#FFFFFF`) para todos los materiales. El código de bandeja (`tray_info_idx`) ya sale de `materiales.json` (`bambu`); validar esos códigos contra un `slice_info.config` real de Bambu Studio.
+
+### Soportes árbol y zonas sin soporte (ADR 0004)
+
+- [ ] **Imprimir con soporte árbol** una pieza con voladizo: que la tapa apoye bien sobre los troncos y que
+      los troncos se despeguen fácil.
+- [ ] **Zona sin soporte en una pieza real**: que la zona marcada se vea sin soporte al imprimir y que el
+      voladizo que cae dentro se imprima como avisa la app.
+- [ ] **Marcar zonas con el dedo en un celu real**: el toque, el radio y quitar una zona.
 
 ### Otros
 

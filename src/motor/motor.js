@@ -2,11 +2,24 @@
 // cierra al terminar: así se libera toda la memoria (importante en celus
 // de gama baja).
 
+// Si el laminador pasa tanto tiempo sin avisar nada (ni progreso, ni listo, ni error), se lo da por trabado.
+const PLAZO_SIN_NOTICIAS_MS = 240_000;
+
+const AVISO_TRABADO = 'El laminado se trabó y lo cancelamos. Probá de nuevo; si vuelve a pasar, mandanos el archivo.';
+
 // Abre un worker, le manda un mensaje y espera 'listo' o 'error'.
 // Con `signal` (AbortController) se puede cancelar: se mata el worker.
-function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } = {}) {
+// Con `plazoSinNoticiasMs` (> 0), si el worker no manda ningún mensaje en ese lapso se lo mata y se rechaza.
+function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal, plazoSinNoticiasMs = 0 } = {}) {
     return new Promise((resolver, rechazar) => {
+        let guardia;
+        const trabado = () => (terminar(), rechazar(new Error(AVISO_TRABADO)));
+        const armarGuardia = () => {
+            clearTimeout(guardia);
+            if (plazoSinNoticiasMs > 0) guardia = setTimeout(trabado, plazoSinNoticiasMs);
+        };
         const terminar = () => {
+            clearTimeout(guardia);
             worker.terminate();
             signal?.removeEventListener('abort', alCancelar);
         };
@@ -15,9 +28,9 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
             rechazar(new DOMException('Cancelado', 'AbortError'));
         };
         signal?.addEventListener('abort', alCancelar);
-
         worker.onmessage = e => {
             const msg = e.data;
+            armarGuardia();
             if (msg.tipo === 'progreso') {
                 alProgresar(msg.etapa, msg.valor);
             } else if (msg.tipo === 'listo') {
@@ -33,23 +46,46 @@ function correr(worker, mensaje, transferir, { alProgresar = () => {}, signal } 
             // Si el worker muere sin mensaje, lo más probable es falta de memoria.
             rechazar(new Error(e.message || 'El laminador se cerró de golpe (¿se quedó sin memoria?)'));
         };
-
+        armarGuardia();
         worker.postMessage(mensaje, transferir);
     });
 }
 
-// Lamina un STL. Devuelve { gcode, info }.
-// Ojo: `stl` se transfiere al worker (sin copiarlo) y queda vacío acá.
-// `transformacion` (opcional): matriz 3×3 de 9 números, fila por fila, con la
-// escala y rotación del modelo (ver transformar.js). El worker la aplica antes
-// de centrar el modelo en la cama.
-export async function laminar({ stl, dispositivo, proceso, maxTriangulos, transformacion, alProgresar, signal }) {
+/**
+ * Lamina una o varias piezas. Devuelve `{ gcode, info }` (`info.copias`: widgets laminados).
+ * Ojo: el `stl` de cada pieza se transfiere al worker (sin copiarlo) y queda vacío acá.
+ * @param {object} opciones
+ * @param {ArrayBuffer} [opciones.stl] formato viejo: una pieza en el centro (se ignora si viene `piezas`)
+ * @param {number[]} [opciones.transformacion] matriz 3×3 de 9 números, fila por fila (ver transformar.js)
+ * @param {{stl:ArrayBuffer, transformacion?:number[], posiciones:{x:number,y:number}[]}[]} [opciones.piezas]
+ *   varias piezas, cada una con una posición (centro en mm, relativo al centro de la cama) por copia
+ * @param {object} opciones.dispositivo perfil de la impresora
+ * @param {object} opciones.proceso configuración del proceso
+ * @param {number} [opciones.maxTriangulos] tope de triángulos del conjunto, copias incluidas
+ * @param {(etapa:string, valor:number)=>void} [opciones.alProgresar] avance
+ * @param {AbortSignal} [opciones.signal] para cancelar
+ * @param {number} [opciones.plazoSinNoticiasMs] si el worker no avisa nada en este lapso se lo cancela con un error (240 s)
+ * @returns {Promise<{gcode:string, info:object}>}
+ */
+export async function laminar({
+    stl,
+    dispositivo,
+    proceso,
+    maxTriangulos,
+    transformacion,
+    piezas,
+    alProgresar,
+    signal,
+    plazoSinNoticiasMs = PLAZO_SIN_NOTICIAS_MS,
+}) {
+    if (signal?.aborted) throw new DOMException('Cancelado', 'AbortError'); // ya cancelado: ni se crea el worker
     const worker = new Worker(new URL('./laminador.worker.js', import.meta.url), { type: 'module' });
+    const lista = piezas || [{ stl, transformacion, posiciones: [{ x: 0, y: 0 }] }];
     const r = await correr(
         worker,
-        { tipo: 'laminar', stl, dispositivo, proceso, maxTriangulos, transformacion },
-        [stl],
-        { alProgresar, signal },
+        { tipo: 'laminar', piezas: lista, dispositivo, proceso, maxTriangulos },
+        [...new Set(lista.map(p => p.stl))], // piezas que comparten el buffer: se transfiere una sola vez
+        { alProgresar, signal, plazoSinNoticiasMs },
     );
     return { gcode: r.gcode, info: r.info };
 }
@@ -62,10 +98,12 @@ export async function leerParaVista(stl, maxTriangulosVista = 300_000) {
 }
 
 // Lee un G-code y arma los recorridos para la vista previa capa por capa
-// (ver recorridos.worker.js). El G-code se copia al worker; el resultado vuelve sin copiar.
-export async function leerRecorridos(gcode, maxSegmentos) {
+// (ver recorridos-lector.js). El G-code se copia al worker; el resultado vuelve sin copiar.
+// `opciones.auto`: el worker elige el nivel de detalle que entra en `maxSegmentos` (recorridos-auto.js) y el
+// resultado trae `nivel`, `simplificado` y `leidoHasta` (ADR 0006).
+export async function leerRecorridos(gcode, maxSegmentos, opciones = {}) {
     const worker = new Worker(new URL('./recorridos.worker.js', import.meta.url), { type: 'module' });
-    return correr(worker, { gcode, maxSegmentos }, []);
+    return correr(worker, { gcode, maxSegmentos, auto: !!opciones.auto }, []);
 }
 
 // Convierte un OBJ o un 3MF a STL binario (en un worker). Devuelve { stl: ArrayBuffer }.

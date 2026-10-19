@@ -1,0 +1,117 @@
+{
+    "_nota": "Perfil de impresora. Las claves de 'dispositivo' y 'proceso' son las de Kiri:Moto; ver src/perfiles/LEEME.md. Las claves que empiezan con _ son comentarios y se ignoran.",
+    "id": "creality-k1",
+    "nombre": "Creality K1",
+    "marca": "Creality",
+    "estado": "revisado",
+    "aviso": "Klipper: el inicio y el fin usan las macros START_PRINT y END_PRINT del equipo (nivelado incluido).",
+    "adhesion": "falda",
+    "_nota_perfil": "Macros de fábrica de Creality (Klipper). Los ventiladores P2/P3 son el auxiliar y el de cámara; en un equipo sin ellos el M106 se ignora. 300 °C de hotend y 100 °C de cama. Velocidades conservadoras.",
+    "pausa": ["PAUSE"],
+    "_nota_reemplaza": "Ids de perfiles importados que este perfil revisado oculta de la lista (mismo modelo).",
+    "reemplaza": ["kiri-creality-k1"],
+    "limites": {
+        "_nota": "Máximos del fabricante. La app no deja pasar estas temperaturas.",
+        "hotendMax": 300,
+        "camaMax": 100
+    },
+    "dispositivo": {
+        "deviceName": "Creality K1",
+        "bedWidth": 220,
+        "bedDepth": 220,
+        "maxHeight": 250,
+        "_nota_origen": "originCenter false = el origen (0,0) es la esquina frontal izquierda de la cama.",
+        "originCenter": false,
+        "bedRound": false,
+        "bedBelt": false,
+        "fwRetract": false,
+        "filamentSource": "direct",
+        "gcodeFExt": "gcode",
+        "extruders": [
+            {
+                "extNozzle": 0.4,
+                "extFilament": 1.75,
+                "extOffsetX": 0,
+                "extOffsetY": 0
+            }
+        ],
+        "gcodePre": [
+            "; --- Inicio: Creality K1 (laminar-movil) ---",
+            "START_PRINT EXTRUDER_TEMP={temp} BED_TEMP={bed_temp}  ; macro del equipo (home, malla de nivelado, purga)",
+            "G90                          ; coordenadas absolutas",
+            "M83                          ; extrusor relativo",
+            "G92 E0"
+        ],
+        "gcodePost": [
+            "; --- Fin ---",
+            "END_PRINT                    ; macro del equipo",
+            "M106 S0                      ; apagar ventilador",
+            "M106 P2 S0                   ; apagar ventilador auxiliar",
+            "M106 P3 S0                   ; apagar ventilador de cámara"
+        ],
+        "_nota_ventilador": "Sin gcodeFan, Kiri no prende nunca el ventilador de capa.",
+        "gcodeFan": ["M106 S{fan_speed}"],
+        "gcodeTrack": ["M73 P{progress}"],
+        "gcodeLayer": [";LAYER:{layer}"]
+    },
+    "proceso": {
+        "_nota": "Valores base para cualquier calidad. Velocidades en mm/s, distancias en mm.",
+        "outputRetractDist": 0.5,
+        "outputRetractSpeed": 40,
+        "outputRetractWipe": 0,
+        "outputRetractDwell": 0,
+        "zHopDistance": 0,
+        "outputSeekrate": 200,
+        "firstLayerRate": 30,
+        "firstLayerFillRate": 30,
+        "outputMaxFlowrate": 20,
+        "outputBrimCount": 2,
+        "outputBrimOffset": 3,
+        "sliceFillType": "hex",
+        "sliceSupportType": "disabled"
+    },
+    "calidades": {
+        "rapido": {
+            "nombre": "Rápido",
+            "descripcion": "Capas de 0,28 mm. Ideal para prototipos.",
+            "proceso": {
+                "sliceHeight": 0.28,
+                "firstSliceHeight": 0.28,
+                "sliceShells": 2,
+                "sliceTopLayers": 3,
+                "sliceBottomLayers": 3,
+                "sliceFillSparse": 0.15,
+                "outputFeedrate": 150,
+                "outputFinishrate": 100
+            }
+        },
+        "normal": {
+            "nombre": "Normal",
+            "descripcion": "Capas de 0,2 mm. Buen equilibrio entre tiempo y terminación.",
+            "proceso": {
+                "sliceHeight": 0.2,
+                "firstSliceHeight": 0.2,
+                "sliceShells": 3,
+                "sliceTopLayers": 4,
+                "sliceBottomLayers": 3,
+                "sliceFillSparse": 0.2,
+                "outputFeedrate": 100,
+                "outputFinishrate": 60
+            }
+        },
+        "detalle": {
+            "nombre": "Detalle",
+            "descripcion": "Capas de 0,12 mm. Más lento, mejor terminación.",
+            "proceso": {
+                "sliceHeight": 0.12,
+                "firstSliceHeight": 0.2,
+                "sliceShells": 3,
+                "sliceTopLayers": 7,
+                "sliceBottomLayers": 5,
+                "sliceFillSparse": 0.2,
+                "outputFeedrate": 70,
+                "outputFinishrate": 40
+            }
+        }
+    }
+}

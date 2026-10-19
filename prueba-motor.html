@@ -51,13 +51,18 @@
                 armarConfiguracion,
                 listaImpresoras,
                 buscarImpresora,
+                idVigente,
+                existeImpresora,
                 ponerImpresorasPropias,
             } from './src/perfiles/perfiles.js';
             window.impresoras = listaImpresoras().map(i => ({ id: i.id, nombre: i.nombre, estado: i.estado }));
             window.buscarImpresora = buscarImpresora;
+            window.idVigente = idVigente;
+            window.existeImpresora = existeImpresora;
             // Para probar con impresoras "propias" (ej. una con límites de temperatura bajos).
             window.ponerImpresorasPropias = ponerImpresorasPropias;
             import { maxTriangulos } from './src/config.js';
+            import { laminarPiezas } from './prueba-piezas.js';
             import { esfera, te, tubo } from './src/prueba/mallas.js';
 
             const estado = document.getElementById('estado');
@@ -71,42 +76,100 @@
                 return (await fetch('ejemplos/cubo-20mm.stl')).arrayBuffer();
             }
 
+            const aBuffer = p =>
+                p.stlBase64 ? Uint8Array.from(atob(p.stlBase64), c => c.charCodeAt(0)).buffer : obtenerSTL(p.caso);
+
+            // Las piezas del pedido con su ArrayBuffer. `mismoQue: i` reusa el buffer de la pieza i (el mismo objeto).
+            async function leerPiezas(pedidas) {
+                const piezas = [];
+                for (const p of pedidas) {
+                    const stl = p.mismoQue === undefined ? await aBuffer(p) : piezas[p.mismoQue].stl;
+                    piezas.push({
+                        stl,
+                        transformacion: p.transformacion,
+                        posiciones: p.posiciones,
+                        bloqueos: p.bloqueos,
+                    });
+                }
+                return piezas;
+            }
+
+            const configurar = ({ impresoraId = 'creality-ender-3-v3-se', calidad = 'normal', ...resto }) =>
+                armarConfiguracion({ impresoraId, calidad, material: 'pla', soportes: false, personal: {}, ...resto });
+
+            // Compara los minions locales con las funciones de polígonos de Kiri (scripts/motor/soportes-progreso.mjs).
+            window.probarMinions = () =>
+                new Promise((resolver, rechazar) => {
+                    const w = new Worker(new URL('./scripts/motor/minions-prueba.worker.js', import.meta.url), {
+                        type: 'module',
+                    });
+                    w.onmessage = e => (w.terminate(), resolver(e.data));
+                    w.onerror = e => (w.terminate(), rechazar(new Error(e.message)));
+                    w.postMessage(null);
+                });
+
             // Expuesta en window para las pruebas automáticas (scripts/probar-motor.mjs).
             window.probar = async ({
                 caso = 'cubo',
-                impresoraId = 'creality-ender-3-v3-se',
-                calidad = 'normal',
-                material = 'pla',
-                soportes = false,
-                personal = {},
                 limite,
                 transformacion,
-                cambios,
                 stlBase64, // un STL ya armado (lo usan las pruebas que necesitan una malla propia)
+                piezas: pedidas, // varias piezas (ADR 0003): [{ caso | stlBase64 | mismoQue, transformacion?, posiciones }]
+                cancelarEn, // aborta (AbortSignal) cuando 'laminando' llega a este valor (0..1)
+                diagnostico, // true: el worker registra las llamadas de los ganchos de soportes y las devuelve en info.ganchos
+                ...config
             } = {}) => {
-                const stl = stlBase64
-                    ? Uint8Array.from(atob(stlBase64), c => c.charCodeAt(0)).buffer
-                    : await obtenerSTL(caso);
-                const { dispositivo, proceso, avisos } = armarConfiguracion({
-                    impresoraId,
-                    calidad,
-                    material,
-                    soportes,
-                    personal,
-                    cambios,
-                });
+                const piezas = pedidas && (await leerPiezas(pedidas));
+                const stl = pedidas ? null : await aBuffer({ stlBase64, caso });
+                const { dispositivo, proceso, avisos } = configurar(config);
+                if (diagnostico) proceso.laminarDiagnostico = true;
                 const inicio = performance.now();
+                const control = new AbortController();
+                window.progreso = []; // [etapa, valor] de cada aviso de progreso, para las pruebas
                 const r = await laminar({
                     stl,
                     dispositivo,
                     proceso,
                     maxTriangulos: limite ?? maxTriangulos(),
                     transformacion,
-                    alProgresar: (etapa, valor) => (estado.textContent = `${etapa} ${Math.round(valor * 100)}%`),
+                    piezas,
+                    signal: control.signal,
+                    alProgresar: (etapa, valor) => {
+                        window.progreso.push([etapa, valor]);
+                        estado.textContent = `${etapa} ${Math.round(valor * 100)}%`;
+                        if (etapa === 'laminando' && valor >= (cancelarEn ?? Infinity)) control.abort();
+                    },
                 });
                 r.ms = Math.round(performance.now() - inicio);
                 r.avisos = avisos;
                 return r;
+            };
+
+            // Manda el mensaje del formato VIEJO ({ stl, transformacion }) directo al worker, sin pasar por motor.js.
+            window.probarViejo = async ({ caso = 'cubo', stlBase64, limite, ...config } = {}) => {
+                const stl = await aBuffer({ stlBase64, caso });
+                const { dispositivo, proceso } = configurar(config);
+                const worker = new Worker(new URL('./src/motor/laminador.worker.js', import.meta.url), {
+                    type: 'module',
+                });
+                return new Promise((ok, mal) => {
+                    worker.onmessage = e => {
+                        const m = e.data;
+                        if (m.tipo === 'progreso') return;
+                        worker.terminate();
+                        if (m.tipo === 'listo') ok({ gcode: m.gcode, info: m.info });
+                        else mal(new Error(m.mensaje));
+                    };
+                    worker.onerror = e => mal(new Error(e.message));
+                    const msg = {
+                        tipo: 'laminar',
+                        stl,
+                        dispositivo,
+                        proceso,
+                        maxTriangulos: limite ?? maxTriangulos(),
+                    };
+                    worker.postMessage(msg, [stl]);
+                });
             };
 
             // Torre de calibración: su configuración (perfiles/torres.js importa JSON, que Node no carga sin más).
@@ -129,6 +192,26 @@
                 } catch (err) {
                     return { error: err.name };
                 }
+            };
+
+            // ADR 0003 (T0): varios widgets con `track.pos` distintos en el Kiri real (ver prueba-piezas.js).
+            // `piezas`: [{ caso | stlBase64, pos: { x, y } }]. Devuelve { gcode, dispositivo }.
+            window.probarPiezas = ({
+                piezas,
+                impresoraId = 'creality-ender-3-v3-se',
+                calidad = 'normal',
+                material = 'pla',
+                soportes = false,
+                personal = {},
+            }) => {
+                const { dispositivo, proceso } = armarConfiguracion({
+                    impresoraId,
+                    calidad,
+                    material,
+                    soportes,
+                    personal,
+                });
+                return laminarPiezas({ piezas, dispositivo, proceso, obtenerSTL });
             };
 
             document.querySelectorAll('[data-caso]').forEach(

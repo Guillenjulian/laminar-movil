@@ -69,89 +69,79 @@ export function resumenAvanzado(av) {
     return partes.join(' · ');
 }
 
-// Arma la sección. `estado` es el de src/ui/estado.js (usa impresoraId, calidad,
-// material y avanzado); `alCambiar` se llama después de cada cambio (para
-// guardar las preferencias).
-export function crearAvanzado({ estado, alCambiar = () => {} }) {
-    const seccion = $('avanzado');
+// Límites de un contador; para las temperaturas, según la impresora (si no los tiene, los de la tabla).
+function limites(estado, clave) {
+    const c = CONTADORES[clave];
+    const lim = buscarImpresora(estado.impresoraId).limites || {};
+    if (clave === 'tempBoquilla' && lim.hotendMax) return { ...c, max: lim.hotendMax };
+    if (clave === 'tempCama' && lim.camaMax) return { ...c, max: lim.camaMax };
+    return c;
+}
 
-    const base = () => valoresDeAvanzado(estado.impresoraId, estado.calidad, estado.material);
-    const actuales = () => ({ ...base(), ...estado.avanzado });
+// Modo jarrón, altura variable y costuras (las dos últimas se deshabilitan con el jarrón).
+function dibujarOpcionesDeCapa(v) {
+    $('avJarron').checked = v.jarron;
+    $('avisoJarron').hidden = !v.jarron;
+    // En modo jarrón no hay relleno: lo mostramos deshabilitado en "Personalizar".
+    $('personalizar').classList.toggle('sin-relleno', v.jarron);
+    $('avAlturaVariable').checked = v.alturaVariable && !v.jarron;
+    $('avAlturaVariable').disabled = v.jarron;
+    $('detalleAlturaVariable').textContent = v.jarron
+        ? 'No se puede con el modo jarrón (la espiral necesita capas parejas).'
+        : 'Capas más finas donde hay curvas; la de la calidad es la más gruesa.';
 
-    // Límites de temperatura según la impresora (si no los tiene, los de la tabla).
-    function limites(clave) {
-        const c = CONTADORES[clave];
-        const lim = buscarImpresora(estado.impresoraId).limites || {};
-        if (clave === 'tempBoquilla' && lim.hotendMax) return { ...c, max: lim.hotendMax };
-        if (clave === 'tempCama' && lim.camaMax) return { ...c, max: lim.camaMax };
-        return c;
-    }
-
-    // Guarda un cambio. Si coincide con el valor de fábrica, se borra (así, si
-    // después cambia la impresora o el material, ese valor los sigue).
-    function cambiar(clave, valor) {
-        if (base()[clave] === valor) delete estado.avanzado[clave];
-        else estado.avanzado[clave] = valor;
-        dibujar();
-        alCambiar();
-    }
-
-    function dibujar() {
-        const v = actuales();
-        $('avJarron').checked = v.jarron;
-        $('avisoJarron').hidden = !v.jarron;
-        // En modo jarrón no hay relleno: lo mostramos deshabilitado en "Personalizar".
-        $('personalizar').classList.toggle('sin-relleno', v.jarron);
-        $('avAlturaVariable').checked = v.alturaVariable && !v.jarron;
-        $('avAlturaVariable').disabled = v.jarron;
-        $('detalleAlturaVariable').textContent = v.jarron
-            ? 'No se puede con el modo jarrón (la espiral necesita capas parejas).'
-            : 'Capas más finas donde hay curvas; la de la calidad es la más gruesa.';
-
-        $('avCosturas').innerHTML = Object.entries(COSTURAS)
-            .map(
-                ([id, c]) =>
-                    `<label class="opcion">
+    $('avCosturas').innerHTML = Object.entries(COSTURAS)
+        .map(
+            ([id, c]) =>
+                `<label class="opcion">
                 <input type="radio" name="costura" value="${id}" ${id === v.costura ? 'checked' : ''} ${v.jarron ? 'disabled' : ''}>
                 <span><b>${c.nombre}</b><br><small>${c.descripcion}</small></span>
             </label>`,
-            )
-            .join('');
-        seccion.querySelector('#avCosturas').classList.toggle('deshabilitado', v.jarron);
+        )
+        .join('');
+    $('avCosturas').classList.toggle('deshabilitado', v.jarron);
+}
 
-        seccion.querySelectorAll('.contador[data-av]').forEach(c => {
+// Contadores ±, deslizadores, resumen del <summary> y botón de restablecer.
+function dibujarValores(estado, v) {
+    $('avanzado')
+        .querySelectorAll('.contador[data-av]')
+        .forEach(c => {
             const clave = c.dataset.av;
-            c.querySelector('output').textContent = limites(clave).ver(v[clave]);
+            c.querySelector('output').textContent = limites(estado, clave).ver(v[clave]);
             c.classList.toggle('cambiado', estado.avanzado[clave] !== undefined);
         });
-        $('avVelocidad').value = v.velocidad;
-        $('avVelocidadValor').textContent = `${v.velocidad} %`;
-        $('avVentilador').value = v.ventilador;
-        $('avVentiladorValor').textContent = `${v.ventilador} %`;
+    $('avVelocidad').value = v.velocidad;
+    $('avVelocidadValor').textContent = `${v.velocidad} %`;
+    $('avVentilador').value = v.ventilador;
+    $('avVentiladorValor').textContent = `${v.ventilador} %`;
 
-        const resumen = resumenAvanzado(estado.avanzado);
-        seccion.querySelector('summary').textContent = resumen
-            ? `Avanzado: ${resumen}`
-            : 'Avanzado: jarrón, costura, retracción, temperaturas…';
-        $('avRestablecer').hidden = !Object.keys(estado.avanzado).length;
-    }
+    const resumen = resumenAvanzado(estado.avanzado);
+    $('avanzado').querySelector('summary').textContent = resumen
+        ? `Avanzado: ${resumen}`
+        : 'Avanzado: jarrón, costura, retracción, temperaturas…';
+    $('avRestablecer').hidden = !Object.keys(estado.avanzado).length;
+}
 
-    // --- Eventos ---
+// Engancha los controles. `cambiar(clave, valor)` guarda; `actuales()` da los valores vigentes.
+function enlazarControles({ estado, cambiar, actuales, dibujar, alCambiar }) {
     $('avJarron').addEventListener('change', e => cambiar('jarron', e.target.checked));
     $('avAlturaVariable').addEventListener('change', e => cambiar('alturaVariable', e.target.checked));
     $('avCosturas').addEventListener('change', e => {
         if (e.target.name === 'costura') cambiar('costura', e.target.value);
     });
-    seccion.querySelectorAll('.contador[data-av]').forEach(c =>
-        c.addEventListener('click', e => {
-            const b = e.target.closest('button');
-            if (!b) return;
-            const clave = c.dataset.av,
-                l = limites(clave);
-            const nuevo = redondear(actuales()[clave] + l.paso * Number(b.dataset.pasoAv));
-            cambiar(clave, Math.min(l.max, Math.max(l.min, nuevo)));
-        }),
-    );
+    $('avanzado')
+        .querySelectorAll('.contador[data-av]')
+        .forEach(c =>
+            c.addEventListener('click', e => {
+                const b = e.target.closest('button');
+                if (!b) return;
+                const clave = c.dataset.av,
+                    l = limites(estado, clave);
+                const nuevo = redondear(actuales()[clave] + l.paso * Number(b.dataset.pasoAv));
+                cambiar(clave, Math.min(l.max, Math.max(l.min, nuevo)));
+            }),
+        );
     for (const clave of Object.keys(DESLIZADORES)) {
         const id = clave === 'velocidad' ? 'avVelocidad' : 'avVentilador';
         // Mientras se arrastra sólo se actualiza el número; al soltar se guarda.
@@ -170,6 +160,30 @@ export function crearAvanzado({ estado, alCambiar = () => {} }) {
     document.addEventListener('change', e => {
         if (e.target.name === 'calidad' || e.target.name === 'material') dibujar();
     });
+}
 
+// Arma la sección. `estado` es el de src/ui/estado.js (usa impresoraId, calidad,
+// material y avanzado); `alCambiar` se llama después de cada cambio (para
+// guardar las preferencias).
+export function crearAvanzado({ estado, alCambiar = () => {} }) {
+    const base = () => valoresDeAvanzado(estado.impresoraId, estado.calidad, estado.material);
+    const actuales = () => ({ ...base(), ...estado.avanzado });
+
+    function dibujar() {
+        const v = actuales();
+        dibujarOpcionesDeCapa(v);
+        dibujarValores(estado, v);
+    }
+
+    // Guarda un cambio. Si coincide con el valor de fábrica, se borra (así, si
+    // después cambia la impresora o el material, ese valor los sigue).
+    function cambiar(clave, valor) {
+        if (base()[clave] === valor) delete estado.avanzado[clave];
+        else estado.avanzado[clave] = valor;
+        dibujar();
+        alCambiar();
+    }
+
+    enlazarControles({ estado, cambiar, actuales, dibujar, alCambiar });
     return { dibujar };
 }

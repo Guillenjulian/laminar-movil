@@ -15,7 +15,7 @@
 // Las capas del fondo (con relleno sólido y viajes) quedan como están.
 //
 // Al principio de cada vuelta deja el comentario MARCA: el lector de la vista
-// previa (recorridos.worker.js) lo usa para saber dónde empieza cada capa, porque
+// previa (recorridos-lector.js) lo usa para saber dónde empieza cada capa, porque
 // la Z ya no salta.
 
 export const MARCA = '; capa en espiral';
@@ -27,128 +27,205 @@ const num = (linea, letra) => {
     return m ? +m[1] : NaN;
 };
 
+/**
+ * Lee los ejes de una línea G0/G1 (sin el comentario). `soloZ`: es el cambio de capa de Kiri,
+ * un movimiento que sólo mueve Z.
+ * @param {string} linea línea G0/G1 completa
+ * @returns {{vx: number, vy: number, vz: number, ve: number, soloZ: boolean}} ejes (NaN si no vienen)
+ */
+function leerMovimiento(linea) {
+    const sinComentario = linea.split(';')[0];
+    const s = ' ' + sinComentario;
+    const vz = num(s, 'Z');
+    return {
+        vx: num(s, 'X'),
+        vy: num(s, 'Y'),
+        ve: num(s, 'E'),
+        vz,
+        soloZ: !isNaN(vz) && !/[XYE]/.test(sinComentario.slice(2)),
+    };
+}
+
+/**
+ * Anota en `est` dónde está la herramienta después de un movimiento (y dónde terminó la última extrusión).
+ * @param {{x: number, y: number, z: number, zExtrusion: number, xFin: number, yFin: number}} est estado de espiralar (se modifica)
+ * @param {{vx: number, vy: number, vz: number, ve: number}} mov resultado de leerMovimiento
+ * @returns {void}
+ */
+function registrarMovimiento(est, mov) {
+    const { vx, vy, vz, ve } = mov;
+    if (!isNaN(vx)) est.x = vx;
+    if (!isNaN(vy)) est.y = vy;
+    if (!isNaN(vz)) est.z = vz;
+    if (ve > 0 && (!isNaN(vx) || !isNaN(vy))) {
+        est.zExtrusion = est.z;
+        est.xFin = est.x;
+        est.yFin = est.y;
+    }
+}
+
+/**
+ * Recorre las líneas desde `desde` mientras sean la vuelta (un viaje corto al principio y después
+ * sólo extrusiones).
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} desde primera línea a mirar
+ * @param {number} xFin X donde terminó la última extrusión
+ * @param {number} yFin Y donde terminó la última extrusión
+ * @returns {{k: number, largo: number, extrusiones: number}|null} dónde se cortó, el largo extruido y cuántas
+ *   extrusiones hubo; null si el viaje del principio es demasiado largo
+ */
+function recorrerVuelta(lineas, desde, xFin, yFin) {
+    let largo = 0,
+        px = xFin,
+        py = yFin,
+        extrusiones = 0,
+        movimientos = 0,
+        k = desde;
+    for (; k < lineas.length; k++) {
+        const l = lineas[k];
+        if (!l.startsWith('G')) continue; // comentarios, M73, M106…
+        if (!/^G1\s/.test(l)) break;
+        const { vx, vy, vz, ve } = leerMovimiento(l);
+        const nx = isNaN(vx) ? px : vx,
+            ny = isNaN(vy) ? py : vy;
+        // Se acepta un viaje corto al principio: en piezas redondas cada vuelta
+        // arranca en el punto más cercano al final de la anterior, no en el mismo.
+        if (movimientos++ === 0 && isNaN(ve) && isNaN(vz) && (!isNaN(vx) || !isNaN(vy))) {
+            if (Math.hypot(nx - px, ny - py) > ACERCAMIENTO) return null;
+        } else {
+            // Termina en el próximo cambio de Z, o en un viaje o retracción.
+            if (!isNaN(vz) || !(ve > 0) || (isNaN(vx) && isNaN(vy))) break;
+            largo += Math.hypot(nx - px, ny - py);
+            extrusiones++;
+        }
+        px = nx;
+        py = ny;
+    }
+    return { k, largo, extrusiones };
+}
+
+/**
+ * ¿Hay más extrusión después de `desde`, antes del próximo cambio de Z? Entonces la capa
+ * tiene relleno o varias islas y queda plana.
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} desde primera línea a mirar
+ * @returns {boolean} true si hay otra extrusión
+ */
+function extruyeDespues(lineas, desde) {
+    for (let j = desde; j < lineas.length; j++) {
+        const s = ' ' + lineas[j].split(';')[0];
+        if (!/^ G[0-3]\s/.test(s)) continue;
+        const z = !isNaN(num(s, 'Z'));
+        if (z && !/[XYE]/.test(s.slice(3))) return false; // cambio de capa
+        if (num(s, 'E') > 0 && (!isNaN(num(s, 'X')) || !isNaN(num(s, 'Y')))) return true;
+    }
+    return false;
+}
+
+/**
+ * ¿Las líneas desde `desde` hasta el próximo movimiento de Z son una sola vuelta de pura extrusión?
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} desde primera línea de la vuelta
+ * @param {number} xFin X donde terminó la última extrusión
+ * @param {number} yFin Y donde terminó la última extrusión
+ * @returns {{fin: number, largo: number}|null} línea donde termina la vuelta y su largo extruido, o null
+ */
+function vueltaDesde(lineas, desde, xFin, yFin) {
+    const r = recorrerVuelta(lineas, desde, xFin, yFin);
+    if (!r || extruyeDespues(lineas, r.k)) return null;
+    let k = r.k;
+    // Lo que no es movimiento al final (ej. ";LAYER:n") queda para lo que sigue.
+    while (k > desde && !lineas[k - 1].startsWith('G')) k--;
+    if (!r.extrusiones || r.largo <= 0) return null;
+    return { fin: k, largo: r.largo };
+}
+
+/**
+ * Pasa una línea de la vuelta a espiral: la extrusión sube su Z según lo recorrido (`prog.recorrido`);
+ * el acercamiento corto se queda a la Z de antes.
+ * @param {string} l línea G1
+ * @param {{px: number, py: number, recorrido: number}} prog progreso de la vuelta (se modifica)
+ * @param {number} zBase Z al empezar la vuelta
+ * @param {number} sube cuánto sube la Z en toda la vuelta
+ * @param {number} largo largo extruido de la vuelta
+ * @returns {string} la línea, con Z si extruye
+ */
+function lineaEnEspiral(l, prog, zBase, sube, largo) {
+    const { vx, vy, ve } = leerMovimiento(l);
+    const nx = isNaN(vx) ? prog.px : vx;
+    const ny = isNaN(vy) ? prog.py : vy;
+    const viaje = !(ve > 0);
+    if (!viaje) prog.recorrido += Math.hypot(nx - prog.px, ny - prog.py);
+    prog.px = nx;
+    prog.py = ny;
+    if (viaje) return l;
+    const zk = zBase + sube * Math.min(1, prog.recorrido / largo);
+    return l.replace(/^(G1(?:\s+[XY]-?[\d.]+)+)/, `$1 Z${zk.toFixed(4)}`);
+}
+
+/**
+ * Escribe en `salida` la vuelta que empieza después de la línea `i` (el cambio de capa) con la
+ * Z subiendo de a poco, y deja `est` donde termina la vuelta.
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} i índice del cambio de capa (sólo Z)
+ * @param {{fin: number, largo: number}} capa vuelta que devolvió vueltaDesde
+ * @param {number} vz Z de la capa nueva
+ * @param {{x: number, y: number, z: number, zExtrusion: number, xFin: number, yFin: number}} est estado (se modifica)
+ * @param {string[]} salida líneas de salida (se agregan)
+ * @returns {void}
+ */
+function convertirVuelta(lineas, i, capa, vz, est, salida) {
+    const sube = vz - est.zExtrusion;
+    const prog = { px: est.xFin, py: est.yFin, recorrido: 0 };
+    salida.push(MARCA);
+    for (let k = i + 1; k < capa.fin; k++) {
+        const l = lineas[k];
+        salida.push(/^G1\s/.test(l) ? lineaEnEspiral(l, prog, est.zExtrusion, sube, capa.largo) : l);
+    }
+    est.x = est.xFin = prog.px;
+    est.y = est.yFin = prog.py;
+    est.z = est.zExtrusion = vz;
+}
+
+/**
+ * Si la línea `i` (sólo Z) abre una vuelta que se puede convertir, la devuelve.
+ * @param {string[]} lineas G-code por líneas
+ * @param {number} i índice del cambio de capa (sólo Z)
+ * @param {number} vz Z de la capa nueva
+ * @param {{x: number, y: number, zExtrusion: number, xFin: number, yFin: number}} est estado de espiralar
+ * @returns {{fin: number, largo: number}|null} la vuelta, o null si la capa queda plana
+ */
+function vueltaConvertible(lineas, i, vz, est) {
+    const capa = vueltaDesde(lineas, i + 1, est.xFin, est.yFin);
+    const sube = vz - est.zExtrusion;
+    const ok = capa && sube > 1e-6 && sube <= 1 && est.x === est.xFin && est.y === est.yFin;
+    return ok ? capa : null;
+}
+
+/**
+ * Convierte en espiral las capas de un G-code de modo jarrón (ver la cabecera del archivo).
+ * @param {string} gcode G-code de Kiri en modo jarrón
+ * @returns {string} el G-code con la Z subiendo dentro de cada vuelta y MARCA al principio de cada una
+ */
 export function espiralar(gcode) {
     const lineas = gcode.split('\n');
     const salida = [];
-    let x = NaN,
-        y = NaN,
-        z = NaN; // posición actual
-    let zExtrusion = NaN; // Z de la última extrusión
-    let xFin = NaN,
-        yFin = NaN; // dónde terminó la última extrusión
+    // Posición actual, Z de la última extrusión y dónde terminó.
+    const est = { x: NaN, y: NaN, z: NaN, zExtrusion: NaN, xFin: NaN, yFin: NaN };
 
     let i = 0;
     while (i < lineas.length) {
         const linea = lineas[i];
-        const esMov = /^G[01]\s/.test(linea);
-        const sinComentario = linea.split(';')[0];
-        const vz = esMov ? num(' ' + sinComentario, 'Z') : NaN;
-        const soloZ = esMov && !isNaN(vz) && !/[XYE]/.test(sinComentario.slice(2));
-
-        if (soloZ) {
-            const capa = vueltaDesde(i + 1);
-            const sube = vz - zExtrusion;
-            if (capa && sube > 1e-6 && sube <= 1 && x === xFin && y === yFin) {
-                // Convertir: la Z va de zExtrusion a vz según lo recorrido.
-                salida.push(MARCA);
-                let recorrido = 0,
-                    px = xFin,
-                    py = yFin;
-                for (let k = i + 1; k < capa.fin; k++) {
-                    const l = lineas[k];
-                    if (!/^G1\s/.test(l)) {
-                        salida.push(l);
-                        continue;
-                    }
-                    const s = ' ' + l.split(';')[0];
-                    const nx = isNaN(num(s, 'X')) ? px : num(s, 'X');
-                    const ny = isNaN(num(s, 'Y')) ? py : num(s, 'Y');
-                    const viaje = !(num(s, 'E') > 0);
-                    if (!viaje) recorrido += Math.hypot(nx - px, ny - py);
-                    px = nx;
-                    py = ny;
-                    if (viaje) {
-                        salida.push(l);
-                        continue;
-                    } // el acercamiento corto, a la Z de antes
-                    const zk = zExtrusion + sube * Math.min(1, recorrido / capa.largo);
-                    salida.push(l.replace(/^(G1(?:\s+[XY]-?[\d.]+)+)/, `$1 Z${zk.toFixed(4)}`));
-                }
-                x = xFin = px;
-                y = yFin = py;
-                z = zExtrusion = vz;
-                i = capa.fin;
-                continue;
-            }
+        const mov = /^G[01]\s/.test(linea) ? leerMovimiento(linea) : null;
+        const capa = mov && mov.soloZ ? vueltaConvertible(lineas, i, mov.vz, est) : null;
+        if (capa) {
+            convertirVuelta(lineas, i, capa, mov.vz, est, salida);
+            i = capa.fin;
+            continue;
         }
-
         salida.push(linea);
-        if (esMov) {
-            const s = ' ' + sinComentario;
-            const vx = num(s, 'X'),
-                vy = num(s, 'Y'),
-                ve = num(s, 'E');
-            if (!isNaN(vx)) x = vx;
-            if (!isNaN(vy)) y = vy;
-            if (!isNaN(vz)) z = vz;
-            if (ve > 0 && (!isNaN(vx) || !isNaN(vy))) {
-                zExtrusion = z;
-                xFin = x;
-                yFin = y;
-            }
-        }
+        if (mov) registrarMovimiento(est, mov);
         i++;
     }
     return salida.join('\n');
-
-    // ¿Las líneas desde `desde` hasta el próximo movimiento de Z son una sola
-    // vuelta de pura extrusión? Devuelve { fin, largo } o null.
-    function vueltaDesde(desde) {
-        let largo = 0,
-            px = xFin,
-            py = yFin,
-            extrusiones = 0,
-            movimientos = 0,
-            k = desde;
-        for (; k < lineas.length; k++) {
-            const l = lineas[k];
-            if (!l.startsWith('G')) continue; // comentarios, M73, M106…
-            if (!/^G1\s/.test(l)) break;
-            const s = ' ' + l.split(';')[0];
-            const vx = num(s, 'X'),
-                vy = num(s, 'Y'),
-                ve = num(s, 'E');
-            // Se acepta un viaje corto al principio: en piezas redondas cada vuelta
-            // arranca en el punto más cercano al final de la anterior, no en el mismo.
-            if (movimientos++ === 0 && isNaN(ve) && isNaN(num(s, 'Z')) && (!isNaN(vx) || !isNaN(vy))) {
-                const nx = isNaN(vx) ? px : vx,
-                    ny = isNaN(vy) ? py : vy;
-                if (Math.hypot(nx - px, ny - py) > ACERCAMIENTO) return null;
-                px = nx;
-                py = ny;
-                continue;
-            }
-            // Termina en el próximo cambio de Z, o en un viaje o retracción.
-            if (!isNaN(num(s, 'Z')) || !(ve > 0) || (isNaN(vx) && isNaN(vy))) break;
-            const nx = isNaN(vx) ? px : vx,
-                ny = isNaN(vy) ? py : vy;
-            largo += Math.hypot(nx - px, ny - py);
-            px = nx;
-            py = ny;
-            extrusiones++;
-        }
-        // La capa tiene que ser una sola vuelta: después no puede extruir nada más
-        // hasta el próximo cambio de Z (si hay relleno o varias islas, queda plana).
-        for (let j = k; j < lineas.length; j++) {
-            const s = ' ' + lineas[j].split(';')[0];
-            if (!/^ G[0-3]\s/.test(s)) continue;
-            const z = !isNaN(num(s, 'Z'));
-            if (z && !/[XYE]/.test(s.slice(3))) break; // cambio de capa
-            if (num(s, 'E') > 0 && (!isNaN(num(s, 'X')) || !isNaN(num(s, 'Y')))) return null;
-        }
-        // Lo que no es movimiento al final (ej. ";LAYER:n") queda para lo que sigue.
-        while (k > desde && !lineas[k - 1].startsWith('G')) k--;
-        if (!extrusiones || largo <= 0) return null;
-        return { fin: k, largo };
-    }
 }

@@ -163,6 +163,37 @@ h2:first-child {
     height: 100%;
     display: block;
 }
+/* Aviso mientras carga three.js (ADR 0006); con error, un botón para reintentar. */
+.visor-estado {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    text-align: center;
+    color: var(--suave);
+    background: var(--tarjeta);
+}
+.visor-estado:empty {
+    display: none;
+}
+.visor[data-visor='error'] .visor-estado {
+    color: var(--texto);
+    background: var(--error);
+}
+.visor-estado-boton {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--error-borde);
+    border-radius: var(--radio);
+    padding: 12px 16px;
+    cursor: pointer;
+}
+.visor-estado-boton:focus-visible {
+    outline: 3px solid var(--acento);
+    outline-offset: 2px;
+}
 .ayuda-gestos {
     position: absolute;
     left: 0;
@@ -237,6 +268,81 @@ h2:first-child {
     margin: 0;
 }
 
+/* --- Piezas del paso 1 (chips y "Agregar pieza") --- */
+.piezas {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.piezas li {
+    display: flex;
+    max-width: 100%;
+}
+.chip,
+.chip-quitar {
+    min-height: 44px;
+    border: 1px solid var(--borde);
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: inherit;
+    cursor: pointer;
+}
+.chip {
+    min-width: 0;
+    max-width: 14em;
+    padding: 6px 12px;
+    border-radius: var(--radio) 0 0 var(--radio);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.chip[aria-pressed='true'] {
+    border-color: var(--acento);
+    background: color-mix(in srgb, var(--acento) 18%, transparent);
+    font-weight: 600;
+}
+.chip-quitar {
+    width: 44px;
+    flex: none;
+    border-left: 0;
+    border-radius: 0 var(--radio) var(--radio) 0;
+    color: var(--suave);
+    font-size: 1.4rem;
+}
+.copias-pieza {
+    margin-bottom: 12px;
+}
+.copias-pieza .fila-escala > span:first-child {
+    flex: 1;
+    font-weight: 600;
+}
+.copias-num {
+    min-width: 2.5em;
+    text-align: center;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+}
+.solo-lectores {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+.agregar-pieza {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.agregar-pieza .boton {
+    margin-top: 0;
+}
+
 /* --- Avisos --- */
 .aviso {
     margin: 12px 0;
@@ -250,6 +356,15 @@ h2:first-child {
 .aviso.error {
     background: var(--error);
     border-color: var(--error-borde);
+}
+
+.aviso-entran:empty,
+#avisoVista:empty,
+#tipoSoportesZonas:empty,
+#bloqueoAyuda:empty {
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
 
 /* --- Modelos recientes --- */
@@ -941,4 +1056,28 @@ input[type='range'] {
     gap: 8px;
     max-width: 640px;
     margin: 0 auto;
+}
+
+/* --- Soportes (paso 2) y zonas sin soporte (paso 1), ADR 0004 --- */
+.opcion-soporte small {
+    display: block;
+    margin: 4px 14px 0;
+    color: var(--suave);
+}
+.zonas-sin-soporte {
+    margin: 12px 0;
+}
+.zonas-sin-soporte .fila-escala {
+    margin-top: 8px;
+}
+.zonas-sin-soporte .fila-escala > span:first-child {
+    flex: 1;
+    font-weight: 600;
+}
+.zonas-sin-soporte .boton[aria-pressed='true'] {
+    border-color: var(--acento);
+    background: color-mix(in srgb, var(--acento) 18%, transparent);
+}
+.zonas-sin-soporte .piezas {
+    margin: 8px 0;
 }

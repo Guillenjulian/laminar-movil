@@ -1,5 +1,5 @@
 // Inserta pausas (cambio de filamento) en el G-code, al principio de las capas
-// elegidas. Las posiciones salen de la vista previa (recorridos.worker.js, `pausaCapa`).
+// elegidas. Las posiciones salen de la vista previa (recorridos-lector.js, `pausaCapa`).
 
 // pausas: [{ capa (desde 0), offset (posición en el texto), z }]
 // lineas: G-code de pausa de la impresora (ej. ['M600'])

@@ -11,6 +11,8 @@
 import { iniciarApp } from './lib/app.mjs';
 import { probarModelo, probarGestos } from './app/paso1-modelo.mjs';
 import { probarFormatos } from './app/paso1-formatos.mjs';
+import { probarPiezas } from './app/piezas.mjs';
+import { probarCopias } from './app/copias.mjs';
 import { probarConfig } from './app/paso2-config.mjs';
 import { probarCancelar, probarPersonalizar, probarLaminarCubo } from './app/paso3-laminar.mjs';
 import { probarMateriales } from './app/materiales.mjs';
@@ -20,17 +22,38 @@ import { probarCambiosGcode } from './app/cambios-gcode.mjs';
 import { probarVistaCapas } from './app/vista-capas.mjs';
 import { probarPausas } from './app/pausas.mjs';
 import { probarDescarga } from './app/descarga.mjs';
+import { probarDescargaBambu } from './app/descarga-bambu.mjs';
 import { probarImpresoras } from './app/impresoras.mjs';
 import { probarRecientes } from './app/recientes.mjs';
 import { probarTransformar } from './app/transformar.mjs';
 import { probarTorres } from './app/torres.mjs';
+import { probarVisorDiferido } from './app/visor-diferido.mjs';
+import { probarVistaLiviana } from './app/vista-liviana.mjs';
 import { probarOffline } from './app/offline.mjs';
+import { probarAcomodoConGiros, probarPrecioTrasRecargar } from './app/piezas-extra.mjs';
+import { probarBloqueos } from './app/bloqueos.mjs';
+import { probarBloqueosModos } from './app/bloqueos-modos.mjs';
+import { probarSoportesTipo } from './app/soportes-tipo.mjs';
+import { probarSoportesEstado } from './app/soportes-estado.mjs';
+import { probarVisorBloqueos } from './app/visor-bloqueos.mjs';
+
+// Vuelve del paso 2 al 1: probarSoportesTipo termina en el paso 2 y probarCancelar también parte del 2.
+const volverAlPaso1 = async ctx => {
+    await ctx.page.goBack();
+};
 
 const AREAS = [
     probarModelo,
     probarFormatos,
     probarGestos,
+    probarPiezas,
+    probarCopias,
+    probarAcomodoConGiros,
+    probarBloqueos, // ADR 0004: zonas sin soporte (paso 1, cubo, 100 %); deja el paso 1
+    probarBloqueosModos, // ADR 0004: modos excluyentes y pieza no activa (mismo estado de entrada y de salida)
     probarConfig,
+    volverAlPaso1,
+    probarSoportesTipo, // ADR 0004: selector de tipo (parte del paso 1 con el cubo y soportes 'no'); deja el paso 2
     probarCancelar,
     probarPersonalizar,
     probarLaminarCubo,
@@ -40,11 +63,17 @@ const AREAS = [
     probarVistaCapas,
     probarPausas,
     probarDescarga,
+    probarDescargaBambu,
     probarCambiosGcode,
     probarImpresoras,
     probarRecientes,
     probarTransformar,
     probarTorres,
+    probarPrecioTrasRecargar,
+    probarSoportesEstado, // ADR 0004: migración de preferencias y laminar con árbol y una zona (recarga la página)
+    probarVisorBloqueos, // ADR 0004: toque con punto y marcas en un visor de prueba (no usa el estado de la app)
+    probarVisorDiferido,
+    probarVistaLiviana,
     probarOffline,
 ];
 
