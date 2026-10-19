@@ -47,6 +47,19 @@ async function revisarLista({ page: pagina, ok: revisar }) {
     );
     revisar('la capa muestra la pausa', (await pagina.textContent('#textoCapa')).endsWith('⏸'));
     revisar('marcas sobre el deslizador', (await pagina.locator('#marcasPausa i').count()) === 2);
+    // ADR 0008, A1: con el deslizador de 44 px de alto la marca sigue centrada sobre el carril.
+    const centros = await pagina.evaluate(() => {
+        const centro = el => {
+            const r = el.getBoundingClientRect();
+            return r.top + r.height / 2;
+        };
+        return [centro(document.querySelector('#marcasPausa i')), centro(document.getElementById('capa'))];
+    });
+    revisar(
+        'la marca de pausa está centrada sobre el deslizador (±2 px)',
+        Math.abs(centros[0] - centros[1]) <= 2,
+        `marca ${centros[0].toFixed(1)}, deslizador ${centros[1].toFixed(1)}`,
+    );
     revisar('el botón ahora quita la pausa', /Quitar/.test(await pagina.textContent('#pausarCapa')));
 }
 

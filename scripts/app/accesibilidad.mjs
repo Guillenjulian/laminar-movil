@@ -38,7 +38,7 @@ function medirEnPagina({ sel, sonda }) {
             outlineAncho: e.outlineWidth,
             outlineEstilo: e.outlineStyle,
             outlineColor: e.outlineColor,
-            enfocado: el.matches(':focus-visible'),
+            enfocado: el.matches(':focus-visible') || !!el.querySelector(':focus-visible'),
             alto: e.minHeight,
             transicion: e.transitionDuration,
         };
@@ -63,6 +63,7 @@ const TEXTOS = [
             },
         },
     ],
+    ['"Volver a los valores" (.boton.enlace)', 'section[data-paso="2"] .boton.enlace', null],
     [
         'número cambiado de Avanzado',
         '#avanzado .contador.cambiado output',
@@ -82,8 +83,28 @@ const BORDES = {
     ],
 };
 
-// Un control enfocable y visible por paso, para el anillo de foco.
-const FOCO = { 1: 'section[data-paso="1"] .botones-modelo .boton', 2: 'section[data-paso="2"] .opcion input' };
+// Controles para el anillo de foco: [nombre, selector del que muestra el anillo, selector del que recibe el foco,
+// HTML de una sonda temporal si el control no está siempre en la página].
+const FOCO = {
+    1: [
+        ['.boton', 'section[data-paso="1"] .botones-modelo .boton', 'section[data-paso="1"] .botones-modelo .boton'],
+        [
+            '.chip',
+            '#sondaChip .chip',
+            '#sondaChip .chip',
+            '<ul class="piezas" id="sondaChip"><li><button type="button" class="chip">x</button></li></ul>',
+        ],
+    ],
+    2: [
+        ['.opcion input', 'section[data-paso="2"] .opcion input', 'section[data-paso="2"] .opcion input'],
+        [
+            '.patron',
+            '#sondaPatron .patron',
+            '#sondaPatron input',
+            '<div id="sondaPatron"><label class="patron"><input type="radio" name="sonda" />x</label></div>',
+        ],
+    ],
+};
 
 const fmt = n => n.toFixed(2).replace('.', ',');
 
@@ -112,17 +133,36 @@ async function probarPaso(ctx, paso, esquema) {
         ok(`${nombre} ≥ 3:1 (${en})`, Math.min(fuera, dentro) >= 3, `fuera ${fmt(fuera)}:1, dentro ${fmt(dentro)}:1`);
     }
     // El anillo: se enfoca con una tecla previa para que el navegador lo trate como foco de teclado.
-    await page.keyboard.press('Shift');
-    await page.focus(FOCO[paso]);
-    const f = await medir(page, FOCO[paso]);
-    const ancho = parseFloat(f.outlineAncho);
-    const rf = ratio(f.outlineColor, fondoEfectivo(f.fondosPadre));
-    ok(
-        `anillo de foco ≥ 2 px y ≥ 3:1 (${en})`,
-        f.enfocado && f.outlineEstilo !== 'none' && ancho >= 2 && rf >= 3,
-        `${ancho} px ${f.outlineEstilo}, ${fmt(rf)}:1${f.enfocado ? '' : ', sin :focus-visible'}`,
-    );
-    await page.evaluate(() => document.activeElement?.blur());
+    for (const [nombre, selAnillo, selFoco, sonda] of FOCO[paso]) {
+        await page.keyboard.press('Shift');
+        if (sonda) {
+            await page.evaluate(
+                ([html, padre]) => {
+                    const t = document.createElement('div');
+                    t.id = 'sondaFoco';
+                    t.innerHTML = html;
+                    document.querySelector(padre).append(t);
+                },
+                [sonda, `section[data-paso="${paso}"]`],
+            );
+        }
+        try {
+            await page.focus(selFoco);
+            const f = await medir(page, selAnillo);
+            const ancho = parseFloat(f.outlineAncho);
+            const rf = ratio(f.outlineColor, fondoEfectivo(f.fondosPadre));
+            ok(
+                `anillo de foco de ${nombre} ≥ 2 px y ≥ 3:1 (${en})`,
+                f.enfocado && f.outlineEstilo !== 'none' && ancho >= 2 && rf >= 3,
+                `${ancho} px ${f.outlineEstilo}, ${fmt(rf)}:1${f.enfocado ? '' : ', sin :focus-visible'}`,
+            );
+        } finally {
+            await page.evaluate(() => {
+                document.activeElement?.blur();
+                document.getElementById('sondaFoco')?.remove();
+            });
+        }
+    }
 }
 
 /**
@@ -132,7 +172,7 @@ async function probarPaso(ctx, paso, esquema) {
  *
  * Flujo: con el paso 2 visible mide ese paso; vuelve con "atrás" al paso 1, mide y avanza de nuevo (como hace
  * probarConfig). Los elementos que no existen en el paso 2 (el botón "Poné el precio" del resumen y el número
- * cambiado de Avanzado) se miden con una sonda temporal que se quita al terminar.
+ * cambiado de Avanzado) se miden con una sonda temporal que se quita al terminar (igual el chip y el patrón del anillo de foco).
  *
  * Precondición: paso 2 visible con el cubo cargado.
  * Deja: igual (mismo paso, calidad y modelo; sin foco ni emulación de medios).

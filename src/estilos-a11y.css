@@ -80,6 +80,16 @@
     min-height: 44px;
 }
 
+/* Con el deslizador de 44 px las marcas de pausa se centran sobre el carril (en estilos.css van a top: 4px). */
+.marcas-pausa i {
+    top: 50%;
+    transform: translateY(-50%);
+}
+/* La lista de filamentos recorta lo que sobresale: el anillo va hacia adentro. */
+.filamentos :focus-visible {
+    outline-offset: -3px;
+}
+
 /* --- Movimiento (2.3.3) --- */
 @media (prefers-reduced-motion: reduce) {
     *,
