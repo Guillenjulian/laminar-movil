@@ -12,7 +12,7 @@ import * as transformar from '../motor/transformar.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxTriangulos } from '../config.js';
 import * as formato from './formato.js';
-import { $, anunciar } from './util-dom.js';
+import { $, anunciar, escapar } from './util-dom.js';
 import { estado, matrizModelo, piezaActiva } from './estado.js';
 
 /**
@@ -144,7 +144,7 @@ function noEntraEnCama(t, d) {
 function textoNoEntra(imp) {
     const d = imp.dispositivo;
     return (
-        `<b>No entra en la ${imp.nombre}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
+        `<b>No entra en la ${escapar(imp.nombre)}</b> (${d.bedWidth} × ${d.bedDepth} × ${d.maxHeight} mm). ` +
         'Rotalo o achicalo con los botones de abajo.'
     );
 }

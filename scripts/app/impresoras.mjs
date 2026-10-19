@@ -58,6 +58,7 @@ async function crearPropia({ page: pagina, ok: revisar, visible, captura }) {
     await captura('2-mi-impresora');
     await pagina.fill('[name=ancho]', '20');
     await pagina.tap('#formImpresora [type=submit]');
+    await pagina.waitForFunction(() => document.getElementById('errorImpresora').textContent !== '');
     revisar(
         'valida los datos',
         (await visible('#errorImpresora')) && /Ancho/.test(await pagina.textContent('#errorImpresora')),

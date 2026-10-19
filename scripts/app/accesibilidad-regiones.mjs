@@ -104,6 +104,52 @@ async function revisarSinReanuncio({ page, ok }) {
     await page.waitForSelector('section[data-paso="2"]:not([hidden])');
 }
 
+const PAYLOAD = '<img src=x onerror=window.__xss=1>';
+
+// "No entra" con el nombre de una impresora propia con HTML: se ve literal y no se ejecuta (escapar). Además, con
+// una pieza y una copia lo dice sólo #avisoModelo; con una copia más, sólo #avisoEntran.
+async function revisarNoEntra({ page, ok }) {
+    const texto = () => page.textContent('#avisoModelo');
+    const modeloDice = () => page.evaluate(() => /No entra/.test(document.getElementById('avisoModelo').textContent));
+    await page.tap('#cambiarImpresora');
+    await page.tap('#nuevaImpresora');
+    await page.fill('[name=nombre]', PAYLOAD);
+    await page.tap('#formImpresora [type=submit]');
+    await page.waitForSelector('#hojaMiImpresora', { state: 'hidden' });
+    await page.goBack();
+    await page.waitForSelector('section[data-paso="1"]:not([hidden])');
+    await page.fill('#escala', '2000');
+    await page.locator('#escala').blur();
+    await page.waitForFunction(() => /No entra/.test(document.getElementById('avisoModelo').textContent));
+    const xss = await page.evaluate(() => ({
+        ejecutado: window.__xss === 1,
+        imgs: document.querySelectorAll('#avisoModelo img').length,
+    }));
+    ok(
+        'nombre de impresora con HTML: no se ejecuta ni crea nodos',
+        !xss.ejecutado && xss.imgs === 0,
+        JSON.stringify(xss),
+    );
+    ok('nombre de impresora con HTML: se ve literal', (await texto()).includes(PAYLOAD));
+    await page.tap('#copiasMas');
+    await page.waitForFunction(() => !/No entra/.test(document.getElementById('avisoModelo').textContent));
+    ok('una copia más: sólo #avisoEntran', (await page.isVisible('#avisoEntran')) && !(await modeloDice()));
+    await page.tap('#copiasMenos');
+    await page.waitForFunction(() => /No entra/.test(document.getElementById('avisoModelo').textContent));
+    ok('una copia menos: sólo #avisoModelo', (await page.isHidden('#avisoEntran')) && (await modeloDice()));
+    await page.tap('#restablecerModelo');
+    await page.goForward();
+    await page.waitForSelector('section[data-paso="2"]:not([hidden])');
+    await borrarPropia(page);
+}
+
+// Borra la impresora propia elegida (vuelve la inicial) para dejar el estado como estaba.
+async function borrarPropia(page) {
+    await page.tap('#editarImpresora');
+    await page.tap('#borrarImpresora');
+    await page.waitForSelector('#hojaMiImpresora', { state: 'hidden' });
+}
+
 // La hoja de impresoras: sus encabezados no saltan de nivel.
 async function revisarHojaImpresoras({ page, ok, visible }) {
     await page.tap('#cambiarImpresora');
@@ -123,7 +169,7 @@ async function revisarHojaImpresoras({ page, ok, visible }) {
  *
  * Flujo: toca Laminar (esfera pesada) y mira `#progreso`; cancela. En el paso 2 lee los `role=alert`, los
  * `.contador`, el 🎉 con `aria-hidden` (▶ y ⏸ los reescribe vista-capas.js: los cubre A4), los `status`, que tocar
- * la escala con un aviso activo no reescriba `#avisoModelo`, y los encabezados de la hoja de impresoras.
+ * la escala con un aviso activo no reescriba `#avisoModelo`, el nombre de una impresora propia con HTML en "No entra" (escapado), "No entra" sólo en uno de los dos avisos, y los encabezados de la hoja de impresoras.
  *
  * Precondición: paso 2 visible (con la esfera pesada de probarCancelar).
  * Deja: paso 2 visible, ninguna hoja abierta (igual que antes de llamarla).
@@ -153,5 +199,6 @@ export async function probarAccesibilidadRegiones(ctx) {
 
     await revisarEstados(ctx);
     await revisarSinReanuncio(ctx);
+    await revisarNoEntra(ctx);
     await revisarHojaImpresoras(ctx);
 }

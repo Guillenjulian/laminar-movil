@@ -19,6 +19,7 @@ export async function probarModelo(ctx) {
 
     // Modelo pesado: tiene que avisar que se va a simplificar.
     await elegirArchivo(stlPesado);
+    await pagina.waitForFunction(() => /Modelo pesado/.test(document.getElementById('avisoModelo').textContent));
     const aviso = await pagina.textContent('#avisoModelo');
     revisar('aviso de modelo pesado', /Modelo pesado/.test(aviso), `"${aviso.slice(0, 60)}…"`);
     await pagina.waitForTimeout(800);

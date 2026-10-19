@@ -233,6 +233,7 @@ async function probarUnaNoEntra({ page: pagina, ok: revisar }) {
     await pagina.tap('#siguiente');
     await pagina.tap('#laminar');
     await pagina.waitForSelector('#errorLaminado:not([hidden])', { timeout: 20000 });
+    await pagina.waitForFunction(() => document.getElementById('errorLaminado').textContent !== '');
     const texto = await pagina.textContent('#errorLaminado');
     revisar(
         'una pieza que no entra: mensaje detallado del worker',

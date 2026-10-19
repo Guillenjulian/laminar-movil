@@ -46,6 +46,7 @@ const piezas = crearPiezas({
     elegirOtro: elegirOtroModelo,
     guardar: almacen.guardarModelo, // las piezas agregadas también van a recientes
     alReacomodar: () => {
+        ajuste.actualizarAviso(); // 1 pieza y 1 copia: lo dice #avisoModelo; con más, #avisoEntran
         bloqueos.dibujar(); // cambió la pieza activa, las copias o sus posiciones: las marcas siguen
         describirVisor();
     },

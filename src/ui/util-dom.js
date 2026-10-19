@@ -32,17 +32,25 @@ const anunciados = new WeakMap();
  */
 export function anunciar(el, texto, html = false) {
     const previo = anunciados.get(el);
-    if (previo?.texto === (texto || '') && previo.visible === !el.hidden) return;
-    const nuevo = { texto: texto || '', visible: !!texto };
+    const igual = previo?.texto === (texto || '');
+    if (igual && (!previo.escrito || previo.visible === !el.hidden)) return; // lo mismo, o ya en camino
+    const nuevo = { texto: texto || '', visible: !!texto, escrito: false };
     anunciados.set(el, nuevo);
     const campo = html ? 'innerHTML' : 'textContent';
     if (!texto) {
         el.hidden = true;
         el[campo] = '';
+        nuevo.escrito = true;
         return;
     }
-    el.hidden = false;
-    requestAnimationFrame(() => {
-        if (anunciados.get(el) === nuevo) el[campo] = texto; // si llegó un mensaje más nuevo, ese gana
-    });
+    // Se muestra y se escribe junto, en el siguiente frame (no se ve la caja vacía); si la pestaña está en segundo
+    // plano y el frame no corre, un temporizador lo escribe. Una sola escritura; si llegó otro mensaje, ese gana.
+    const escribir = () => {
+        if (anunciados.get(el) !== nuevo || nuevo.escrito) return;
+        nuevo.escrito = true;
+        el.hidden = false;
+        el[campo] = texto;
+    };
+    requestAnimationFrame(escribir);
+    setTimeout(escribir, 100);
 }
