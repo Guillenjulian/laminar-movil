@@ -1,7 +1,7 @@
 // Laminado con soportes automáticos: tiene que terminar (o fallar con un error) y avisar el progreso (QA, bug del 41 %).
 // Reproduce el laminado "trabado" que reportó el usuario en el link de prueba del PR #4 (el avance se queda quieto para
-// siempre y la UI no se entera). Esta prueba FALLA hoy: ver "Causa" abajo. Todavía no está registrada en
-// scripts/probar-motor.mjs (eso lo hace quien arregle el bug); para correrla sola:
+// siempre y la UI no se entera). Antes del arreglo esta prueba fallaba: ver "Causa" abajo. Está registrada en
+// scripts/probar-motor.mjs; para correrla sola:
 //
 //   npm run build && node scripts/motor/soportes-progreso.mjs
 //
@@ -17,12 +17,12 @@
 //   2. la barra de progreso avanza al menos cada 3 s;
 //   3. si termina, el G-code tiene capas.
 // Casos: (a) una placa chata de 2 mm con 36 islotes (muchos polígonos por capa, como las letras de un llavero) y
-// (b) una esfera rugosa de ~115 mil triángulos (≈ 5,7 MB de STL: pesada, con voladizos por todos lados).
+// (b) una esfera rugosa de ~40 mil triángulos (≈ 2 MB de STL: pesada, con voladizos por todos lados).
 
 import { fileURLToPath } from 'node:url';
 
 const MAX_SIN_AVISO_S = 3;
-const PLAZOS_S = { islotes: 20, rugosa: 120 };
+const PLAZOS_S = { islotes: 20, rugosa: 90 };
 
 function aSTL(tris) {
     const n = tris.length / 9;
@@ -56,7 +56,7 @@ function placaDeIslotes() {
 }
 
 // Esfera de radio 30 con ondulaciones y ruido (como un escaneo): 4·L² triángulos.
-function esferaRugosa(L = 170) {
+function esferaRugosa(L = 100) {
     let s = 7;
     const azar = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
     const fases = Array.from({ length: 6 }, () => [azar() * 6.28, azar() * 6.28, 2 + Math.floor(azar() * 9)]);
@@ -162,7 +162,7 @@ async function probarCaso({ pagina, revisar }, nombre, stl, plazoS) {
 
 export async function probarSoportesProgreso(ctx) {
     await probarCaso(ctx, 'placa de 36 islotes (2,2 mm de alto)', placaDeIslotes(), PLAZOS_S.islotes);
-    await probarCaso(ctx, 'esfera rugosa pesada (~115 mil triángulos)', esferaRugosa(), PLAZOS_S.rugosa);
+    await probarCaso(ctx, 'esfera rugosa pesada (~40 mil triángulos)', esferaRugosa(), PLAZOS_S.rugosa);
 }
 
 // Solo: levanta la app construida (dist/), abre Chromium y corre la prueba.

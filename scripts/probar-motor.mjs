@@ -28,6 +28,7 @@ import { probarPiezasExtra } from './motor/piezas-extra.mjs';
 import { probarSoportesGanchos } from './motor/soportes-ganchos.mjs';
 import { probarSoportesKiri } from './motor/soportes-kiri.mjs';
 import { probarSignoDePos } from './motor/soportes-signo.mjs';
+import { probarSoportesProgreso } from './motor/soportes-progreso.mjs';
 
 const modoDev = process.argv.includes('--dev');
 const servidor = modoDev
@@ -81,6 +82,7 @@ try {
     await probarSoportesGanchos(ctx); // ganchos de soportes con puente de mentira (ADR 0004, T0)
     await probarSoportesKiri(ctx); // soportes árbol y zonas con el puente real (ADR 0004, T4)
     await probarSignoDePos(ctx); // el signo de `pos` en la cama local del árbol (ADR 0004, T6)
+    await probarSoportesProgreso(ctx); // islotes y malla pesada con soportes: termina y avisa (bug del 41 %)
 } finally {
     await navegador.close();
     await (modoDev ? servidor.close() : servidor.httpServer.close());

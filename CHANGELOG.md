@@ -21,6 +21,10 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - La app arranca más liviana: three.js se carga aparte, cuando hace falta (y se precarga en segundo plano). El chunk principal pasa de 594 a 62 kB.
 - La vista previa de G-codes enormes se simplifica si no entra en la memoria del equipo, y avisa. Antes se cortaba: ahora se ven todas las capas.
 
+### Corregido
+
+- El laminado ya no se queda colgado en ~41 % con piezas cuyas capas tienen muchas islas (por ejemplo un llavero con letras, con o sin soportes): Kiri mandaba la resta de polígonos a un pool de sub-workers que acá no existe y esperaba para siempre. Ahora `minions-locales.js` hace `subtract`, `union` y `fill` en el mismo worker, y `clip`/`sliceZ` fallan con un error claro en vez de quedarse esperando. Prueba nueva: `scripts/motor/soportes-progreso.mjs` (placa de 36 islotes y esfera rugosa con soportes).
+
 ## [0.3.0] - 2026-10-18
 
 Sprint de deuda técnica.
