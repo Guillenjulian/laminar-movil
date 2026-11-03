@@ -99,3 +99,23 @@ export function tubo(lado = 20, hueco = 10, alto = 10) {
     }
     return aSTL(new Float32Array(t));
 }
+
+// `cantidad` cilindros sueltos (islas) de 6 mm de diámetro y `alto` mm, en fila, con `lados` caras cada uno.
+// Con 8 o más islas por capa Kiri reparte las restas de capas entre sub-workers: sirve para probar los
+// minions locales (ver minions-locales.js).
+export function islas(cantidad = 9, alto = 3, lados = 32) {
+    const t = [];
+    for (let k = 0; k < cantidad; k++) {
+        const cx = (k - (cantidad - 1) / 2) * 9;
+        for (let i = 0; i < lados; i++) {
+            const a0 = (i / lados) * 2 * Math.PI,
+                a1 = ((i + 1) / lados) * 2 * Math.PI;
+            const p0 = [cx + 3 * Math.cos(a0), 3 * Math.sin(a0)],
+                p1 = [cx + 3 * Math.cos(a1), 3 * Math.sin(a1)];
+            t.push(cx, 0, alto, ...p0, alto, ...p1, alto); // tapa
+            t.push(cx, 0, 0, ...p1, 0, ...p0, 0); // fondo
+            t.push(...p0, 0, ...p1, 0, ...p1, alto, ...p0, 0, ...p1, alto, ...p0, alto); // pared
+        }
+    }
+    return aSTL(new Float32Array(t));
+}

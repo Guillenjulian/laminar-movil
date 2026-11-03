@@ -9,6 +9,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ### Corregido
 
+- El laminado se colgaba en ~41 % cuando una capa tenía 8 o más islas (por ejemplo, un texto en relieve o un
+  QR): Kiri mandaba las restas entre capas a un pool de sub-workers que la app no usa. Ahora se calculan en el
+  mismo worker, y cualquier otro pedido a ese pool corta con un error en vez de colgarse.
 - Con soportes, la barra de laminado quedaba clavada cerca del 45 % mientras se calculaban las sombras de los
   soportes (en el celu, varios minutos sin moverse). Ahora el avance se actualiza capa por capa.
 
