@@ -3,7 +3,7 @@
 // Devuelve `base` (cubo con el perfil por defecto) y `nada` (adhesión nada): las pruebas de avanzado los comparan.
 
 import { probarPausa, filamento } from './ayudas.mjs';
-import { esfera } from '../../src/prueba/mallas.js';
+import { esfera, islas } from '../../src/prueba/mallas.js';
 
 // 3. Soportes automáticos (con los minions locales).
 async function probarSoportes({ laminar, revisar, pagina }) {
@@ -94,7 +94,21 @@ async function probarAdhesion({ laminar, revisar }) {
     return nada;
 }
 
+// Con 8 o más islas por capa Kiri manda las restas entre capas al pool de sub-workers. Sin un reemplazo local,
+// el pedido queda en una cola que nadie atiende y el laminado se cuelga en ~41 % (pasaba con textos en relieve).
+async function probarMuchasIslas({ laminar, revisar }) {
+    const stlBase64 = Buffer.from(islas(9)).toString('base64');
+    const plazo = new Promise(resolver => setTimeout(() => resolver(null), 60000));
+    const r = await Promise.race([laminar({ stlBase64 }), plazo]);
+    revisar(
+        '9 islas por capa: lamina sin colgarse',
+        r !== null && r.g.capas >= 14,
+        r ? `(${r.g.capas} capas)` : '(más de 60 s)',
+    );
+}
+
 export async function probarPersonalizar({ laminar, revisar, pagina }) {
+    await probarMuchasIslas({ laminar, revisar });
     await probarSoportes({ laminar, revisar, pagina });
     // 4. Personalizar: patrones, densidad, paredes y adhesión.
     const base = await probarRelleno({ laminar, revisar });
