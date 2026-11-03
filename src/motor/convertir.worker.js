@@ -5,14 +5,14 @@
 // Recibe: { tipo: 'convertir', nombre, buffer: ArrayBuffer }       (OBJ o 3MF)
 //         { tipo: 'torre', tipoTorre: 'temperatura'|'retraccion', bloques, altoBloqueMm, ... }  (ver torres.js)
 //         { tipo: 'litofania', grises: Uint8Array, ancho, alto, anchoMm, minMm, maxMm, tipoLitofania, marco }
-//         { tipo: 'placa', texto, imagen, marco, bandas }   (placa QR, ver placa-qr.js)
+//         { tipo: 'placas', placas: [{ texto, imagen, marco, bandas }], lugares }   (placas QR, ver placa-qr.js)
 // Manda:  { tipo: 'listo', stl: ArrayBuffer, triangulos }
 //         { tipo: 'error', mensaje }
 
 import { leerModelo, escribirSTL } from './formatos.js';
 import { generarLitofania } from './litofania.js';
 import { generarTorreTemperatura, generarTorreRetraccion } from './torres.js';
-import { generarPlaca } from './placa-qr.js';
+import { generarPlacas } from './placa-qr.js';
 
 self.onmessage = async e => {
     const msg = e.data;
@@ -22,8 +22,8 @@ self.onmessage = async e => {
             vertices = await leerModelo(msg.nombre, msg.buffer);
         } else if (msg.tipo === 'litofania') {
             vertices = generarLitofania({ ...msg, tipo: msg.tipoLitofania });
-        } else if (msg.tipo === 'placa') {
-            vertices = generarPlaca(msg);
+        } else if (msg.tipo === 'placas') {
+            vertices = generarPlacas(msg.placas, msg.lugares);
         } else if (msg.tipo === 'torre') {
             const { tipoTorre, ...opciones } = msg;
             const generar = { temperatura: generarTorreTemperatura, retraccion: generarTorreRetraccion }[tipoTorre];

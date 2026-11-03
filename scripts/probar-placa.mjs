@@ -5,8 +5,8 @@
 
 import jsQR from 'jsqr';
 import { trazarBordes, agrupar, area, grosorMedio, engordar } from '../src/motor/contornos.js';
-import { generarPlaca, disenarPlaca } from '../src/motor/placa-qr.js';
-import { PLACA } from '../src/motor/placa-medidas.js';
+import { generarPlaca, generarPlacas, disenarPlaca } from '../src/motor/placa-qr.js';
+import { PLACA, lugaresEnCama } from '../src/motor/placa-medidas.js';
 import { analizarLamina } from '../src/ui/placa-imagen.js';
 import { laminaSintetica, URL_PRUEBA } from './placa/lamina.mjs';
 import { cerrada, rango, vistaDeArriba } from './placa/malla.mjs';
@@ -85,8 +85,60 @@ function probarMalla(a) {
     revisar('sin textos: sólo base, marco y QR (hasta 2,2 mm)', Math.abs(rango(sinTexto, 2)[1] - 2.2) < 1e-6);
 }
 
+// Lee el QR de una parte de la vista de arriba (x0..x1 × y0..y1 en mm, con y hacia arriba).
+function qrEn(vista, ppm, alto, [x0, x1], [y0, y1]) {
+    const w = Math.round((x1 - x0) * ppm),
+        h = Math.round((y1 - y0) * ppm);
+    const data = new Uint8ClampedArray(w * h * 4);
+    const fila0 = Math.round((alto - y1) * ppm),
+        col0 = Math.round(x0 * ppm);
+    for (let y = 0; y < h; y++)
+        data.set(
+            vista.data.subarray(((fila0 + y) * vista.width + col0) * 4, ((fila0 + y) * vista.width + col0 + w) * 4),
+            y * w * 4,
+        );
+    return jsQR(data, w, h)?.data;
+}
+
+function probarVariasPlacas(a) {
+    console.log('\n▶ Varias placas en la cama');
+    const cuantas = c => lugaresEnCama(c).length;
+    const casos = [
+        [{ x: 220, y: 220 }, 2],
+        [{ x: 180, y: 180 }, 1],
+        [{ x: 100, y: 150 }, 0],
+        [{ x: 350, y: 350 }, 6],
+        [{ x: 170, y: 230 }, 2], // acostadas: una arriba de la otra
+    ];
+    for (const [cama, n] of casos)
+        revisar(`cama ${cama.x} × ${cama.y}: entran ${n}`, cuantas(cama) === n, `(${cuantas(cama)})`);
+    revisar(
+        '170 × 230: van acostadas',
+        lugaresEnCama({ x: 170, y: 230 }).every(l => l.girar),
+    );
+    const otra = analizarLamina(laminaSintetica({ url: URL_PRUEBA + '-2' }));
+    const v = generarPlacas([a, otra], lugaresEnCama({ x: 220, y: 220 }));
+    const [x, y] = [rango(v, 0), rango(v, 1)];
+    revisar(
+        'dos placas: 203 × 150 mm (3 mm entre ellas)',
+        x[0] === 0 && x[1] === 203 && y[0] === 0 && y[1] === 150,
+        `(${x} × ${y})`,
+    );
+    revisar('dos placas: malla cerrada', cerrada(v) === 0);
+    const vista = vistaDeArriba(v, 6, 203, 150);
+    const leidos = [qrEn(vista, 6, 150, [0, 100], [0, 150]), qrEn(vista, 6, 150, [103, 203], [0, 150])];
+    revisar('dos placas: cada una con su QR', leidos.join() === `${URL_PRUEBA},${URL_PRUEBA}-2`, leidos.join(' | '));
+    const acostadas = generarPlacas([a, otra], lugaresEnCama({ x: 170, y: 230 }));
+    const [ax, ay] = [rango(acostadas, 0), rango(acostadas, 1)];
+    revisar('acostadas: 150 × 203 mm', ax[1] === 150 && ay[1] === 203 && ax[0] === 0 && ay[0] === 0, `(${ax} × ${ay})`);
+    revisar('acostadas: malla cerrada (girar no da vuelta los triángulos)', cerrada(acostadas) === 0);
+}
+
 probarContornos();
 const analisis = probarAnalisis();
-if (analisis) probarMalla(analisis);
+if (analisis) {
+    probarMalla(analisis);
+    probarVariasPlacas(analisis);
+}
 console.log(fallas ? `\n${fallas} prueba(s) fallaron` : '\nTodo OK');
 process.exit(fallas ? 1 : 0);

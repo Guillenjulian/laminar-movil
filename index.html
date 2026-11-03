@@ -51,7 +51,7 @@
                     <button class="boton" id="ejemplo">Probar con un cubo de ejemplo</button>
                     <label class="boton chico boton-foto">
                         Litofanía o placa QR desde una imagen
-                        <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" hidden />
+                        <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" multiple hidden />
                     </label>
                     <button class="boton chico boton-foto" id="botonTorre">Torre de calibración</button>
                     <div id="recientes" hidden>
@@ -611,12 +611,15 @@
                     <img id="fotoPlaca" alt="Lámina elegida" />
                     <figcaption id="nombrePlaca"></figcaption>
                 </figure>
-                <p class="nota">El código lleva a <b id="enlacePlaca" class="enlace-placa"></b></p>
+                <p class="nota" id="lineaEnlace">El código lleva a <b id="enlacePlaca" class="enlace-placa"></b></p>
+                <ul class="lista-placas enlace-placa" id="listaPlacas" hidden></ul>
                 <p id="resumenPlaca"></p>
+                <p class="aviso" id="avisoPlacas" hidden></p>
                 <p class="nota">
-                    El QR se rehace limpio y los textos se copian de la imagen. Se imprime con un solo extrusor: blanco
-                    hasta 1,6 mm, negro hasta 2,2 mm y bordó arriba de todo. Las pausas para cambiar el filamento se
-                    ponen solas en la vista previa.
+                    El QR se rehace limpio y los textos se copian de la imagen. Podés elegir varias láminas juntas: van
+                    en la misma cama todas las que entren. Se imprime con un solo extrusor: blanco hasta 1,6 mm, negro
+                    hasta 2,2 mm y bordó arriba de todo. Las pausas para cambiar el filamento se ponen solas en la vista
+                    previa.
                 </p>
                 <button type="button" class="boton grande primario" id="generarPlaca">Generar placa</button>
                 <button type="button" class="boton enlace" id="placaComoLitofania">

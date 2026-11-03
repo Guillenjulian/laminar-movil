@@ -71,6 +71,10 @@ export function iniciarPaso1() {
         cerrar: cerrarHojas,
         cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar, placa: true }),
         litofania: (nombre, buffer) => litofania.abrirFoto(nombre, buffer),
+        cama: () => {
+            const d = buscarImpresora(estado.impresoraId).dispositivo;
+            return { x: d.bedWidth, y: d.bedDepth };
+        },
     });
     $('botonTorre').onclick = torres.abrir;
     conectarSubida();
@@ -110,10 +114,10 @@ export function elegirOtroModelo() {
     mostrarRecientes();
 }
 
-/** Cablea la subida: archivo, foto, otro modelo, ejemplo, recientes y "Siguiente". */
+/** Cablea la subida: archivo, imágenes, otro modelo, ejemplo, recientes y "Siguiente". */
 function conectarSubida() {
     $('archivo').onchange = alElegirArchivo;
-    $('foto').onchange = alElegirArchivo;
+    $('foto').onchange = alElegirImagenes;
     $('otroModelo').onclick = elegirOtroModelo;
     $('siguiente').onclick = () => irA(2);
     $('ejemplo').onclick = async () => {
@@ -140,6 +144,17 @@ async function alElegirArchivo(e) {
     if (archivo) await cargarArchivo(archivo.name, await archivo.arrayBuffer());
 }
 
+/** Handler de #foto: con una imagen, como cualquier archivo; con varias, todas a la hoja de placa QR. */
+async function alElegirImagenes(e) {
+    const archivos = [...e.target.files];
+    e.target.value = '';
+    if (archivos.length === 1) await cargarArchivo(archivos[0].name, await archivos[0].arrayBuffer());
+    else if (archivos.length > 1)
+        await placa.abrirImagenes(
+            await Promise.all(archivos.map(async a => ({ nombre: a.name, buffer: await a.arrayBuffer() }))),
+        );
+}
+
 /**
  * Acepta STL, OBJ y 3MF (estos dos se convierten a STL en un worker). Una imagen con un QR abre la
  * hoja de placa QR; cualquier otra, la de litofanía. `placa`: el STL es una placa QR (pone sus pausas).
@@ -153,7 +168,8 @@ async function cargarArchivo(
     { guardar = true, esStl = false, generar = null, transformacion = null, torre = null, placa: esPlaca = false } = {},
 ) {
     const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
-    if (tipo === 'imagen') return (await placa.abrirSiTieneQr(nombre, buffer)) || litofania.abrirFoto(nombre, buffer);
+    if (tipo === 'imagen')
+        return (await placa.abrirImagenes([{ nombre, buffer }])) || litofania.abrirFoto(nombre, buffer);
     if (!tipo) {
         alert('No sabemos leer ese archivo. Elegí un modelo STL, OBJ o 3MF (o una foto para hacer una litofanía).');
         return;

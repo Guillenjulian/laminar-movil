@@ -72,3 +72,10 @@
 .enlace-placa {
     overflow-wrap: anywhere;
 }
+.lista-placas {
+    margin: 0;
+    padding-left: 1.2em;
+    font-size: 0.9rem;
+    display: grid;
+    gap: 6px;
+}
