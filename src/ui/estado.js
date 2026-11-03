@@ -40,6 +40,7 @@ export const estado = {
     avanzado: {}, // ajustes de "Avanzado" que el usuario cambió (ver src/ui/avanzado.js)
     cambios: [], // cambios por altura (ADR 0002, ver src/ui/cambios.js); no se persiste: dependen del modelo
     torre: null, // torre de calibración cargada como modelo (ADR 0002, ver ui/torres.js); no se persiste
+    placa: null, // placa QR cargada como modelo: { pausas: alturas en mm, colores } (ver ui/placa-qr.js)
     resultado: null, // { gcode, info, archivo, impresoraId }
     pausas: new Map(), // capa -> { capa, offset, z }: pausas para cambiar filamento
     coloresFilamento: [...COLORES_FILAMENTO], // color de cada filamento (1º, 2º, ...) en la vista previa
@@ -57,7 +58,7 @@ export const estado = {
  * @property {number[]} rotacion matriz 3×3 en 9 números
  * @property {number} escala uniforme, 0,01 a 20
  * @property {number} copias entero >= 1
- * @property {'modelo'|'litofania'|'torre'} origen
+ * @property {'modelo'|'litofania'|'torre'|'placa'} origen
  * @property {{x:number,y:number}[]} posiciones centro de cada copia en mm (no se persiste)
  * @property {{x:number,y:number,z:number}} [tamano] medida real ya transformada (la guarda la UI desde el visor)
  */

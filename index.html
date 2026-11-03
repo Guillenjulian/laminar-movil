@@ -50,7 +50,7 @@
                     </label>
                     <button class="boton" id="ejemplo">Probar con un cubo de ejemplo</button>
                     <label class="boton chico boton-foto">
-                        Litofanía desde una foto
+                        Litofanía o placa QR desde una imagen
                         <input type="file" id="foto" accept="image/png,image/jpeg,image/webp" hidden />
                     </label>
                     <button class="boton chico boton-foto" id="botonTorre">Torre de calibración</button>
@@ -599,6 +599,30 @@
                 <p class="aviso error" id="errorLitofania" hidden></p>
                 <button type="submit" class="boton grande primario" id="generarLitofania">Generar</button>
             </form>
+        </section>
+
+        <section class="hoja" id="hojaPlaca" hidden aria-label="Placa QR">
+            <header class="barra">
+                <button class="atras" data-cerrar aria-label="Cerrar">‹</button>
+                <h1>Placa QR</h1>
+            </header>
+            <div class="contenido-hoja formulario">
+                <figure class="foto-litofania">
+                    <img id="fotoPlaca" alt="Lámina elegida" />
+                    <figcaption id="nombrePlaca"></figcaption>
+                </figure>
+                <p class="nota">El código lleva a <b id="enlacePlaca" class="enlace-placa"></b></p>
+                <p id="resumenPlaca"></p>
+                <p class="nota">
+                    El QR se rehace limpio y los textos se copian de la imagen. Se imprime con un solo extrusor: blanco
+                    hasta 1,6 mm, negro hasta 2,2 mm y bordó arriba de todo. Las pausas para cambiar el filamento se
+                    ponen solas en la vista previa.
+                </p>
+                <button type="button" class="boton grande primario" id="generarPlaca">Generar placa</button>
+                <button type="button" class="boton enlace" id="placaComoLitofania">
+                    Hacer una litofanía con esta imagen
+                </button>
+            </div>
         </section>
 
         <section class="hoja" id="hojaTorre" hidden aria-label="Torre de calibración">

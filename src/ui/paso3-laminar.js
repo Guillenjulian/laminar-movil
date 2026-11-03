@@ -116,6 +116,7 @@ async function ejecutarLaminado({ dispositivo, proceso, avisos, cambios, signal 
         impresoraId: estado.impresoraId,
         capas: { sliceHeight: proceso.sliceHeight, firstSliceHeight: proceso.firstSliceHeight },
         cambios: cambios.map(c => ({ ...c })),
+        placa: estado.placa, // la vista previa pone sola las pausas de la placa QR
     };
 }
 

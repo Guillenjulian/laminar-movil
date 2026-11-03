@@ -68,3 +68,7 @@
 #formLitofania .nota {
     margin: 0;
 }
+
+.enlace-placa {
+    overflow-wrap: anywhere;
+}

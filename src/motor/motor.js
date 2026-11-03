@@ -126,3 +126,15 @@ export async function torreAStl({ tipo, ...opciones }, { signal } = {}) {
     const r = await correr(worker, { tipo: 'torre', tipoTorre: tipo, ...opciones }, [], { signal });
     return { stl: r.stl };
 }
+
+// Arma una placa QR a partir del análisis de la lámina (ver ui/placa-imagen.js y placa-qr.js).
+// Devuelve { stl: ArrayBuffer }. Transfiere las máscaras de los renglones.
+export async function placaAStl({ texto, imagen, marco, bandas }) {
+    const worker = new Worker(new URL('./convertir.worker.js', import.meta.url), { type: 'module' });
+    const r = await correr(
+        worker,
+        { tipo: 'placa', texto, imagen, marco, bandas },
+        bandas.map(b => b.mascara.buffer),
+    );
+    return { stl: r.stl };
+}

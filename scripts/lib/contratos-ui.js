@@ -43,6 +43,7 @@ export const CONTRATOS = {
             VISOR,
             'ui/litofania',
             'ui/torres',
+            'ui/placa-qr',
             MOTOR,
             PERFILES,
             'almacen',
@@ -70,6 +71,14 @@ export const CONTRATOS = {
     'ui/torres': {
         exports: { prepararTorre: 1 },
         importa: ['perfiles/torres', PERFILES, MOTOR, 'ui/util-dom', FORMATO],
+    },
+    'ui/placa-qr': {
+        exports: { prepararPlaca: 1, nombrePlaca: 1, DATOS_PLACA: 'valor' },
+        importa: [MOTOR, 'motor/placa-medidas', 'ui/util-dom', 'ui/placa-imagen'], // placa-imagen con import() dinámico
+    },
+    'ui/placa-imagen': {
+        exports: { luminancias: 1, buscarQr: 1, esDestacado: 1, analizarLamina: 1 },
+        importa: [],
     },
     'ui/recientes': {
         exports: { iniciarRecientes: 1, mostrarRecientes: 0, programarGuardado: 0, guardarPendiente: 0 },
@@ -107,7 +116,7 @@ export const CONTRATOS = {
         importa: conBase(VISOR, FORMATO, MOTOR, 'motor/tipos-linea', PERFILES, 'config', 'ui/pausas-ui'),
     },
     'ui/pausas-ui': {
-        exports: { conectarPausas: 1, dibujarPausas: 0 },
+        exports: { conectarPausas: 1, dibujarPausas: 0, ponerPausasEnAlturas: 2 },
         importa: ['ui/estado', 'ui/util-dom', FORMATO, 'motor/tipos-linea', PERFILES],
     },
     'ui/paso3-laminar': {
