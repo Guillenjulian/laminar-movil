@@ -38,7 +38,7 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/util-dom.js` | `$` (getElementById) y `escapar` (texto del usuario a entidades para `innerHTML`) | — |
 | `src/ui/estado.js` | Objeto `estado` único (con `piezas`, ADR 0003), `crearPieza`, `piezaActiva`, `matrizPieza`, `matrizModelo`, `copiasTotales`, `piezasParaMotor`, `valoresActuales` y la persistencia de preferencias e impresoras propias | `perfiles`, `almacen`, `motor/transformar`, `motor/tipos-linea`, `avanzado` |
 | `src/ui/navegacion.js` | Muestra el paso y la hoja correctos y mantiene el historial para que "atrás" funcione; `alMostrarPaso` avisa los cambios de paso; `irAPaso1` vuelve al paso 1 por el historial (cuenta las hojas, espera si hay un recorrido en curso y enfoca el paso 1) | `ui/estado`, `ui/util-dom` |
-| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` y las piezas extra `piezas-ui` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `ajuste-modelo`, `piezas-ui`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
+| `src/ui/paso1-modelo.js` | Sube el modelo (STL, OBJ, 3MF, lámina con QR, foto, ejemplo o reciente), crea la pieza en `estado.piezas` y lo muestra en el visor; el ajuste lo hace `ajuste-modelo` y las piezas extra `piezas-ui` | `estado`, `navegacion`, `util-dom`, `visor`, `litofania`, `torres`, `placa-qr`, `ajuste-modelo`, `piezas-ui`, `motor/motor`, `perfiles/perfiles`, `almacen`, `recientes` |
 | `src/ui/ajuste-modelo.js` | Ajuste de la pieza activa (ADR 0003): escala, rotaciones de 90°, apoyar cara, ajustar a la cama, restablecer y avisos (no entra, modelo pesado); en cada `aplicar` guarda en la pieza su medida real (`p.tamano`, desde `visor.tamanoModelo`); `crearAjuste` | `estado`, `util-dom`, `formato`, `motor/transformar`, `perfiles/perfiles`, `config` |
 | `src/ui/piezas-ui.js` | Varias piezas en el paso 1 (ADR 0003, T8 y T10): chips de `#listaPiezas` (desde 2 piezas, con `×copias`), "Agregar pieza" (archivo o cubo de ejemplo; no con torre ni litofanía; tope de piezas y de copias; las agregadas van a recientes con `ctx.guardar`), quitar y elegir la pieza activa (chip o toque en el visor). `reacomodar()`: `acomodarPiezas()`, `visor.ponerCopias` por pieza (las que no entran, en rojo), aviso `#avisoEntran` "No entran todas en la cama" y "Siguiente" deshabilitado (con una pieza y una copia no cambia nada: sigue el aviso de `ajuste-modelo`); expone `data-copias` en `#listaPiezas`; `crearPiezas` | `estado`, `util-dom`, `config`, `motor/piezas`, `acomodo`, `copias-ui` |
 | `src/ui/copias-ui.js` | Stepper de copias de la pieza activa (ADR 0003, T10): `#copiasPieza` con − / + y el número; mínimo 1, máximo según `validarCantidad` (`MAX_PIEZAS`, `maxCopias()`), con texto que explica el tope; oculto con torre o litofanía; `crearCopias` | `estado`, `util-dom`, `config`, `motor/piezas` |
@@ -60,6 +60,8 @@ Todo lo pesado corre en Web Workers. Cada tarea abre un worker y lo cierra al te
 | `src/ui/iconos-relleno.js` | SVG de cada patrón de relleno | — |
 | `src/ui/torres.js` | Hoja "Torre de calibración" del paso 1 (ADR 0002): tipo, cantidad de bloques, valor de cada uno (sugeridos según impresora y material), avisos y carga como modelo con `estado.torre`. Con torre se ocultan escala y rotación y no entra en recientes | `perfiles/torres`, `perfiles/perfiles`, `motor/motor`, `util-dom`, `formato` |
 | `src/ui/litofania.js` | Hoja de opciones de litofanía y decodificación de la foto a grises | `motor/motor`, `motor/litofania`, `formato` |
+| `src/ui/placa-qr.js` | Hoja "Placa QR" (ADR 0004): `abrirSiTieneQr` decodifica la imagen, la analiza (carga `placa-imagen` con `import()`) y, si tiene QR, muestra link y resumen; "Generar placa" pide la malla y carga la pieza con `estado.placa` (pausas solas); "Hacer una litofanía" manda la imagen a la otra hoja | `motor/motor`, `motor/placa-medidas`, `util-dom`, `placa-imagen` (dinámico) |
+| `src/ui/placa-imagen.js` | Análisis de la lámina sin DOM (ADR 0004): `buscarQr` (jsQR), marco, renglones, color destacado (`esDestacado`) y máscara agrandada de cada renglón; `analizarLamina` | `jsqr` |
 | `src/ui/materiales.js` | Tarjeta del material, precio del rollo y filas de filamento/costo del resumen. `iniciarMateriales()` registra el listener de "Poné el precio" y devuelve la promesa de carga de precios (la llama `main.js`, que la espera antes del primer dibujo) | `perfiles`, `almacen`, `formato` |
 | `src/ui/avanzado.js` | Sección "Avanzado" del paso 2 (jarrón, altura variable, costura, retracción, z-hop, coasting, wipe, compensación, velocidad, temperaturas, ventilador) | `perfiles` |
 | `src/ui/cambios.js` | Sección "Cambios por altura" del paso 2 (ADR 0002): agregar, editar y quitar cambios (relleno, temperatura, velocidad, ventilador desde cierta altura en mm), errores de `validarCambios`, ayuda de Velocidad, aviso "sin valor: se ignora" y resumen en el `<summary>`. Deshabilitada con altura variable | `perfiles/cambios`, `util-dom` |
@@ -97,10 +99,12 @@ La lista exacta de aristas está en el ADR 0001, sección 2; `npm run test:contr
 
 | Archivo | Responsabilidad |
 |---|---|
-| `motor.js` | API para la interfaz: `laminar` (una pieza o varias con `piezas`, ADR 0003), `leerParaVista`, `leerRecorridos`, `convertirAStl`, `litofaniaAStl`, `torreAStl`. Un worker por tarea, cancelable con `AbortSignal` |
+| `motor.js` | API para la interfaz: `laminar` (una pieza o varias con `piezas`, ADR 0003), `leerParaVista`, `leerRecorridos`, `convertirAStl`, `litofaniaAStl`, `torreAStl`, `placaAStl`. Un worker por tarea, cancelable con `AbortSignal` |
 | `laminador.worker.js` | `prepararPiezas` → un widget de Kiri por copia (cada uno con su `track.pos`) → slice por widget, un solo prepare y export → G-code. `info.copias` y `info.tamano` del conjunto |
 | `vista.worker.js` | Lee el STL para mostrarlo (cuenta, mide y simplifica sólo para dibujar) |
-| `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración → STL binario |
+| `convertir.worker.js` | OBJ/3MF/litofanía/torres de calibración/placa QR → STL binario |
+| `placa-qr.js` · `placa-medidas.js` | Placa QR (ADR 0004): `matrizQr` (qrcode-generator), `disenarPlaca` (escala y lugar de renglones y QR), `generarPlaca` (base, marco, cajas del QR y textos extruidos a 2,2 o 2,6 mm). `placa-medidas` tiene `PLACA`, `PAUSAS_PLACA` y `COLORES_PLACA` sin dependencias, para la UI |
+| `contornos.js` · `extruir.js` | Puros: máscara → lazos (`trazarBordes`, sin diagonales sueltas), `simplificar`, `agrupar` agujeros, `grosorMedio`, `engordar`; y `extruir` una forma con agujeros a un prisma cerrado (earcut), `rectangulo` |
 | `recorridos.worker.js` | Worker de la vista previa: recibe el G-code, llama a `leer` y devuelve los recorridos (re-exporta `leer`, que usan las pruebas en Node) |
 | `recorridos-lector.js` | `leer`: G-code → tramos por capa (Uint16), colores, tipos, inicio de capa y offset de cada pausa. Puro (sin `self`); la clase `Lector` guarda el estado y no arma objetos por línea (G-codes de millones de líneas) |
 | `recorridos-tramos.js` · `recorridos-lista.js` | Piezas de `leer`, puras: `Tramos` (guarda y une los tramos, lleva caja y capas) y `Lista` (array tipado que crece), `q` (cuantizado), `tipoDe`, `valor` |
@@ -144,8 +148,9 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `nombre`, `stl`, `vista`, `rotacion`, `escala` | Accesores de la pieza activa (sin pieza: `''`, `null`, `null`, identidad, `1`, y el setter no hace nada: cargar un modelo exige crear la pieza antes) | sí, en recientes (500 ms o al salir) |
 | `impresoraId`, `calidad`, `material`, `soportes`, `personal`, `avanzado` | Elecciones del paso 2 (sólo lo cambiado) | sí, en `preferencias` |
 | `propias` | Impresoras del usuario | sí, en `impresorasPropias` |
-| `resultado` | `{ gcode, info, archivo, impresoraId, capas, cambios }` del último laminado (`capas`: alturas de capa usadas; `cambios`: los efectivos y validados, o los de la torre) | no |
+| `resultado` | `{ gcode, info, archivo, impresoraId, capas, cambios, placa }` del último laminado (`capas`: alturas de capa usadas; `cambios`: los efectivos y validados, o los de la torre) | no |
 | `cambios` | Cambios por altura (`Cambio[]`, ADR 0002); se pasan a `armarConfiguracion`; tras laminar, los efectivos y validados van a `estado.resultado.cambios` y a `avisosPostLaminado` (paso 4). Se vacían al cargar un modelo | no |
+| `placa` | Placa QR cargada (`{ pausas: [1,6, 2,2], colores }`, ADR 0004) o `null`; viaja a `resultado.placa` y la vista previa pone sola las pausas y los colores (`ponerPausasEnAlturas`) | no |
 | `torre` | Torre de calibración cargada (`Torre` + `aviso` + `resumen`, ADR 0002) o `null`; si existe, `paso3-laminar` usa `configuracionDeTorre` por encima de Avanzado, Personalizar, soportes y cambios | no |
 | `pausas`, `coloresFilamento`, `modoColor` | Pausas y colores de la vista previa | no |
 
@@ -158,6 +163,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | `npm run test:torres` | Mallas de las torres de calibración: cerradas, medidas, `bloquesDeTorre` (Node) | `scripts/probar-torres.mjs` |
 | `npm run test:piezas` | Acomodo de piezas en la cama (Node): posiciones exactas, separación, `fuera`, reparto de triángulos y límites de cantidad; y `prepararPiezas`: vértices, copias, decimación repartida, borde de la cama y posiciones inválidas | `scripts/probar-piezas.mjs` + `scripts/piezas/preparar.mjs` |
 | `npm run test:recorridos` | Lector de G-code de la vista previa (Node, G-codes sintéticos): cuantizado exacto, tipos y colores de Kiri, unión de tramos, `pausaCapa` (con y sin subida de Z), modo espiral, detección de capa (altura variable), tope e `incompleta`, crecimiento de arrays con más de 65536 tramos | `scripts/probar-recorridos.mjs` + `scripts/recorridos/*.mjs` |
+| `npm run test:placa` | Placa QR (Node, ADR 0004): contornos (anillo con agujero, diagonales, vacía, grosor y engordar), análisis de una lámina sintética (QR, marco, 4 renglones, destacado, sin QR = null) y la malla (100 × 150, alturas, cerrada, QR legible desde la vista de arriba con jsQR, QR de 78 mm) | `scripts/probar-placa.mjs` + `scripts/placa/{lamina,malla}.mjs` |
 | `npm run test:cambios` | Cambios por altura (Node): validación, mapeo mm → capa, campos de Kiri, resumen y avisos | `scripts/probar-cambios.mjs` |
 | `npm run test:contratos` | Contratos de los módulos nuevos de `src/ui/` (ADR 0001): exports y aridad, que importarlos no toque el DOM, aristas permitidas y ciclos. Los que no existen se saltean; `CONTRATOS_ESTRICTO=1` los exige. También corre las pruebas de los accesores de `estado.piezas` (Node) | `scripts/probar-contratos.mjs` + `scripts/lib/contratos-ui.js` + `scripts/probar-estado.mjs` |
 | `npm run test:motor` | Laminado real en Chromium: perfil, calidades, relleno, adhesión, materiales, soportes, pausas, transformaciones, todas las impresoras importadas, malla pesada, cambios por altura (ADR 0002: relleno, temperatura, velocidad, ventilador, retracción, balsa, jarrón, pausa), torres de calibración (casos 10-11: M104 y retracción por bloque), los 8 perfiles revisados (tabla fija de datos de fábrica, macros sin reemplazar, temperaturas, X/Y dentro de la cama, retracción esperada, orden de arranque, G29 sólo donde corresponde, `reemplaza` e `idVigente`) y varias piezas con `track.pos` (ADR 0003: T0 con falda, borde, balsa y soportes; T6 con equivalencia con una pieza, 4 copias, alturas distintas, cambio por altura, fuera de la cama) | `scripts/probar-motor.mjs` (orquestador) + `prueba-motor.html` + `scripts/motor/{cubo,materiales,transformaciones,personalizar,impresoras,avanzado,malla-pesada,ayudas}.mjs` + `scripts/motor/cambios.mjs` + `scripts/motor/torres.mjs` + `scripts/motor/perfiles-revisados.mjs` + `scripts/motor/piezas-kiri.mjs` + `scripts/motor/piezas.mjs` + `scripts/motor/piezas-extra.mjs` (cama centrada con `originCenter` y `bedRound` falso, progreso con 1 y 3 copias y `AbortError` con 3 copias sin worker vivo; `prueba-motor.html` expone `window.progreso` y `cancelarEn`) + `scripts/lib/gcode.mjs` (`puntosDeCapa`, compartido con `test:app`). Helpers de G-code en `scripts/motor/gcode-capas.mjs` |
@@ -189,6 +195,7 @@ Kiri:Moto 4.7.0 (MIT), copiado por `scripts/vendor-kiri.mjs`. **No editar a mano
 | Recientes y ajustes guardados | `scripts/app/recientes.mjs` |
 | Escala, rotar, apoyar cara | `scripts/app/transformar.mjs` |
 | Torres de calibración (hoja, paso 2, M104 por bloque) | `scripts/app/torres.mjs` |
+| Placa QR (hoja con link y resumen, sin escala ni rotación, dos pausas solas en la vista previa y en el G-code, "Hacer una litofanía") | `scripts/app/placa-qr.mjs` |
 | Precio del rollo tras recargar (precio y costo) | `scripts/app/piezas-extra.mjs` |
 | PWA y sin conexión | `scripts/app/offline.mjs` |
 
@@ -196,7 +203,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 
 ### CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main` (Node de `.node-version`): `npm ci`, lint, format:check, build, instala Chromium (`playwright-core install --with-deps chromium`) y pasa su ruta en `CHROMIUM_PATH`, y corre `test:transformar`, `test:formatos`, `test:torres`, `test:cambios`, `test:piezas`, `test:recorridos`, `test:placa`, `test:motor`, `test:app` y `test:contratos`. Un push nuevo al mismo PR cancela la corrida anterior.
 
 ## 5. Dónde buscar si algo falla
 
@@ -237,3 +244,7 @@ Antes de cualquier commit: `npm run build` y las suites que toquen el área camb
 - Piezas y copias (ADR 0003):
   - En recientes, dos piezas con el mismo nombre y peso guardan sólo la activa (la clave es nombre y bytes; limitación de v1).
   - No hay prueba de piezas con cama de cinta (R1 del ADR 0003 lo deja pendiente).
+- Placa QR (ADR 0004):
+  - Una placa por cama: "Agregar pieza" todavía no acepta imágenes (para imprimir dos placas distintas juntas).
+  - En imágenes reales pueden quedar unas pocas aristas de área cero donde un agujero toca su letra (Kiri lamina igual).
+  - Un texto que en la lámina toca el QR o el marco se pierde con ellos.

@@ -1,4 +1,4 @@
-// PNG mínimo en escala de grises para las pruebas de litofanía.
+// PNG mínimos para las pruebas: en escala de grises (litofanía) y a color RGBA (placa QR).
 
 import zlib from 'node:zlib';
 
@@ -36,6 +36,28 @@ export function pngGrises(ancho, alto, gris) {
     ihdr[8] = 8; // 8 bits por píxel, tipo 0 = escala de grises
     const filas = Buffer.alloc((ancho + 1) * alto); // cada fila empieza con el filtro 0
     for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) filas[y * (ancho + 1) + 1 + x] = gris(x, y);
+    return Buffer.concat([
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        bloque('IHDR', ihdr),
+        bloque('IDAT', zlib.deflateSync(filas)),
+        bloque('IEND', Buffer.alloc(0)),
+    ]);
+}
+
+/**
+ * PNG de 8 bits por canal, RGBA.
+ * @param {{data: Uint8ClampedArray, width: number, height: number}} img píxeles RGBA, fila por fila.
+ * @returns {Buffer}
+ */
+export function pngRgba({ data, width, height }) {
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(width, 0);
+    ihdr.writeUInt32BE(height, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 6; // tipo 6 = RGBA
+    const fila = width * 4 + 1;
+    const filas = Buffer.alloc(fila * height); // cada fila empieza con el filtro 0
+    for (let y = 0; y < height; y++) filas.set(data.subarray(y * width * 4, (y + 1) * width * 4), y * fila + 1);
     return Buffer.concat([
         Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
         bloque('IHDR', ihdr),

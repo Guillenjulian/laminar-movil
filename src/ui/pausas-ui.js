@@ -91,6 +91,25 @@ function colorFilamento(i) {
 }
 
 /**
+ * Pone una pausa en la primera capa que pasa cada altura de `alturas` (mm) y los colores de cada
+ * filamento, y redibuja. Lo usa la placa QR, que ya sabe a qué alturas cambia de color (ver
+ * ui/placa-qr.js). Llamar con `deps.capas()` ya apuntando a `capas`.
+ * @param {{inicioCapa: ArrayLike<number>, zCapa: ArrayLike<number>, pausaCapa: ArrayLike<number>, total: number}} capas
+ * @param {{pausas: number[], colores: string[]}} placa
+ * @returns {void}
+ */
+export function ponerPausasEnAlturas(capas, { pausas, colores }) {
+    for (const z of pausas) {
+        let n = 0;
+        while (n < capas.total && capas.zCapa[n] <= z + 1e-3) n++;
+        if (n > 0 && n < capas.total) estado.pausas.set(n, { capa: n, offset: capas.pausaCapa[n], z: capas.zCapa[n] });
+    }
+    colores.forEach((c, i) => (estado.coloresFilamento[i] = c));
+    if (estado.pausas.size) estado.modoColor = 'filamento';
+    dibujarPausas();
+}
+
+/**
  * Redibuja la lista de filamentos y las marcas de pausa sobre el deslizador.
  * @returns {void}
  */

@@ -14,7 +14,7 @@ import { leerRecorridos } from '../motor/motor.js';
 import { TIPOS } from '../motor/tipos-linea.js';
 import { buscarImpresora } from '../perfiles/perfiles.js';
 import { maxSegmentosVista } from '../config.js';
-import { conectarPausas, dibujarPausas } from './pausas-ui.js';
+import { conectarPausas, dibujarPausas, ponerPausasEnAlturas } from './pausas-ui.js';
 
 let visorCapas = null; // visor de la vista previa capa por capa (paso 4)
 let capas = null; // { inicioCapa, zCapa, pausaCapa, tipos, total }
@@ -81,6 +81,7 @@ function mostrarRecorridos(r, resultado) {
     visorCapas.ponerRecorridos(r, { origenCentro: d.originCenter });
     visorCapas.pausar(estado.paso !== 4);
     capas = { inicioCapa: r.inicioCapa, zCapa: r.zCapa, pausaCapa: r.pausaCapa, tipos: r.tipos, total };
+    if (resultado.placa) ponerPausasEnAlturas(capas, resultado.placa);
 
     $('capa').max = total - 1;
     $('leyenda').innerHTML = TIPOS.slice(0, -1)

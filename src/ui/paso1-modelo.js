@@ -1,6 +1,7 @@
 // Paso 1: subir un modelo y dejarlo bien puesto en la cama (ADR 0001, sección 3.3).
 //
-// Responsabilidad: subir/abrir un modelo (STL, OBJ, 3MF, foto para litofanía, ejemplo o reciente),
+// Responsabilidad: subir/abrir un modelo (STL, OBJ, 3MF, lámina con QR para una placa, foto para
+// litofanía, ejemplo o reciente),
 // mostrarlo en el visor y ajustarlo (escala, rotación, apoyar cara, avisos). Es el dueño exclusivo de
 // `visor`, la instancia de crearVisor del paso 1.
 //
@@ -14,6 +15,7 @@ import * as almacen from '../almacen.js';
 import { crearVisor } from './visor.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
+import { prepararPlaca, DATOS_PLACA } from './placa-qr.js';
 import { $ } from './util-dom.js';
 import { estado, crearPieza } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
@@ -26,6 +28,7 @@ export { mostrarRecientes }; // main.js lo importa desde acá (ADR 0001)
 let visor = null; // visor del modelo (se crea al cargar el primer modelo)
 let litofania = null; // hoja "Litofanía desde una foto" (se crea en iniciarPaso1)
 let torres = null; // hoja "Torre de calibración" (se crea en iniciarPaso1)
+let placa = null; // hoja "Placa QR" (se crea en iniciarPaso1)
 const ajuste = crearAjuste({
     visor: () => visor,
     alCambiar: () => {
@@ -63,6 +66,12 @@ export function iniciarPaso1() {
         cargar: (nombre, generar, torre) => cargarArchivo(nombre, null, { generar, guardar: false, torre }),
         contexto: () => ({ impresoraId: estado.impresoraId, material: estado.material }),
     });
+    placa = prepararPlaca({
+        abrir: () => abrirHoja('placa'),
+        cerrar: cerrarHojas,
+        cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar, placa: true }),
+        litofania: (nombre, buffer) => litofania.abrirFoto(nombre, buffer),
+    });
     $('botonTorre').onclick = torres.abrir;
     conectarSubida();
     ajuste.conectar();
@@ -93,6 +102,7 @@ export function elegirOtroModelo() {
     estado.piezas = [];
     estado.activa = null;
     estado.torre = null;
+    estado.placa = null;
     visor?.quitarModelo();
     $('conModelo').hidden = true;
     $('sinModelo').hidden = false;
@@ -131,8 +141,8 @@ async function alElegirArchivo(e) {
 }
 
 /**
- * Acepta STL, OBJ y 3MF (estos dos se convierten a STL en un worker). Una foto abre la hoja de
- * litofanía.
+ * Acepta STL, OBJ y 3MF (estos dos se convierten a STL en un worker). Una imagen con un QR abre la
+ * hoja de placa QR; cualquier otra, la de litofanía. `placa`: el STL es una placa QR (pone sus pausas).
  * `esStl`: el buffer ya es STL aunque el nombre diga .obj/.3mf (los recientes guardan el STL
  * convertido con el nombre original). `generar`: función que devuelve una promesa con el STL.
  * `transformacion`: `{ rotacion, escala }` guardada de un reciente (si falta, identidad y 100 %).
@@ -140,10 +150,10 @@ async function alElegirArchivo(e) {
 async function cargarArchivo(
     nombre,
     buffer,
-    { guardar = true, esStl = false, generar = null, transformacion = null, torre = null } = {},
+    { guardar = true, esStl = false, generar = null, transformacion = null, torre = null, placa: esPlaca = false } = {},
 ) {
     const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
-    if (tipo === 'imagen') return litofania.abrirFoto(nombre, buffer);
+    if (tipo === 'imagen') return (await placa.abrirSiTieneQr(nombre, buffer)) || litofania.abrirFoto(nombre, buffer);
     if (!tipo) {
         alert('No sabemos leer ese archivo. Elegí un modelo STL, OBJ o 3MF (o una foto para hacer una litofanía).');
         return;
@@ -152,7 +162,7 @@ async function cargarArchivo(
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
-        montarModelo(nombre, datos, transformacion, torre, generar ? 'litofania' : 'modelo');
+        montarModelo(nombre, datos, transformacion, torre, esPlaca ? 'placa' : generar ? 'litofania' : 'modelo');
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
         if (guardar)
             await almacen.guardarModelo(nombre, datos.buffer).catch(err => console.warn('No se guardó el modelo', err));
@@ -181,8 +191,9 @@ async function leerModelo(nombre, buffer, tipo, generar) {
 function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre, origen) {
     estado.resultado = null;
     estado.torre = torre; // la torre fija sus alturas: sin escala ni rotación
+    estado.placa = origen === 'placa' ? DATOS_PLACA : null; // la placa también: sus pausas van a alturas fijas
     estado.cambios = []; // los cambios por altura dependen del modelo
-    $('ajustesModelo').hidden = !!torre;
+    $('ajustesModelo').hidden = !!torre || !!estado.placa;
 
     $('conModelo').hidden = false;
     if (!visor) visor = crearVisor($('visor'));

@@ -18,6 +18,7 @@
         "test:cambios": "node scripts/probar-cambios.mjs",
         "test:piezas": "node scripts/probar-piezas.mjs",
         "test:recorridos": "node scripts/probar-recorridos.mjs",
+        "test:placa": "node scripts/probar-placa.mjs",
         "test:contratos": "CONTRATOS_ESTRICTO=1 node scripts/probar-contratos.mjs",
         "iconos": "python3 scripts/generar-iconos.py",
         "importar:impresoras": "node scripts/importar-impresoras-kiri.mjs",
@@ -29,7 +30,9 @@
     "dependencies": {
         "@tweenjs/tween.js": "^25.0.0",
         "earcut": "^3.2.4",
+        "jsqr": "^1.4.0",
         "jszip": "^3.10.2",
+        "qrcode-generator": "^1.4.4",
         "three": "^0.182.0",
         "three-mesh-bvh": "^0.7.6"
     },
