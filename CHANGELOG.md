@@ -17,6 +17,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Formato "sólo QR" en la hoja Placa QR (ADR 0005): un cuadrado de 10 × 10 cm con el QR adelante y la filial y la
   sucursal de la lámina grabadas atrás, en espejo. Un solo cambio de filamento (blanco → negro) y 4 por cama en una de
   220 × 220 mm.
+- Botón "Descargar STL" en el paso 1 para lo que arma la app (placa QR, litofanía, torre): baja la malla para usarla
+  en otro laminador o guardarla.
 
 ### Corregido
 

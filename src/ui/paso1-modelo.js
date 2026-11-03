@@ -17,7 +17,7 @@ import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
 import { prepararPlaca } from './placa-qr.js';
 import { $ } from './util-dom.js';
-import { estado, crearPieza } from './estado.js';
+import { estado, crearPieza, piezaActiva } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
 import { irA, abrirHoja, cerrarHojas, alMostrarPaso } from './navegacion.js';
 import { crearAjuste } from './ajuste-modelo.js';
@@ -119,6 +119,7 @@ function conectarSubida() {
     $('archivo').onchange = alElegirArchivo;
     $('foto').onchange = alElegirImagenes;
     $('otroModelo').onclick = elegirOtroModelo;
+    $('descargarStl').onclick = descargarStl;
     $('siguiente').onclick = () => irA(2);
     $('ejemplo').onclick = async () => {
         try {
@@ -128,6 +129,20 @@ function conectarSubida() {
         }
     };
     iniciarRecientes((nombre, stl, transformacion) => cargarArchivo(nombre, stl, { esStl: true, transformacion }));
+}
+
+/** Descarga el STL de la pieza activa (placa QR, litofanía o torre: lo que arma la app). */
+function descargarStl() {
+    const pieza = piezaActiva();
+    if (!pieza) return;
+    const url = URL.createObjectURL(new Blob([pieza.stl], { type: 'model/stl' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = /\.stl$/i.test(pieza.nombre) ? pieza.nombre : pieza.nombre + '.stl';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 /** Descarga el cubo de ejemplo (lo usan #ejemplo y "Agregar cubo de ejemplo"). */
@@ -218,6 +233,8 @@ function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transfor
     estado.placa = datosPlaca ?? null; // la placa también: sus pausas van a alturas fijas
     estado.cambios = []; // los cambios por altura dependen del modelo
     $('ajustesModelo').hidden = !!torre || !!estado.placa;
+    // Lo que arma la app (placa, litofanía, torre) se puede bajar como STL para usarlo en otro laminador.
+    $('descargarStl').hidden = origen === 'modelo' && !torre;
 
     $('conModelo').hidden = false;
     if (!visor) visor = crearVisor($('visor'));
