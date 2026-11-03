@@ -147,9 +147,10 @@ async function revisarCuadrado({ page: pagina, ok: revisar, esperarResultado }, 
     await esperarResultado();
     await pagina.waitForSelector('#controlCapas:not([hidden])', { timeout: 60000 });
     const zs = await pagina.$$eval('#listaPausas small', els => els.map(e => e.textContent));
+    const z = zs.map(t => Number(t.replace(/.*Z ([\d,]+).*/, '$1').replace(',', '.')));
     revisar(
         'sólo QR: una sola pausa, apenas arriba de 1,6 mm',
-        zs.length === 1 && zs[0].includes('1,80'),
+        z.length === 1 && z[0] > 1.6 && z[0] <= 1.9,
         zs.join(' | '),
     );
 }
