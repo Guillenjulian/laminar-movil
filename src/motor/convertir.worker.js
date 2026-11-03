@@ -5,7 +5,7 @@
 // Recibe: { tipo: 'convertir', nombre, buffer: ArrayBuffer }       (OBJ o 3MF)
 //         { tipo: 'torre', tipoTorre: 'temperatura'|'retraccion', bloques, altoBloqueMm, ... }  (ver torres.js)
 //         { tipo: 'litofania', grises: Uint8Array, ancho, alto, anchoMm, minMm, maxMm, tipoLitofania, marco }
-//         { tipo: 'placas', placas: [{ texto, imagen, marco, bandas }], lugares }   (placas QR, ver placa-qr.js)
+//         { tipo: 'placas', placas: [{ texto, imagen, marco, bandas }], lugares, formato }   (placas QR, ver placa-qr.js)
 // Manda:  { tipo: 'listo', stl: ArrayBuffer, triangulos }
 //         { tipo: 'error', mensaje }
 
@@ -23,7 +23,7 @@ self.onmessage = async e => {
         } else if (msg.tipo === 'litofania') {
             vertices = generarLitofania({ ...msg, tipo: msg.tipoLitofania });
         } else if (msg.tipo === 'placas') {
-            vertices = generarPlacas(msg.placas, msg.lugares);
+            vertices = generarPlacas(msg.placas, msg.lugares, msg.formato);
         } else if (msg.tipo === 'torre') {
             const { tipoTorre, ...opciones } = msg;
             const generar = { temperatura: generarTorreTemperatura, retraccion: generarTorreRetraccion }[tipoTorre];

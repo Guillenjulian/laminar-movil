@@ -73,7 +73,7 @@ export const CONTRATOS = {
         importa: ['perfiles/torres', PERFILES, MOTOR, 'ui/util-dom', FORMATO],
     },
     'ui/placa-qr': {
-        exports: { prepararPlaca: 1, nombrePlaca: 1, DATOS_PLACA: 'valor' },
+        exports: { prepararPlaca: 1, nombrePlaca: 1 },
         importa: [MOTOR, 'motor/placa-medidas', 'ui/util-dom', 'ui/placa-imagen'], // placa-imagen con import() dinámico
     },
     'ui/placa-imagen': {

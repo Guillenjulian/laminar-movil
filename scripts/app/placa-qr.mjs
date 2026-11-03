@@ -5,7 +5,8 @@
 // (link leído y resumen), genera la placa (100 × 150 mm, sin escala ni rotación), lamina, revisa las dos
 // pausas en la vista previa y que el G-code descargado las tenga. Después elige tres láminas juntas en la
 // cama de 220 × 220: la hoja lista dos, avisa que la tercera queda afuera, y la pieza "placas-2.stl" entra
-// y lamina con sus dos pausas. Al final revisa "Hacer una litofanía" desde la hoja.
+// y lamina con sus dos pausas. Con el formato "sólo QR" la misma lámina da un cuadrado de 100 × 100 mm con una
+// sola pausa. Al final revisa "Hacer una litofanía" desde la hoja.
 //
 // Precondición: cualquier paso, con o sin modelo. Deja: paso 1 con el cubo de 20 mm cargado.
 
@@ -50,6 +51,7 @@ export async function probarPlacaQr(ctx) {
     await esperarResultado();
     await revisarPausas(ctx);
     await revisarVarias(ctx, png);
+    await revisarCuadrado(ctx, png);
     await revisarLitofania(ctx, png);
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
 }
@@ -117,6 +119,40 @@ async function revisarVarias(ctx, png) {
     await pagina.waitForSelector('#controlCapas:not([hidden])', { timeout: 60000 });
     const pausas = await pagina.$$eval('#listaPausas small', els => els.length);
     revisar('placas: dos placas juntas con las mismas dos pausas', pausas === 2, `(${pausas})`);
+}
+
+// Formato "sólo QR": cuadrado de 100 × 100 mm con una sola pausa (blanco → negro).
+async function revisarCuadrado({ page: pagina, ok: revisar, esperarResultado }, png) {
+    await pagina.goBack();
+    await pagina.goBack();
+    await pagina.waitForSelector('section[data-paso="1"]:not([hidden])');
+    await pagina.tap('#otroModelo');
+    await pagina.setInputFiles('#foto', png);
+    await pagina.waitForSelector('#hojaPlaca:not([hidden])', { timeout: 20000 });
+    await pagina.check('#hojaPlaca [name=formatoPlaca][value=cuadrado]');
+    const resumen = await pagina.textContent('#resumenPlaca');
+    revisar(
+        'sólo QR: el resumen dice que los renglones van grabados atrás',
+        /sólo el QR.*2 renglones grabados atrás.*10 × 10 cm/.test(resumen),
+        resumen,
+    );
+    await pagina.tap('#generarPlaca');
+    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'lamina-qr.stl', null, {
+        timeout: 60000,
+    });
+    const datos = await pagina.textContent('#datosModelo');
+    revisar('sólo QR: cuadrado de 100 × 100 × 2,2 mm', datos.startsWith('100,0 × 100,0 × 2,2'), datos);
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await esperarResultado();
+    await pagina.waitForSelector('#controlCapas:not([hidden])', { timeout: 60000 });
+    const zs = await pagina.$$eval('#listaPausas small', els => els.map(e => e.textContent));
+    const z = zs.map(t => Number(t.replace(/.*Z ([\d,]+).*/, '$1').replace(',', '.')));
+    revisar(
+        'sólo QR: una sola pausa, apenas arriba de 1,6 mm',
+        z.length === 1 && z[0] > 1.6 && z[0] <= 1.9,
+        zs.join(' | '),
+    );
 }
 
 // Desde la hoja de placa se puede mandar la misma imagen a la litofanía.

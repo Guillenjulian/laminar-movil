@@ -611,6 +611,25 @@
                     <img id="fotoPlaca" alt="Lámina elegida" />
                     <figcaption id="nombrePlaca"></figcaption>
                 </figure>
+                <fieldset id="formatoPlaca">
+                    <legend>Formato</legend>
+                    <label class="opcion">
+                        <input type="radio" name="formatoPlaca" value="placa" checked />
+                        <span
+                            ><b>Placa de 10 × 15 cm</b><br /><small
+                                >El QR y los textos de la lámina adelante (blanco, negro y bordó).</small
+                            ></span
+                        >
+                    </label>
+                    <label class="opcion">
+                        <input type="radio" name="formatoPlaca" value="cuadrado" />
+                        <span
+                            ><b>Sólo el QR, 10 × 10 cm</b><br /><small
+                                >El nombre de la lámina queda grabado atrás (blanco y negro).</small
+                            ></span
+                        >
+                    </label>
+                </fieldset>
                 <p class="nota" id="lineaEnlace">El código lleva a <b id="enlacePlaca" class="enlace-placa"></b></p>
                 <ul class="lista-placas enlace-placa" id="listaPlacas" hidden></ul>
                 <p id="resumenPlaca"></p>

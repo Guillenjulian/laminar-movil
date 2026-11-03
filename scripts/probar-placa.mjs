@@ -5,8 +5,8 @@
 
 import jsQR from 'jsqr';
 import { trazarBordes, agrupar, area, grosorMedio, engordar } from '../src/motor/contornos.js';
-import { generarPlaca, generarPlacas, disenarPlaca } from '../src/motor/placa-qr.js';
-import { PLACA, lugaresEnCama } from '../src/motor/placa-medidas.js';
+import { generarPlaca, generarPlacas, generarCuadrado, disenarPlaca } from '../src/motor/placa-qr.js';
+import { PLACA, FORMATOS, lugaresEnCama } from '../src/motor/placa-medidas.js';
 import { analizarLamina } from '../src/ui/placa-imagen.js';
 import { laminaSintetica, URL_PRUEBA } from './placa/lamina.mjs';
 import { cerrada, rango, vistaDeArriba } from './placa/malla.mjs';
@@ -134,11 +134,53 @@ function probarVariasPlacas(a) {
     revisar('acostadas: malla cerrada (girar no da vuelta los triángulos)', cerrada(acostadas) === 0);
 }
 
+// Área (mm²) de los triángulos apoyados en la cama (z = 0): la cara de abajo.
+function areaAbajo(v) {
+    let s = 0;
+    for (let i = 0; i < v.length; i += 9) {
+        if (v[i + 2] !== 0 || v[i + 5] !== 0 || v[i + 8] !== 0) continue;
+        s += Math.abs((v[i + 3] - v[i]) * (v[i + 7] - v[i + 1]) - (v[i + 6] - v[i]) * (v[i + 4] - v[i + 1])) / 2;
+    }
+    return s;
+}
+
+function probarCuadrado(a) {
+    console.log('\n▶ Formato sólo QR (cuadrado con el nombre atrás)');
+    const v = generarCuadrado(a);
+    const [x, y, z] = [0, 1, 2].map(k => rango(v, k));
+    revisar(
+        'mide 100 × 100 mm y llega a 2,2 mm',
+        x.join() === '0,100' && y.join() === '0,100' && Math.abs(z[1] - 2.2) < 1e-6,
+        `(${x} × ${y} × ${z})`,
+    );
+    revisar('malla cerrada', cerrada(v) === 0, `(${cerrada(v)} aristas sin pareja)`);
+    const vista = vistaDeArriba(v, 6, 100, 100);
+    revisar('el QR se lee', jsQR(vista.data, vista.width, vista.height)?.data === URL_PRUEBA);
+    const abajo = areaAbajo(v);
+    revisar(
+        'atrás quedan grabados los renglones (falta área abajo)',
+        abajo > 9000 && abajo < 9990,
+        `(${abajo.toFixed(0)} de 10000 mm²)`,
+    );
+    const liso = areaAbajo(generarCuadrado({ ...a, bandas: a.bandas.filter(b => !b.arriba) }));
+    revisar(
+        'sin renglones arriba: la cara de abajo queda lisa',
+        Math.abs(liso - 10000) < 1e-6,
+        `(${liso.toFixed(0)} mm²)`,
+    );
+    revisar('cama 220 × 220: entran 4 cuadrados', lugaresEnCama({ x: 220, y: 220 }, FORMATOS.cuadrado).length === 4);
+    revisar('el cuadrado tiene una sola pausa (blanco → negro)', FORMATOS.cuadrado.pausas.join() === '1.6');
+    const cuatro = generarPlacas([a, a, a, a], lugaresEnCama({ x: 220, y: 220 }, FORMATOS.cuadrado), 'cuadrado');
+    const [cx, cy] = [rango(cuatro, 0), rango(cuatro, 1)];
+    revisar('4 cuadrados: 203 × 203 mm', cx.join() === '0,203' && cy.join() === '0,203', `(${cx} × ${cy})`);
+}
+
 probarContornos();
 const analisis = probarAnalisis();
 if (analisis) {
     probarMalla(analisis);
     probarVariasPlacas(analisis);
+    probarCuadrado(analisis);
 }
 console.log(fallas ? `\n${fallas} prueba(s) fallaron` : '\nTodo OK');
 process.exit(fallas ? 1 : 0);
