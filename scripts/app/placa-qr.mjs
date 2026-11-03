@@ -17,7 +17,7 @@ import { laminaSintetica, URL_PRUEBA } from '../placa/lamina.mjs';
 
 /** @param {import('../lib/app.mjs').Ctx} ctx */
 export async function probarPlacaQr(ctx) {
-    const { page: pagina, ok: revisar, visible, tmp, elegirArchivo, esperarResultado } = ctx;
+    const { page: pagina, ok: revisar, visible, tmp, esperarResultado } = ctx;
     const png = path.join(tmp, 'lamina.png');
     fs.writeFileSync(png, pngRgba(laminaSintetica()));
     if (!(await visible('section[data-paso="1"]'))) await pagina.goBack();
@@ -46,6 +46,7 @@ export async function probarPlacaQr(ctx) {
     );
     const medidas = await pagina.textContent('#medidasModelo').catch(() => '');
     revisar('placa: se carga sin escala ni rotación', !(await visible('#ajustesModelo')), medidas);
+    await revisarDescargaStl(ctx);
     await pagina.tap('#siguiente');
     await pagina.tap('#laminar');
     await esperarResultado();
@@ -53,7 +54,36 @@ export async function probarPlacaQr(ctx) {
     await revisarVarias(ctx, png);
     await revisarCuadrado(ctx, png);
     await revisarLitofania(ctx, png);
+    await volverAlCubo(ctx);
+}
+
+// Deja el cubo cargado (lo que esperan las áreas que siguen) y revisa que con un modelo común no haya "Descargar STL".
+async function volverAlCubo({ ok: revisar, visible, elegirArchivo }) {
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
+    revisar('placa: con un modelo común no se ofrece "Descargar STL"', !(await visible('#descargarStl')));
+}
+
+// "Descargar STL" baja la placa tal cual: STL binario de 100 × 150 mm con tantos triángulos como dice la cabecera.
+async function revisarDescargaStl({ page: pagina, ok: revisar }) {
+    const [descarga] = await Promise.all([pagina.waitForEvent('download'), pagina.tap('#descargarStl')]);
+    const stl = fs.readFileSync(await descarga.path());
+    const triangulos = stl.readUInt32LE(80);
+    let maxX = 0,
+        maxY = 0;
+    for (let i = 0; i < triangulos; i++)
+        for (let v = 0; v < 3; v++) {
+            const o = 84 + i * 50 + 12 + v * 12;
+            maxX = Math.max(maxX, stl.readFloatLE(o));
+            maxY = Math.max(maxY, stl.readFloatLE(o + 4));
+        }
+    revisar(
+        'placa: "Descargar STL" baja la placa (100 × 150 mm)',
+        descarga.suggestedFilename() === 'lamina-placa.stl' &&
+            stl.length === 84 + 50 * triangulos &&
+            Math.abs(maxX - 100) < 1e-3 &&
+            Math.abs(maxY - 150) < 1e-3,
+        `${descarga.suggestedFilename()} · ${triangulos} triángulos · ${maxX.toFixed(1)} × ${maxY.toFixed(1)} mm`,
+    );
 }
 
 // La vista previa trae dos pausas (en la primera capa sobre 1,6 y sobre 2,2 mm) y 3 filamentos con los
