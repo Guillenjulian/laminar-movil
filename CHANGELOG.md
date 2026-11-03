@@ -14,6 +14,9 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
   pone sola las dos pausas para imprimirla con un extrusor: blanco, negro y bordó (los textos rojizos de la lámina).
   Desde la misma hoja se puede hacer una litofanía con la imagen. Eligiendo varias láminas juntas, van en la misma
   cama todas las que entren (dos en una cama de 220 × 220 mm).
+- Formato "sólo QR" en la hoja Placa QR (ADR 0005): un cuadrado de 10 × 10 cm con el QR adelante y la filial y la
+  sucursal de la lámina grabadas atrás, en espejo. Un solo cambio de filamento (blanco → negro) y 4 por cama en una de
+  220 × 220 mm.
 
 ### Corregido
 

@@ -15,7 +15,7 @@ import * as almacen from '../almacen.js';
 import { crearVisor } from './visor.js';
 import { tipoArchivo, prepararLitofania } from './litofania.js';
 import { prepararTorre } from './torres.js';
-import { prepararPlaca, DATOS_PLACA } from './placa-qr.js';
+import { prepararPlaca } from './placa-qr.js';
 import { $ } from './util-dom.js';
 import { estado, crearPieza } from './estado.js';
 import { iniciarRecientes, mostrarRecientes, programarGuardado, guardarPendiente } from './recientes.js';
@@ -69,7 +69,7 @@ export function iniciarPaso1() {
     placa = prepararPlaca({
         abrir: () => abrirHoja('placa'),
         cerrar: cerrarHojas,
-        cargar: (nombre, generar) => cargarArchivo(nombre, null, { generar, placa: true }),
+        cargar: (nombre, generar, datos) => cargarArchivo(nombre, null, { generar, placa: datos }),
         litofania: (nombre, buffer) => litofania.abrirFoto(nombre, buffer),
         cama: () => {
             const d = buscarImpresora(estado.impresoraId).dispositivo;
@@ -157,7 +157,7 @@ async function alElegirImagenes(e) {
 
 /**
  * Acepta STL, OBJ y 3MF (estos dos se convierten a STL en un worker). Una imagen con un QR abre la
- * hoja de placa QR; cualquier otra, la de litofanía. `placa`: el STL es una placa QR (pone sus pausas).
+ * hoja de placa QR; cualquier otra, la de litofanía. `placa`: el STL es una placa QR; `{ pausas, colores }` para que la vista previa ponga sus pausas.
  * `esStl`: el buffer ya es STL aunque el nombre diga .obj/.3mf (los recientes guardan el STL
  * convertido con el nombre original). `generar`: función que devuelve una promesa con el STL.
  * `transformacion`: `{ rotacion, escala }` guardada de un reciente (si falta, identidad y 100 %).
@@ -165,7 +165,14 @@ async function alElegirImagenes(e) {
 async function cargarArchivo(
     nombre,
     buffer,
-    { guardar = true, esStl = false, generar = null, transformacion = null, torre = null, placa: esPlaca = false } = {},
+    {
+        guardar = true,
+        esStl = false,
+        generar = null,
+        transformacion = null,
+        torre = null,
+        placa: datosPlaca = null,
+    } = {},
 ) {
     const tipo = esStl || generar ? 'stl' : tipoArchivo(nombre);
     if (tipo === 'imagen')
@@ -178,7 +185,8 @@ async function cargarArchivo(
     $('sinModelo').hidden = true;
     try {
         const datos = await leerModelo(nombre, buffer, tipo, generar);
-        montarModelo(nombre, datos, transformacion, torre, esPlaca ? 'placa' : generar ? 'litofania' : 'modelo');
+        const origen = datosPlaca ? 'placa' : generar ? 'litofania' : 'modelo';
+        montarModelo(nombre, datos, transformacion, torre, origen, datosPlaca);
         // Guardarlo en recientes (si falla, por ejemplo por falta de espacio, no pasa nada).
         if (guardar)
             await almacen.guardarModelo(nombre, datos.buffer).catch(err => console.warn('No se guardó el modelo', err));
@@ -204,10 +212,10 @@ async function leerModelo(nombre, buffer, tipo, generar) {
 }
 
 /** Llena `estado`, crea el visor si falta, pone cama y modelo y actualiza los textos del paso. */
-function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre, origen) {
+function montarModelo(nombre, { buffer, vertices, triangulos, tamano }, transformacion, torre, origen, datosPlaca) {
     estado.resultado = null;
     estado.torre = torre; // la torre fija sus alturas: sin escala ni rotación
-    estado.placa = origen === 'placa' ? DATOS_PLACA : null; // la placa también: sus pausas van a alturas fijas
+    estado.placa = datosPlaca ?? null; // la placa también: sus pausas van a alturas fijas
     estado.cambios = []; // los cambios por altura dependen del modelo
     $('ajustesModelo').hidden = !!torre || !!estado.placa;
 

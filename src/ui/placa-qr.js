@@ -1,6 +1,7 @@
 // Paso 1: hoja "Placa QR". Una imagen con un código QR (la lámina de un punto de control, por ejemplo)
 // se convierte en una placa de 10 × 15 cm para imprimir con un solo extrusor y dos cambios de filamento.
-// Con varias imágenes, van en la misma cama tantas placas como entren (lugaresEnCama).
+// Con varias imágenes, van en la misma cama tantas placas como entren (lugaresEnCama). Formato "sólo QR":
+// cuadrado de 10 × 10 cm con el QR adelante y los renglones de arriba de la lámina grabados atrás.
 //
 // Responsabilidad: decodificar las imágenes (en el hilo principal: createImageBitmap + canvas),
 // analizarlas (placa-imagen.js), mostrar lo que se encontró y, al tocar "Generar placa", pedir la malla
@@ -9,15 +10,12 @@
 // false y la imagen sigue a la litofanía. Importarlo no toca el DOM: todo se cablea en prepararPlaca.
 
 import { placasAStl } from '../motor/motor.js';
-import { PLACA, PAUSAS_PLACA, COLORES_PLACA, lugaresEnCama } from '../motor/placa-medidas.js';
+import { FORMATOS, lugaresEnCama } from '../motor/placa-medidas.js';
 import { $, escapar } from './util-dom.js';
 
-/** Lo que paso1 guarda en `estado.placa` para que la vista previa ponga las pausas solas. */
-export const DATOS_PLACA = { pausas: PAUSAS_PLACA, colores: COLORES_PLACA };
-
-// Nombre del STL: "lamina 10.png" -> "lamina 10-placa.stl".
-export function nombrePlaca(nombreImagen) {
-    return nombreImagen.replace(/\.[a-z0-9]+$/i, '') + '-placa.stl';
+// Nombre del STL: "lamina 10.png" -> "lamina 10-placa.stl" (o "-qr.stl" con el formato sólo QR).
+export function nombrePlaca(nombreImagen, formato = 'placa') {
+    return nombreImagen.replace(/\.[a-z0-9]+$/i, '') + (formato === 'cuadrado' ? '-qr.stl' : '-placa.stl');
 }
 
 // Píxeles RGBA de la imagen (a su tamaño, sobre blanco); null si no se puede abrir.
@@ -39,11 +37,17 @@ async function leerPixeles(buffer) {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-// Describe lo que se va a pasar a relieve: cuántos renglones y cuáles salen en bordó.
-function resumen(analisis) {
-    const n = analisis.bandas.length;
-    const bordo = analisis.bandas.filter(b => b.destacado).length;
-    const partes = [`${n} ${n === 1 ? 'renglón' : 'renglones'} de texto`];
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+// Describe lo que se va a pasar a relieve (placa) o a grabar atrás (cuadrado).
+function resumen(analisis, formato) {
+    const { bandas } = analisis;
+    if (formato === 'cuadrado') {
+        const atras = bandas.filter(b => b.arriba).length;
+        return `sólo el QR adelante y ${plural(atras, 'renglón grabado', 'renglones grabados')} atrás`;
+    }
+    const bordo = bandas.filter(b => b.destacado).length;
+    const partes = [plural(bandas.length, 'renglón', 'renglones') + ' de texto'];
     if (bordo) partes.push(`${bordo} en bordó`);
     if (analisis.marco) partes.push('marco');
     return partes.join(' · ');
@@ -64,9 +68,17 @@ async function analizarTodas(lista) {
     return { laminas, sinQr };
 }
 
-// Llena la hoja: foto de la primera lámina, link (una) o lista de láminas (varias), resumen y avisos.
-function mostrar(usadas, { sobran, sinQr, cama }) {
+// Cuántas de las láminas van en la cama con el formato elegido.
+function distribuir(laminas, formato, cama) {
+    const lugares = lugaresEnCama(cama, FORMATOS[formato]);
+    return { formato, lugares, usadas: laminas.slice(0, lugares.length), sobran: laminas.slice(lugares.length) };
+}
+
+// Llena la hoja: nombre, link (una) o lista de láminas (varias), resumen y avisos.
+function mostrar({ formato, usadas, sobran }, { sinQr, cama }) {
     const una = usadas.length === 1;
+    const f = FORMATOS[formato];
+    const medida = `${f.ancho / 10} × ${f.alto / 10} cm`;
     $('nombrePlaca').textContent = una ? usadas[0].nombre : `${usadas.length} láminas`;
     $('lineaEnlace').hidden = !una;
     $('enlacePlaca').textContent = una ? usadas[0].analisis.texto : '';
@@ -74,52 +86,61 @@ function mostrar(usadas, { sobran, sinQr, cama }) {
     $('listaPlacas').innerHTML = una
         ? ''
         : usadas.map(l => `<li><b>${escapar(l.nombre)}</b><br />${escapar(l.analisis.texto)}</li>`).join('');
-    const medida = `${PLACA.ancho / 10} × ${PLACA.alto / 10} cm`;
+    const pieza = formato === 'cuadrado' ? ['cuadrado', 'cuadrados'] : ['placa', 'placas'];
     $('resumenPlaca').innerHTML = una
-        ? `Encontramos ${escapar(resumen(usadas[0].analisis))}. Va a medir <b>${medida}</b>.`
-        : `<b>${usadas.length} placas</b> de ${medida} en la misma cama.`;
+        ? `Encontramos ${escapar(resumen(usadas[0].analisis, formato))}. Va a medir <b>${medida}</b>.`
+        : `<b>${plural(usadas.length, ...pieza)}</b> de ${medida} en la misma cama.`;
     const avisos = [];
-    if (sobran.length)
+    if (!usadas.length) avisos.push(`No entra en la cama de tu impresora (${cama.x} × ${cama.y} mm).`);
+    else if (sobran.length)
         avisos.push(
-            `En la cama de tu impresora (${cama.x} × ${cama.y} mm) entran ${usadas.length}: quedan afuera ${sobran.join(', ')}. Hacelas en la próxima tanda.`,
+            `En la cama de tu impresora (${cama.x} × ${cama.y} mm) entran ${usadas.length}: quedan afuera ${sobran.map(l => l.nombre).join(', ')}. Hacelas en la próxima tanda.`,
         );
     if (sinQr.length) avisos.push(`No encontramos un QR en ${sinQr.join(', ')}: se saltean.`);
     $('avisoPlacas').textContent = avisos.join(' ');
     $('avisoPlacas').hidden = !avisos.length;
+    $('generarPlaca').disabled = !usadas.length;
     $('placaComoLitofania').hidden = !una;
 }
 
-// Pide al worker la malla de las placas elegidas y la carga como modelo.
-function generar({ usadas, lugares }, cargar) {
+// Pide al worker la malla de las placas elegidas y la carga como modelo, con sus pausas y colores.
+function generar({ formato, usadas, lugares }, cargar) {
     // Copias de las máscaras: se transfieren al worker y así se puede volver a generar.
     const placas = usadas.map(({ analisis: a }) => ({
         ...a,
         bandas: a.bandas.map(b => ({ ...b, mascara: b.mascara.slice() })),
     }));
-    const nombre = usadas.length === 1 ? nombrePlaca(usadas[0].nombre) : `placas-${usadas.length}.stl`;
-    cargar(nombre, async () => (await placasAStl(placas, lugares)).stl);
+    const prefijo = formato === 'cuadrado' ? 'qr' : 'placas';
+    const nombre = usadas.length === 1 ? nombrePlaca(usadas[0].nombre, formato) : `${prefijo}-${usadas.length}.stl`;
+    const { pausas, colores } = FORMATOS[formato];
+    cargar(nombre, async () => (await placasAStl(placas, lugares, formato)).stl, { pausas, colores });
 }
 
+const formatoElegido = () => document.querySelector('#hojaPlaca [name=formatoPlaca]:checked')?.value || 'placa';
+
 /**
- * Arma la hoja. `abrir()`/`cerrar()` son abrirHoja/cerrarHojas; `cargar(nombre, generar)` carga el
- * modelo (generar() devuelve una promesa con el STL); `litofania(nombre, buffer)` manda la imagen a la
- * hoja de litofanía; `cama()` da la medida de la cama de la impresora elegida ({ x, y } en mm).
+ * Arma la hoja. `abrir()`/`cerrar()` son abrirHoja/cerrarHojas; `cargar(nombre, generar, datos)` carga el
+ * modelo (generar() devuelve una promesa con el STL; `datos`: pausas y colores para `estado.placa`);
+ * `litofania(nombre, buffer)` manda la imagen a la hoja de litofanía; `cama()` da la medida de la cama de
+ * la impresora elegida ({ x, y } en mm).
  * @returns {{abrirImagenes: (lista: {nombre: string, buffer: ArrayBuffer}[]) => Promise<boolean>}}
  */
 export function prepararPlaca({ abrir, cerrar, cargar, litofania, cama }) {
-    let actual = null; // { usadas: [{ nombre, buffer, analisis }], lugares, url }
+    let actual = null; // { laminas: [{ nombre, buffer, analisis }], sinQr, url }
+    const ahora = () => distribuir(actual.laminas, formatoElegido(), cama());
 
     $('generarPlaca').onclick = () => {
-        if (!actual) return;
+        if (!actual || !ahora().usadas.length) return;
         cerrar();
-        generar(actual, cargar);
+        generar(ahora(), cargar);
     };
     $('placaComoLitofania').onclick = () => {
         if (!actual) return;
-        const { nombre, buffer } = actual.usadas[0];
+        const { nombre, buffer } = actual.laminas[0];
         cerrar();
         litofania(nombre, buffer);
     };
+    $('formatoPlaca').onchange = () => actual && mostrar(ahora(), { sinQr: actual.sinQr, cama: cama() });
 
     async function abrirImagenes(lista) {
         const { laminas, sinQr } = await analizarTodas(lista);
@@ -128,19 +149,10 @@ export function prepararPlaca({ abrir, cerrar, cargar, litofania, cama }) {
             alert('Ninguna de esas imágenes tiene un código QR que podamos leer.');
             return true;
         }
-        const medida = cama();
-        const lugares = lugaresEnCama(medida);
-        if (!lugares.length) {
-            alert(
-                `La placa (${PLACA.ancho} × ${PLACA.alto} mm) no entra en la cama de tu impresora (${medida.x} × ${medida.y} mm).`,
-            );
-            return true;
-        }
-        const usadas = laminas.slice(0, lugares.length);
         if (actual) URL.revokeObjectURL(actual.url);
-        actual = { usadas, lugares, url: URL.createObjectURL(new Blob([usadas[0].buffer])) };
+        actual = { laminas, sinQr, url: URL.createObjectURL(new Blob([laminas[0].buffer])) };
         $('fotoPlaca').src = actual.url;
-        mostrar(usadas, { sobran: laminas.slice(lugares.length).map(l => l.nombre), sinQr, cama: medida });
+        mostrar(ahora(), { sinQr, cama: cama() });
         abrir();
         return true;
     }

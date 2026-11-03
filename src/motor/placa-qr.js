@@ -13,7 +13,7 @@ import qrcode from 'qrcode-generator';
 import { trazarBordes, simplificar, agrupar, area, grosorMedio, engordar } from './contornos.js';
 import { extruir, rectangulo } from './extruir.js';
 
-import { PLACA } from './placa-medidas.js';
+import { PLACA, CUADRADO } from './placa-medidas.js';
 
 const MARGEN = 8; // del borde de la placa a los textos (mm)
 const MARCO = 2; // ancho del marco (mm)
@@ -142,14 +142,51 @@ export function generarPlaca({ texto, imagen, marco, bandas }) {
     return new Float32Array(v);
 }
 
+// Formas del dorso del cuadrado: los renglones de arriba del QR, uno debajo del otro y centrados, en espejo (se
+// leen dando vuelta la pieza). Cada renglón con su escala: hasta 84 mm de ancho y 10 mm de alto el primero
+// (la filial), 7 mm los demás.
+function formasDelDorso(bandas) {
+    const escalas = bandas.map((b, i) => Math.min(84 / b.ancho, (i === 0 ? 10 : 7) / b.alto));
+    const altos = bandas.map((b, i) => b.alto * escalas[i]);
+    const ENTRE = 3;
+    let techo = CUADRADO.alto / 2 + (altos.reduce((s, h) => s + h, 0) + ENTRE * (bandas.length - 1)) / 2;
+    return bandas.flatMap((b, i) => {
+        const e = escalas[i];
+        const y0 = techo;
+        techo -= altos[i] + ENTRE;
+        const aMm = (_b, x, y) => [CUADRADO.ancho / 2 - (x - b.x0 - b.ancho / 2) * e, y0 - (y - b.y0) * e];
+        return formasDeBanda(b, aMm, e);
+    });
+}
+
+/**
+ * Vértices del formato "sólo QR": cuadrado de 100 × 100 mm, QR de 90 mm en relieve (1,6 a 2,2 mm) y los
+ * renglones de arriba de la lámina grabados 0,6 mm en la cara de abajo, en espejo.
+ * @param {{texto: string, bandas: object[]}} o lo mismo que generarPlaca (usa sólo los renglones `arriba`).
+ * @returns {Float32Array}
+ */
+export function generarCuadrado({ texto, bandas }) {
+    const { ancho: L, margen: M, grabado: G } = CUADRADO;
+    const v = [];
+    const letras = formasDelDorso(bandas.filter(b => b.arriba));
+    extruir(rectangulo(0, 0, L, L), G, PLACA.base, v);
+    // La primera capa lleva las letras huecas; los huecos de cada letra (el ojo de la "o") quedan como islas.
+    extruir({ afuera: rectangulo(0, 0, L, L).afuera, agujeros: letras.map(f => f.afuera) }, 0, G, v);
+    for (const f of letras) for (const ojo of f.agujeros) extruir({ afuera: ojo, agujeros: [] }, 0, G, v);
+    cajasQr(matrizQr(texto), { x: M, y: M, lado: L - 2 * M }, v);
+    return new Float32Array(v);
+}
+
 /**
  * Varias placas en una sola malla, cada una en su lugar (ver lugaresEnCama en placa-medidas.js).
  * @param {object[]} placas datos de generarPlaca, uno por placa.
  * @param {{x: number, y: number, girar: boolean}[]} lugares al menos tantos como placas.
+ * @param {'placa'|'cuadrado'} [formato] placa de 10 × 15 con textos o cuadrado sólo con el QR.
  * @returns {Float32Array}
  */
-export function generarPlacas(placas, lugares) {
-    const partes = placas.map((p, i) => ubicar(generarPlaca(p), lugares[i]));
+export function generarPlacas(placas, lugares, formato = 'placa') {
+    const [generar, alto] = formato === 'cuadrado' ? [generarCuadrado, CUADRADO.alto] : [generarPlaca, PLACA.alto];
+    const partes = placas.map((p, i) => ubicar(generar(p), lugares[i], alto));
     const v = new Float32Array(partes.reduce((n, p) => n + p.length, 0));
     let desde = 0;
     for (const p of partes) {
@@ -161,9 +198,9 @@ export function generarPlacas(placas, lugares) {
 
 // Mueve (y, si hace falta, gira 90° en sentido antihorario) los vértices de una placa a su lugar.
 // Girar es una rotación: no cambia el sentido de los triángulos.
-function ubicar(v, { x, y, girar }) {
+function ubicar(v, { x, y, girar }, alto) {
     for (let i = 0; i < v.length; i += 3) {
-        const [px, py] = girar ? [PLACA.alto - v[i + 1], v[i]] : [v[i], v[i + 1]];
+        const [px, py] = girar ? [alto - v[i + 1], v[i]] : [v[i], v[i + 1]];
         v[i] = px + x;
         v[i + 1] = py + y;
     }
