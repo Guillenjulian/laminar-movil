@@ -24,10 +24,10 @@ function renglon(pintar, x0, y0, letras, alto, color) {
 }
 
 /**
- * @param {{sinQr?: boolean}} [opciones]
+ * @param {{sinQr?: boolean, url?: string}} [opciones]
  * @returns {{data: Uint8ClampedArray, width: number, height: number}}
  */
-export function laminaSintetica({ sinQr = false } = {}) {
+export function laminaSintetica({ sinQr = false, url = URL_PRUEBA } = {}) {
     const data = new Uint8ClampedArray(ANCHO * ALTO * 4).fill(255);
     const pintar = (x, y, w, h, [r, g, b]) => {
         for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) data.set([r, g, b, 255], (j * ANCHO + i) * 4);
@@ -40,7 +40,7 @@ export function laminaSintetica({ sinQr = false } = {}) {
     renglon(pintar, 130, 12, 5, 13, BORDO);
     renglon(pintar, 30, 32, 20, 16, AZUL);
     if (!sinQr) {
-        const m = matrizQr(URL_PRUEBA);
+        const m = matrizQr(url);
         const modulo = 4;
         const x0 = Math.round((ANCHO - m.length * modulo) / 2),
             y0 = 75;

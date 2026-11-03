@@ -25,7 +25,10 @@ por otro programa. Hechos que condicionan el diseño:
 ## Decisión
 
 Vamos a agregar una hoja "Placa QR" en el paso 1. Una imagen elegida con "Litofanía o placa QR" pasa primero por
-`abrirSiTieneQr` (`ui/placa-qr.js`); si tiene un QR legible se abre la hoja; si no, sigue a la litofanía como antes.
+`abrirImagenes` (`ui/placa-qr.js`); si tiene un QR legible se abre la hoja; si no, sigue a la litofanía como antes.
+Con varias imágenes elegidas juntas, `lugaresEnCama` (`motor/placa-medidas.js`) calcula cuántas placas entran en la
+cama (paradas o acostadas, 3 mm entre placas y 5 mm al borde) y `generarPlacas` las arma en **una sola malla**: la
+separación general entre piezas (10 mm, ADR 0003) no deja dos placas de 100 mm en una cama de 220 mm.
 
 - **Análisis** (`ui/placa-imagen.js`, hilo principal, sin DOM): `buscarQr` con jsQR; `quitarMarco` (filas y columnas
   del borde casi todas tinta); se blanquea la caja del QR; los renglones salen del perfil de filas con tinta
@@ -60,5 +63,5 @@ vectorizar el QR desde la imagen (borroso; regenerarlo es exacto).
   (se blanquea con ellos).
 - En imágenes reales pueden quedar unas pocas aristas de área cero donde un agujero toca el contorno de su letra; Kiri
   las lamina igual (verificado con la lámina original).
-- Una placa por cama: "Agregar pieza" no acepta imágenes todavía (deuda en MAPA §6). Dos dependencias nuevas, chicas
-  y sin dependencias propias: `jsqr` (Apache-2.0) y `qrcode-generator` (MIT).
+- Varias placas por cama se eligen juntas desde "Litofanía o placa QR" (no con "Agregar pieza"). Dos dependencias
+  nuevas, chicas y sin dependencias propias: `jsqr` (Apache-2.0) y `qrcode-generator` (MIT).

@@ -141,3 +141,31 @@ export function generarPlaca({ texto, imagen, marco, bandas }) {
     }
     return new Float32Array(v);
 }
+
+/**
+ * Varias placas en una sola malla, cada una en su lugar (ver lugaresEnCama en placa-medidas.js).
+ * @param {object[]} placas datos de generarPlaca, uno por placa.
+ * @param {{x: number, y: number, girar: boolean}[]} lugares al menos tantos como placas.
+ * @returns {Float32Array}
+ */
+export function generarPlacas(placas, lugares) {
+    const partes = placas.map((p, i) => ubicar(generarPlaca(p), lugares[i]));
+    const v = new Float32Array(partes.reduce((n, p) => n + p.length, 0));
+    let desde = 0;
+    for (const p of partes) {
+        v.set(p, desde);
+        desde += p.length;
+    }
+    return v;
+}
+
+// Mueve (y, si hace falta, gira 90° en sentido antihorario) los vértices de una placa a su lugar.
+// Girar es una rotación: no cambia el sentido de los triángulos.
+function ubicar(v, { x, y, girar }) {
+    for (let i = 0; i < v.length; i += 3) {
+        const [px, py] = girar ? [PLACA.alto - v[i + 1], v[i]] : [v[i], v[i + 1]];
+        v[i] = px + x;
+        v[i + 1] = py + y;
+    }
+    return v;
+}

@@ -3,8 +3,9 @@
 //
 // Flujo: desde el paso 1 sin modelo elige la lámina sintética con "Litofanía o placa QR", revisa la hoja
 // (link leído y resumen), genera la placa (100 × 150 mm, sin escala ni rotación), lamina, revisa las dos
-// pausas y sus colores en la vista previa y que el G-code descargado tenga las dos pausas. Al final
-// revisa que una foto sin QR siga yendo a la litofanía desde la hoja ("Hacer una litofanía").
+// pausas en la vista previa y que el G-code descargado las tenga. Después elige tres láminas juntas en la
+// cama de 220 × 220: la hoja lista dos, avisa que la tercera queda afuera, y la pieza "placas-2.stl" entra
+// y lamina con sus dos pausas. Al final revisa "Hacer una litofanía" desde la hoja.
 //
 // Precondición: cualquier paso, con o sin modelo. Deja: paso 1 con el cubo de 20 mm cargado.
 
@@ -48,6 +49,7 @@ export async function probarPlacaQr(ctx) {
     await pagina.tap('#laminar');
     await esperarResultado();
     await revisarPausas(ctx);
+    await revisarVarias(ctx, png);
     await revisarLitofania(ctx, png);
     await elegirArchivo('public/ejemplos/cubo-20mm.stl');
 }
@@ -68,6 +70,53 @@ async function revisarPausas({ page: pagina, ok: revisar }) {
     const gcode = fs.readFileSync(await descarga.path(), 'utf8');
     const veces = gcode.split('; --- PAUSA:').length - 1;
     revisar('placa: el G-code descargado tiene las dos pausas', veces === 2, `(${veces})`);
+}
+
+// Escribe la lámina número n (con su propio link) en la carpeta temporal y devuelve la ruta.
+function escribirLamina({ tmp }, n) {
+    const ruta = path.join(tmp, `lamina-${n}.png`);
+    fs.writeFileSync(ruta, pngRgba(laminaSintetica({ url: `${URL_PRUEBA}-${n}` })));
+    return ruta;
+}
+
+// Tres láminas juntas en una cama de 220 × 220: entran dos, en una sola pieza, y la tercera queda avisada.
+async function revisarVarias(ctx, png) {
+    const { page: pagina, ok: revisar, visible, esperarResultado } = ctx;
+    const otras = [2, 3].map(n => escribirLamina(ctx, n));
+    await pagina.goBack();
+    await pagina.goBack();
+    await pagina.waitForSelector('section[data-paso="1"]:not([hidden])');
+    await pagina.tap('#otroModelo');
+    await pagina.setInputFiles('#foto', [png, ...otras]);
+    await pagina.waitForSelector('#hojaPlaca:not([hidden])', { timeout: 30000 });
+    const items = await pagina.$$eval('#listaPlacas li', els => els.map(e => e.textContent));
+    revisar(
+        'placas: con tres láminas la hoja lista las dos que entran',
+        items.length === 2 && items[1].includes(`${URL_PRUEBA}-2`),
+        items.join(' | '),
+    );
+    const aviso = await pagina.textContent('#avisoPlacas');
+    revisar(
+        'placas: avisa que la tercera queda afuera',
+        (await visible('#avisoPlacas')) && aviso.includes('lamina-3.png'),
+        aviso,
+    );
+    await pagina.tap('#generarPlaca');
+    await pagina.waitForFunction(() => document.getElementById('nombreModelo').textContent === 'placas-2.stl', null, {
+        timeout: 60000,
+    });
+    const datos = await pagina.textContent('#datosModelo');
+    revisar(
+        'placas: las dos van en una pieza de 203 × 150 mm que entra en la cama',
+        datos.startsWith('203,0 × 150,0') && !(await visible('#ajustarCama')),
+        datos,
+    );
+    await pagina.tap('#siguiente');
+    await pagina.tap('#laminar');
+    await esperarResultado();
+    await pagina.waitForSelector('#controlCapas:not([hidden])', { timeout: 60000 });
+    const pausas = await pagina.$$eval('#listaPausas small', els => els.length);
+    revisar('placas: dos placas juntas con las mismas dos pausas', pausas === 2, `(${pausas})`);
 }
 
 // Desde la hoja de placa se puede mandar la misma imagen a la litofanía.

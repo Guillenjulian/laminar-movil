@@ -12,7 +12,8 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Placa QR (ADR 0004): al elegir una imagen con un código QR (por ejemplo, la lámina de un punto de control), la app
   arma una placa de 10 × 15 cm con el QR rehecho limpio y los textos copiados de la imagen en relieve, y al laminar
   pone sola las dos pausas para imprimirla con un extrusor: blanco, negro y bordó (los textos rojizos de la lámina).
-  Desde la misma hoja se puede hacer una litofanía con la imagen.
+  Desde la misma hoja se puede hacer una litofanía con la imagen. Eligiendo varias láminas juntas, van en la misma
+  cama todas las que entren (dos en una cama de 220 × 220 mm).
 
 ### Corregido
 
